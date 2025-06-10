@@ -1,7 +1,7 @@
 [project]
 name = "storyboard"
 description = "A ComfyUI node set for creating and managing visual storyboards. Includes nodes for markdown rendering, image composition, and storyboard sequence management."
-version = "1.0.3"
+version = "1.0.4"
 license = {file = "LICENSE"}
 dependencies = ["markdown2"]
 
@@ -13,4 +13,3 @@ Repository = "https://github.com/laubsauger/comfyui-storyboard"
 PublisherId = "laub"
 DisplayName = "comfyui-storyboard"
 Icon = "https://raw.githubusercontent.com/laubsauger/comfyui-storyboard/refs/heads/main/web/storyboard_icon_opt.png"
-includes = []
