@@ -14,6 +14,12 @@ app.registerExtension({
         node._editableContent = ""
         node._hasReceivedData = false
 
+        // Check for existing input connections (for loaded workflows)
+        if (node.inputs && node.inputs[0] && node.inputs[0].link) {
+          node._hasInputConnection = true
+          console.log("[MarkdownRenderer] Found existing input connection on workflow load")
+        }
+
         // Monitor for input connections
         const originalOnConnectionsChange = node.onConnectionsChange
         node.onConnectionsChange = function (type, index, connected, link_info) {
@@ -39,20 +45,31 @@ app.registerExtension({
           }
         }
 
-        // Initialize with editor if no input connection
+        // Initialize with appropriate UI based on connection status
         console.log("[MarkdownRenderer] Initializing node, hasInputConnection:", node._hasInputConnection)
-        if (!node._hasInputConnection) {
-          console.log("[MarkdownRenderer] Calling showEditor")
-          setTimeout(() => {
-            console.log("[MarkdownRenderer] showEditor timeout executing")
+
+        // Use requestAnimationFrame for more deterministic timing
+        const initializeUI = () => {
+          // Re-check connection status right before initialization (for loaded workflows)
+          const hasConnection = node.inputs && node.inputs[0] && node.inputs[0].link
+          if (hasConnection) {
+            node._hasInputConnection = true
+            console.log("[MarkdownRenderer] Connection detected during initialization")
+          } else {
+            node._hasInputConnection = false
+          }
+
+          if (!node._hasInputConnection) {
+            console.log("[MarkdownRenderer] showEditor executing")
             showEditor.call(node)
-          }, 100)
-        } else {
-          console.log("[MarkdownRenderer] Input connection detected, showing waiting overlay")
-          setTimeout(() => {
+          } else {
+            console.log("[MarkdownRenderer] Input connection detected, showing waiting overlay")
             showWaitingForInput.call(node)
-          }, 100)
+          }
         }
+
+        // Use requestAnimationFrame for better timing control
+        requestAnimationFrame(initializeUI)
       }
     } catch (error) {
       console.error("[MarkdownRenderer] Error in nodeCreated:", error)
@@ -67,20 +84,15 @@ app.registerExtension({
         .markdown-content {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           line-height: 1.6;
-          color: #e0e0e0;
-          padding: 16px 12px 12px 12px;
+          color: #c8c8c8;
+          padding: 0 12px 0 12px;
           width: 100%;
-          height: 100%;
-          background: #0d0d0d;
-          border-radius: 6px;
+          background: #151515;
+          border-radius: 0 0 6px 6px;
           overflow-y: auto;
           overflow-x: hidden;
           box-sizing: border-box;
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
+          flex: 1;
         }
         .markdown-content::-webkit-scrollbar {
           width: 6px;
@@ -117,7 +129,7 @@ app.registerExtension({
           padding: 12px;
           border-radius: 4px;
           overflow-x: auto;
-          color: #e0e0e0;
+          color: #c8c8c8;
           border: 1px solid #1a1a1a;
         }
         .markdown-content blockquote {
@@ -157,17 +169,13 @@ app.registerExtension({
                  .markdown-editor {
            width: 100%;
            height: 100%;
-           background: #0d0d0d;
+           background: #151515;
            border: 1px solid #222;
            border-radius: 6px;
            display: flex;
            flex-direction: column;
            box-sizing: border-box;
-           position: absolute;
-           top: 0;
-           left: 0;
-           right: 0;
-           bottom: 0;
+           position: relative;
          }
          .markdown-editor-toolbar {
            background: #141414;
@@ -196,10 +204,10 @@ app.registerExtension({
          }
          .markdown-editor-textarea {
            flex: 1;
-           background: #0d0d0d;
-           color: #e0e0e0;
+           background: #151515;
+           color: #c8c8c8;
            border: none;
-           border-radius: 6px;
+           border-radius: 0 0 6px 6px;
            resize: none;
            padding: 12px;
            font-family: 'SF Mono', Monaco, Consolas, monospace;
@@ -247,11 +255,9 @@ app.registerExtension({
            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
          }
           .markdown-waiting-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            position: relative;
+            width: 100%;
+            height: 100%;
             background: rgba(0, 0, 0, 0.85);
             border-radius: 6px;
             display: flex;
@@ -319,13 +325,17 @@ app.registerExtension({
           height: 100%;
           display: flex;
           flex-direction: column;
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: #0d0d0d;
+          position: relative;
+          background: #151515;
           border: 1px solid #222;
           border-radius: 6px;
           box-sizing: border-box;
         `
+
+        // Prevent all clicks on the main container from propagating to the node frame
+        mainContainer.addEventListener('click', (e) => {
+          e.stopPropagation()
+        })
 
         // Create toolbar
         const toolbar = document.createElement('div')
@@ -389,6 +399,8 @@ app.registerExtension({
           markdownButton.classList.remove('active')
           isSourceMode = true
           updateCharCount()
+          // Focus the textarea so user can immediately start typing
+          setTimeout(() => textarea.focus(), 0)
         }
 
         // Event handlers - always toggle to the other mode
@@ -417,6 +429,8 @@ app.registerExtension({
             if (toolbar.contains(e.target)) {
               return
             }
+            // Stop propagation to prevent outer node frame clicks
+            e.stopPropagation()
             // Only trigger when in markdown mode (not when already in text mode)
             if (!isSourceMode) {
               showText()
@@ -486,6 +500,17 @@ app.registerExtension({
           hideOnZoom: false
         }
 
+        // For editable widgets, also create a hidden text widget to store content for backend
+        if (isEditable) {
+          widgetConfig.callback = () => {
+            // Ensure the hidden widget gets the current content
+            const hiddenWidget = node.widgets?.find(w => w.name === 'text')
+            if (hiddenWidget) {
+              hiddenWidget.value = currentContent
+            }
+          }
+        }
+
         if (isEditable) {
           widgetConfig.onRemove = () => {
             document.removeEventListener('click', handleDocumentClick)
@@ -500,10 +525,15 @@ app.registerExtension({
 
       function populate(html) {
         if (this.widgets) {
-          for (let i = 0; i < this.widgets.length; i++) {
-            this.widgets[i].onRemove?.()
+          // Remove widgets without clearing the array completely to preserve input socket
+          const widgetsToRemove = [...this.widgets]
+          for (let widget of widgetsToRemove) {
+            widget.onRemove?.()
+            const index = this.widgets.indexOf(widget)
+            if (index > -1) {
+              this.widgets.splice(index, 1)
+            }
           }
-          this.widgets.length = 0
         }
 
         const v = [...html]
@@ -540,11 +570,16 @@ app.registerExtension({
           }
         }
 
-        // Update node size
+        // Update node size with reasonable bounds
         requestAnimationFrame(() => {
           const sz = this.computeSize()
           if (sz[0] < this.size[0]) sz[0] = this.size[0]
           if (sz[1] < this.size[1]) sz[1] = this.size[1]
+
+          // Prevent runaway height increases
+          if (sz[1] > 800) sz[1] = 800
+          if (sz[0] > 600) sz[0] = 600
+
           this.onResize?.(sz)
           app.graph.setDirtyCanvas(true, false)
         })
@@ -556,7 +591,8 @@ app.registerExtension({
         onExecuted?.apply(this, arguments)
         console.log("[MarkdownRenderer] Node executed with message:", message)
 
-        if (message.html) {
+        // Only process execution results if we have an input connection and HTML content
+        if (this._hasInputConnection && message.html) {
           // Store the original text for source viewing and mark as received
           this._sourceText = message.text || []
           this._hasReceivedData = true
@@ -577,10 +613,15 @@ app.registerExtension({
         onConfigure?.apply(this, arguments)
         const widgets_values = this[VALUES]
         if (widgets_values?.length) {
-          // In newer frontend there seems to be a delay in creating the initial widget
-          requestAnimationFrame(() => {
-            populate.call(this, widgets_values)
-          })
+          // Check if we have an input connection before populating
+          const hasConnection = this.inputs && this.inputs[0] && this.inputs[0].link
+          if (hasConnection) {
+            // In newer frontend there seems to be a delay in creating the initial widget
+            requestAnimationFrame(() => {
+              populate.call(this, widgets_values)
+            })
+          }
+          // If no connection, showEditor will be called by the nodeCreated timeout
         }
       }
     }
@@ -590,24 +631,59 @@ app.registerExtension({
 function showEditor(node) {
   console.log("[MarkdownRenderer] showEditor called, this:", this)
 
-  // Remove any existing widgets
+  // Remove any existing widgets, but preserve input structure
   if (this.widgets) {
     console.log("[MarkdownRenderer] Removing existing widgets:", this.widgets.length)
-    for (let i = 0; i < this.widgets.length; i++) {
-      this.widgets[i].onRemove?.()
+    // Remove widgets without clearing the array completely to preserve input socket
+    const widgetsToRemove = [...this.widgets]
+    for (let widget of widgetsToRemove) {
+      widget.onRemove?.()
+      const index = this.widgets.indexOf(widget)
+      if (index > -1) {
+        this.widgets.splice(index, 1)
+      }
     }
-    this.widgets.length = 0
   }
 
-  // Set default content if none exists
+  // Set default content if none exists, but first check for existing saved content
   if (!this._editableContent) {
-    this._editableContent = `
-Write your **markdown** content here!
+    // Try to restore content from multiple sources
+    let existingContent = ''
 
+    // 1. Check if we have a text widget with existing content
+    const existingTextWidget = this.widgets?.find(w => w.name === 'text' && w.value)
+    if (existingTextWidget && existingTextWidget.value.trim()) {
+      existingContent = existingTextWidget.value
+      console.log("[MarkdownRenderer] Restored content from existing text widget:", existingContent.substring(0, 50) + "...")
+    }
+
+    // 2. Check if there's stored content in node properties (for workflow reload)
+    if (!existingContent && this.properties && this.properties.text && this.properties.text.trim()) {
+      existingContent = this.properties.text
+      console.log("[MarkdownRenderer] Restored content from node properties:", existingContent.substring(0, 50) + "...")
+    }
+
+    // 3. Check stored _editableContent from previous sessions
+    if (!existingContent && this._editableContent && this._editableContent.trim() &&
+      !this._editableContent.includes('Write your **markdown** content here!')) {
+      existingContent = this._editableContent
+      console.log("[MarkdownRenderer] Using existing _editableContent:", existingContent.substring(0, 50) + "...")
+    }
+
+    // Use existing content or fall back to placeholder
+    this._editableContent = existingContent || `Write your **markdown** content here!
 - Bullet points
 - *Italic text*
 - \`Code snippets\`
 `
+  }
+
+  // Create a hidden text widget to store content for the backend (only when no input connection)
+  let textWidget = null
+  if (!this._hasInputConnection) {
+    textWidget = ComfyWidgets.STRING(this, 'text', ['STRING', { multiline: true }], app).widget
+    textWidget.value = this._editableContent || ""
+    textWidget.type = 'hidden'
   }
 
   const widget = window.createMarkdownWidget(this, {
@@ -615,7 +691,17 @@ Write your **markdown** content here!
     isEditable: true,
     initialContent: this._editableContent,
     onContentChange: (content) => {
+      console.log("[MarkdownRenderer] onContentChange called with content:", { editableContent: this._editableContent, content })
       this._editableContent = content
+
+      // Update the hidden widget value so it gets sent to backend (only if we have one)
+      if (textWidget) {
+        textWidget.value = content
+      }
+
+      // Save to node properties for persistence across reloads
+      if (!this.properties) this.properties = {}
+      this.properties.text = content
     }
   })
 
@@ -629,13 +715,18 @@ Write your **markdown** content here!
 function showWaitingForInput() {
   console.log("[MarkdownRenderer] showWaitingForInput called")
 
-  // Remove any existing widgets
+  // Remove any existing widgets, but preserve connection state and input structure
   if (this.widgets) {
     console.log("[MarkdownRenderer] Removing existing widgets:", this.widgets.length)
-    for (let i = 0; i < this.widgets.length; i++) {
-      this.widgets[i].onRemove?.()
+    // Remove widgets without clearing the array completely to preserve input socket
+    const widgetsToRemove = [...this.widgets]
+    for (let widget of widgetsToRemove) {
+      widget.onRemove?.()
+      const index = this.widgets.indexOf(widget)
+      if (index > -1) {
+        this.widgets.splice(index, 1)
+      }
     }
-    this.widgets.length = 0
   }
 
   // Create waiting overlay container
@@ -645,9 +736,8 @@ function showWaitingForInput() {
     height: 100%;
     display: flex;
     flex-direction: column;
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: #0d0d0d;
+    position: relative;
+    background: #151515;
     border: 1px solid #222;
     border-radius: 6px;
     box-sizing: border-box;

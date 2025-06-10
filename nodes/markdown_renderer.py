@@ -5,7 +5,9 @@ class MarkdownRenderer:
     @classmethod
     def INPUT_TYPES(s):
         return {
-            "required": {},
+            "required": {
+                # "text": ("STRING", {"forceInput": False}),
+            },
             "optional": {
                 "text": ("STRING", {"forceInput": True}),
             },
