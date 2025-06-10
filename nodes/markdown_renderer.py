@@ -34,6 +34,7 @@ class MarkdownRenderer:
         "nofollow",
         "strike",
         "target-blank-links",
+        "cuddled-lists",
     ]
 
     @classmethod
