@@ -1,0 +1,16 @@
+[project]
+name = "storyboard"
+description = ""
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["markdown2"]
+
+[project.urls]
+Repository = "https://github.com/laubsauger/comfyui-storyboard"
+#  Used by Comfy Registry https://registry.comfy.org
+
+[tool.comfy]
+PublisherId = "laub"
+DisplayName = "comfyui-storyboard"
+Icon = ""
+includes = []
