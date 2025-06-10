@@ -207,6 +207,16 @@ app.registerExtension({
           }
         })
 
+        // Create warning indicator for non-editable content
+        const warningIndicator = document.createElement('div')
+        warningIndicator.className = 'markdown-warning-indicator'
+        warningIndicator.style.color = '#6c757d'
+        warningIndicator.style.fontSize = '12px'
+        warningIndicator.style.fontWeight = 'bold'
+        warningIndicator.style.display = isEditable ? 'none' : 'block'
+        warningIndicator.textContent = '🔒 Read-only'
+        warningIndicator.title = 'Editing is disabled while input is connected. Disconnect the input to enable manual editing.'
+
         // Click-to-edit functionality for editable widgets
         if (isEditable) {
           container.addEventListener('click', (e) => {
@@ -227,6 +237,11 @@ app.registerExtension({
           textarea.addEventListener('click', (e) => {
             e.stopPropagation()
           })
+        } else {
+          // For non-editable content (input connected), add tooltip to both container and textarea
+          const tooltipText = 'Editing is disabled while input is connected. Disconnect the input to enable manual editing.'
+          container.title = tooltipText
+          textarea.title = tooltipText
         }
 
         if (isEditable) {
@@ -265,6 +280,7 @@ app.registerExtension({
         toggleGroup.appendChild(markdownButton)
         toggleGroup.appendChild(textButton)
         toolbar.appendChild(charCount)
+        toolbar.appendChild(warningIndicator)
         toolbar.appendChild(toggleGroup)
         mainContainer.appendChild(toolbar)
         mainContainer.appendChild(container)
@@ -308,7 +324,8 @@ app.registerExtension({
       // Make parseMarkdownSimple available globally for the widget creator
       window.parseMarkdownSimple = parseMarkdownSimple
 
-      function populate(html) {
+      // Make populate function available globally for restoreRenderedContent
+      window.populateMarkdownWidget = function populate(html) {
         if (this.widgets) {
           // Remove widgets without clearing the array completely to preserve input socket
           const widgetsToRemove = [...this.widgets]
@@ -388,7 +405,7 @@ app.registerExtension({
           this.properties.storedHtml = message.html
           this.properties.sourceText = message.text || []
 
-          populate.call(this, message.html)
+          window.populateMarkdownWidget.call(this, message.html)
         }
       }
 
@@ -421,7 +438,7 @@ app.registerExtension({
           if (hasConnection) {
             // In newer frontend there seems to be a delay in creating the initial widget
             requestAnimationFrame(() => {
-              populate.call(this, widgets_values)
+              window.populateMarkdownWidget.call(this, widgets_values)
             })
           }
           // If no connection, showEditor will be called by the nodeCreated timeout
@@ -528,7 +545,7 @@ function restoreRenderedContent() {
 
   // Populate with the stored content
   if (this._storedHtml) {
-    populate.call(this, this._storedHtml)
+    window.populateMarkdownWidget.call(this, this._storedHtml)
   } else {
     // Fallback to waiting overlay if no content found
     showWaitingForInput.call(this)
