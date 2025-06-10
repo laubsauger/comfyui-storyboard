@@ -23,6 +23,18 @@ class MarkdownRenderer:
     CATEGORY = "storyboard"
     OUTPUT_NODE = True
     OUTPUT_IS_LIST = (True,)
+    MARKDOWN_EXTRAS = [
+        "fenced-code-blocks",
+        "tables",
+        "code-friendly",
+        "task_list",
+        "break-on-newline",
+        "footnotes",
+        "header-ids",
+        "nofollow",
+        "strike",
+        "target-blank-links",
+    ]
 
     @classmethod
     def IS_CHANGED(s, **kwargs):
@@ -46,11 +58,7 @@ class MarkdownRenderer:
                         html_content.append(
                             markdown2.markdown(
                                 text_str,
-                                extras=[
-                                    "fenced-code-blocks",
-                                    "tables",
-                                    "code-friendly",
-                                ],
+                                extras=MarkdownRenderer.MARKDOWN_EXTRAS,
                             )
                         )
                 else:
@@ -59,7 +67,7 @@ class MarkdownRenderer:
                     html_content.append(
                         markdown2.markdown(
                             text_str,
-                            extras=["fenced-code-blocks", "tables", "code-friendly"],
+                            extras=MarkdownRenderer.MARKDOWN_EXTRAS,
                         )
                     )
         else:
