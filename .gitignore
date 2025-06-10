@@ -25,3 +25,4 @@ openapi.yaml
 filtered-openapi.yaml
 uv.lock
 .lh/
+.env
