@@ -26,3 +26,4 @@ filtered-openapi.yaml
 uv.lock
 .lh/
 .env
+node.zip
