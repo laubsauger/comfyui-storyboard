@@ -1,0 +1,281 @@
+.storyboard-main-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #151515;
+  border: 1px solid #222;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.markdown-content {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  color: #c8c8c8;
+  padding: 0 12px 0 12px;
+  width: 100%;
+  background: #151515;
+  border-radius: 0 0 6px 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  flex: 1;
+}
+
+.markdown-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.markdown-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.markdown-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.markdown-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.markdown-content h1 {
+  color: #00d4ff;
+}
+
+.markdown-content h2 {
+  color: #00b8e6;
+}
+
+.markdown-content h3 {
+  color: #009fcc;
+}
+
+.markdown-content code {
+  background: #1a1a1a;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: "SF Mono", Monaco, Consolas, monospace;
+  color: #00d4ff;
+  border: 1px solid #333;
+}
+
+.markdown-content pre {
+  background: #0a0a0a;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  color: #c8c8c8;
+  border: 1px solid #1a1a1a;
+}
+
+.markdown-content blockquote {
+  border-left: 2px solid #007acc;
+  margin: 0;
+  padding-left: 12px;
+  color: #bbb;
+  background: #0a0a0a;
+  padding: 8px 12px;
+  border-radius: 0 3px 3px 0;
+}
+
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #222;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #222;
+  padding: 8px;
+}
+
+.markdown-content th {
+  background: #111;
+  color: #00d4ff;
+  font-weight: 600;
+}
+
+.markdown-content a {
+  color: #007acc;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.markdown-content a:hover {
+  color: #00b8e6;
+}
+
+.markdown-editor {
+  width: 100%;
+  height: 100%;
+  background: #151515;
+  border: 1px solid #222;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.markdown-editor-toolbar {
+  background: #141414;
+  color: #ffffff;
+  padding: 6px 6px;
+  font-size: 11px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1a1a1a;
+  border-radius: 6px 6px 0 0;
+  flex-shrink: 0;
+  z-index: 100;
+  position: relative;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.markdown-char-count {
+  color: #666;
+  font-size: 10px;
+  font-family: "SF Mono", Monaco, Consolas, monospace;
+  background: #111;
+  padding: 3px 4px;
+  border-radius: 3px;
+  border: 1px solid #222;
+}
+
+.markdown-editor-textarea {
+  flex: 1;
+  background: #151515;
+  color: #c8c8c8;
+  border: none;
+  border-radius: 0 0 6px 6px;
+  resize: none;
+  padding: 12px;
+  font-family: "SF Mono", Monaco, Consolas, monospace;
+  font-size: 13px;
+  outline: none;
+  overflow-y: auto;
+  line-height: 1.4;
+}
+
+.markdown-toggle-group {
+  display: flex;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #222;
+  background: #111;
+}
+
+.markdown-editor-button {
+  background: transparent;
+  color: #888;
+  border: none;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-right: 1px solid #222;
+  border-radius: 0;
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.markdown-editor-button:last-child {
+  border-right: none;
+}
+
+.markdown-editor-button:hover:not(.active) {
+  background: #1a1a1a;
+  color: #ccc;
+}
+
+.markdown-editor-button.active {
+  background: #007acc;
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.markdown-waiting-overlay {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  text-align: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+  border: 1px solid #333;
+}
+
+.markdown-waiting-icon {
+  font-size: 42px;
+  margin-bottom: 12px;
+  animation: pulse 2s ease-in-out infinite;
+  filter: grayscale(30%);
+}
+
+.markdown-waiting-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #00d4ff;
+}
+
+.markdown-waiting-subtitle {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 16px;
+  max-width: 280px;
+  line-height: 1.3;
+  color: #ccc;
+}
+
+.markdown-waiting-note {
+  font-size: 11px;
+  opacity: 0.8;
+  background: #111;
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid #333;
+  color: #00d4ff;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+}

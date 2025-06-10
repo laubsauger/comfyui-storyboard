@@ -2,6 +2,9 @@ import markdown2
 
 
 class MarkdownRenderer:
+    NAME = "MarkdownRenderer"
+    DISPLAY_NAME = "Markdown Renderer"
+
     @classmethod
     def INPUT_TYPES(s):
         return {

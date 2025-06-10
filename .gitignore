@@ -27,3 +27,22 @@ uv.lock
 .lh/
 .env
 node.zip
+
+# Node modules
+node_modules/
+
+# TypeScript build temporary directory
+web_backup_temp/
+__pycache__
+*.ini
+wildcards/**
+.vscode/
+.idea/
+node_modules/
+storyboard_config.json
+web/storyboard_config.js
+web/comfyui/storyboard_config.js
+userdata/
+userdata/**
+web/comfyui/testing/
+web/comfyui/tests/
