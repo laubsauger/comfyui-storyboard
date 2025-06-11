@@ -18,6 +18,7 @@ function createMarkdownWidget(node, config) {
   } = config;
   const mainContainer = document.createElement("div");
   mainContainer.classList.add("storyboard-main-container");
+  mainContainer.style.position = "relative";
   mainContainer.addEventListener("click", (e) => {
     e.stopPropagation();
   });
@@ -89,9 +90,6 @@ function createMarkdownWidget(node, config) {
   });
   const warningIndicator = document.createElement("div");
   warningIndicator.className = "markdown-warning-indicator";
-  warningIndicator.style.color = "#6c757d";
-  warningIndicator.style.fontSize = "12px";
-  warningIndicator.style.fontWeight = "bold";
   warningIndicator.style.display = isEditable ? "none" : "block";
   warningIndicator.textContent = "\u{1F512} Read-only";
   warningIndicator.title = "Editing is disabled while input is connected. Disconnect the input to enable manual editing.";
@@ -145,7 +143,7 @@ function createMarkdownWidget(node, config) {
   if (isEditable) {
     toolbar.append(toggleGroup, charCount);
   } else {
-    toolbar.append(toggleGroup, charCount, warningIndicator);
+    toolbar.append(toggleGroup, warningIndicator, charCount);
   }
   mainContainer.append(toolbar, container, textarea);
   const widget = node.addDOMWidget(
@@ -172,6 +170,10 @@ function populateMarkdownWidget(node, html) {
   );
   if (mdWidget) {
     const mainContainer = mdWidget.element;
+    const overlay = mainContainer.querySelector(".markdown-waiting-overlay");
+    if (overlay) {
+      overlay.remove();
+    }
     const contentDiv = mainContainer.querySelector(".markdown-content");
     if (contentDiv) {
       contentDiv.innerHTML = finalHtml;
@@ -268,16 +270,28 @@ function showWaitingForInput(node) {
   log("showWaitingForInput called");
   if (node.widgets) {
     const widgetsToRemove = [...node.widgets];
-    for (let widget of widgetsToRemove) {
-      (_a = widget.onRemove) == null ? void 0 : _a.call(widget);
-      const index = node.widgets.indexOf(widget);
+    for (let widget2 of widgetsToRemove) {
+      (_a = widget2.onRemove) == null ? void 0 : _a.call(widget2);
+      const index = node.widgets.indexOf(widget2);
       if (index > -1) {
         node.widgets.splice(index, 1);
       }
     }
   }
-  const mainContainer = document.createElement("div");
-  mainContainer.classList.add("storyboard-main-container");
+  if (!node._editableContent) {
+    node._editableContent = `Write your **markdown** content here!
+- Bullet points
+- *Italic text*
+- \`Code snippets\``;
+  }
+  const widget = createMarkdownWidget(node, {
+    widgetName: "markdown_widget",
+    isEditable: false,
+    initialContent: node._editableContent,
+    htmlContent: parseMarkdownSimple(node._editableContent),
+    sourceText: node._editableContent
+  });
+  const mainContainer = widget.element;
   const overlay = document.createElement("div");
   overlay.className = "markdown-waiting-overlay";
   overlay.innerHTML = `
@@ -287,7 +301,6 @@ function showWaitingForInput(node) {
     <div class="markdown-waiting-note">Manual content will be overridden</div>
   `;
   mainContainer.appendChild(overlay);
-  node.addDOMWidget("waiting_overlay", "div", mainContainer, {});
   if (node.size[0] < 400) node.size[0] = 400;
   if (node.size[1] < 350) node.size[1] = 350;
 }

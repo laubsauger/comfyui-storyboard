@@ -20,6 +20,7 @@ function createMarkdownWidget(node: any, config: any) {
 
   const mainContainer = document.createElement("div");
   mainContainer.classList.add("storyboard-main-container");
+  mainContainer.style.position = "relative";
 
   mainContainer.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -103,9 +104,6 @@ function createMarkdownWidget(node: any, config: any) {
 
   const warningIndicator = document.createElement("div");
   warningIndicator.className = "markdown-warning-indicator";
-  warningIndicator.style.color = "#6c757d";
-  warningIndicator.style.fontSize = "12px";
-  warningIndicator.style.fontWeight = "bold";
   warningIndicator.style.display = isEditable ? "none" : "block";
   warningIndicator.textContent = "🔒 Read-only";
   warningIndicator.title =
@@ -167,7 +165,7 @@ function createMarkdownWidget(node: any, config: any) {
   if (isEditable) {
     toolbar.append(toggleGroup, charCount);
   } else {
-    toolbar.append(toggleGroup, charCount, warningIndicator);
+    toolbar.append(toggleGroup, warningIndicator, charCount);
   }
   mainContainer.append(toolbar, container, textarea);
 
@@ -195,6 +193,10 @@ export function populateMarkdownWidget(node: any, html: string | string[]) {
   );
   if (mdWidget) {
     const mainContainer = mdWidget.element;
+    const overlay = mainContainer.querySelector(".markdown-waiting-overlay");
+    if (overlay) {
+      overlay.remove();
+    }
     const contentDiv = mainContainer.querySelector(".markdown-content");
     if (contentDiv) {
       contentDiv.innerHTML = finalHtml;
@@ -312,10 +314,25 @@ export function showWaitingForInput(node: any) {
     }
   }
 
-  const mainContainer = document.createElement("div");
-  mainContainer.classList.add("storyboard-main-container");
+  if (!node._editableContent) {
+    node._editableContent = `Write your **markdown** content here!
+- Bullet points
+- *Italic text*
+- \`Code snippets\``;
+  }
+  const widget = createMarkdownWidget(node, {
+    widgetName: "markdown_widget",
+    isEditable: false,
+    initialContent: node._editableContent,
+    htmlContent: parseMarkdownSimple(node._editableContent),
+    sourceText: node._editableContent,
+  });
+
+  const mainContainer = widget.element;
+
   const overlay = document.createElement("div");
   overlay.className = "markdown-waiting-overlay";
+
   overlay.innerHTML = `
     <div class="markdown-waiting-icon">⏳</div>
     <div class="markdown-waiting-title">Waiting for Input</div>
@@ -324,7 +341,6 @@ export function showWaitingForInput(node: any) {
   `;
   mainContainer.appendChild(overlay);
 
-  node.addDOMWidget("waiting_overlay", "div", mainContainer, {});
   if (node.size[0] < 400) node.size[0] = 400;
   if (node.size[1] < 350) node.size[1] = 350;
 }
