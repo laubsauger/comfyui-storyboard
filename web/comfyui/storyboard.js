@@ -3136,7 +3136,7 @@ var parser = _Parser.parse;
 var lexer = _Lexer.lex;
 
 // src_web/comfyui/markdown_renderer.ts
-var LOG_VERBOSE = false;
+var LOG_VERBOSE = true;
 var log = (...args) => {
   if (LOG_VERBOSE) {
     console.log(`[MarkdownRenderer]`, ...args);
@@ -3371,19 +3371,16 @@ function populateMarkdownWidget(node, html3) {
       textarea.value = node._sourceText;
     }
   } else {
-    showWaitingForInput(node);
-    requestAnimationFrame(() => {
-      const sourceText = node._sourceText ? Array.isArray(node._sourceText) ? node._sourceText.join("") : node._sourceText : "";
-      const widget = createMarkdownWidget(node, {
-        widgetName: "markdown_widget",
-        isEditable: false,
-        htmlContent: finalHtml,
-        sourceText,
-        initialContent: sourceText
-      });
-      node.widgets.splice(node.widgets.indexOf(widget), 1);
-      node.addDOMWidget(widget.name, "div", widget.element, {});
+    const sourceText = node._sourceText ? Array.isArray(node._sourceText) ? node._sourceText.join("") : node._sourceText : "";
+    const widget = createMarkdownWidget(node, {
+      widgetName: "markdown_widget",
+      isEditable: false,
+      htmlContent: finalHtml,
+      sourceText,
+      initialContent: sourceText
     });
+    node.widgets.splice(node.widgets.indexOf(widget), 1);
+    node.addDOMWidget(widget.name, "div", widget.element, {});
   }
 }
 function showEditor(node) {
@@ -3487,8 +3484,10 @@ function restoreRenderedContent(node) {
     log("Restored HTML and source from properties");
   }
   if (node._storedHtml) {
+    log("Populating widget with stored HTML");
     populateMarkdownWidget(node, node._storedHtml);
   } else {
+    log("No stored HTML found, showing waiting UI");
     showWaitingForInput(node);
   }
 }
@@ -3523,11 +3522,15 @@ function handleMarkdownRendererCreated(node) {
       node._sourceText = [node.properties.text];
       node._hasReceivedData = true;
       log("Restored content for standalone node:", node._editableContent);
-    } else {
+    } else if (hasInput) {
       node._editableContent = node.properties.text || "";
       node._storedHtml = node.properties.storedHtml || null;
       node._sourceText = node.properties.sourceText || null;
       node._hasReceivedData = !!node._storedHtml;
+      log("Restored content for connected node:", {
+        hasStoredHtml: !!node._storedHtml,
+        hasSourceText: !!node._sourceText
+      });
     }
   } else {
     log("No properties found, initializing empty state");
@@ -3539,11 +3542,6 @@ function handleMarkdownRendererCreated(node) {
   logNodeState(node, "After initialization");
   if (!node.widgets) {
     node.widgets = [];
-  }
-  const textWidget = node.widgets.find((w) => w.name === "text");
-  if (textWidget) {
-    textWidget.type = "hidden";
-    textWidget.hidden = true;
   }
   const originalOnConnectionsChange = node.onConnectionsChange;
   node.onConnectionsChange = function(type, index, connected, link_info) {
@@ -3559,11 +3557,14 @@ function handleMarkdownRendererCreated(node) {
   };
   if (hasInput) {
     if (node._storedHtml) {
+      log("Node has connection and stored HTML, restoring content");
       restoreRenderedContent(node);
     } else {
+      log("Node has connection but no stored HTML, showing waiting UI");
       showWaitingForInput(node);
     }
   } else {
+    log("Node has no connection, showing editor");
     showEditor(node);
   }
 }
@@ -3591,9 +3592,26 @@ function setupMarkdownRenderer(nodeType, _nodeData) {
   };
   const onConfigure = nodeType.prototype.onConfigure;
   nodeType.prototype.onConfigure = function() {
-    var _a2, _b;
+    var _a2;
     onConfigure == null ? void 0 : onConfigure.apply(this, arguments);
     log("onConfigure called");
+    if (this._isDuplication) {
+      log("Skipping UI initialization in onConfigure - node duplication detected");
+      return;
+    }
+    if (this.widgets) {
+      const widgetsToRemove = [...this.widgets];
+      for (let widget of widgetsToRemove) {
+        if (widget.element) {
+          widget.element.remove();
+        }
+        (_a2 = widget.onRemove) == null ? void 0 : _a2.call(widget);
+        const index = this.widgets.indexOf(widget);
+        if (index > -1) {
+          this.widgets.splice(index, 1);
+        }
+      }
+    }
     if (this.properties) {
       const hasConnection2 = this.inputs && this.inputs[0] && this.inputs[0].link;
       if (hasConnection2 && this.properties.storedHtml) {
@@ -3614,22 +3632,52 @@ function setupMarkdownRenderer(nodeType, _nodeData) {
     const hasConnection = this.inputs && this.inputs[0] && this.inputs[0].link;
     log(`Input connection state in onConfigure: ${hasConnection}`);
     this._hasInputConnection = hasConnection;
-    const hasMarkdownWidget = (_a2 = this.widgets) == null ? void 0 : _a2.some((w) => w.name === "markdown_widget");
-    const hasEditorWidget = (_b = this.widgets) == null ? void 0 : _b.some((w) => w.name === "markdown_editor");
     if (hasConnection) {
       if (this._storedHtml) {
         log("Node has connection and stored HTML, restoring content");
         restoreRenderedContent(this);
-      } else if (!hasMarkdownWidget) {
+      } else {
         log("Node has connection but no stored HTML, showing waiting UI");
         showWaitingForInput(this);
       }
     } else {
-      if (!hasEditorWidget) {
-        log("Node has no connection, showing editor");
-        showEditor(this);
+      log("Node has no connection, showing editor");
+      showEditor(this);
+    }
+  };
+  const originalOnDeselected = nodeType.prototype.onDeselected;
+  nodeType.prototype.onDeselected = function() {
+    originalOnDeselected == null ? void 0 : originalOnDeselected.apply(this, arguments);
+    this._isDuplication = false;
+  };
+  const originalOnSelected = nodeType.prototype.onSelected;
+  nodeType.prototype.onSelected = function() {
+    originalOnSelected == null ? void 0 : originalOnSelected.apply(this, arguments);
+    this._isDuplication = false;
+  };
+  const originalOnRemoved = nodeType.prototype.onRemoved;
+  nodeType.prototype.onRemoved = function() {
+    var _a2;
+    originalOnRemoved == null ? void 0 : originalOnRemoved.apply(this, arguments);
+    if (this.widgets) {
+      const widgetsToRemove = [...this.widgets];
+      for (let widget of widgetsToRemove) {
+        if (widget.element) {
+          widget.element.remove();
+        }
+        (_a2 = widget.onRemove) == null ? void 0 : _a2.call(widget);
+        const index = this.widgets.indexOf(widget);
+        if (index > -1) {
+          this.widgets.splice(index, 1);
+        }
       }
     }
+  };
+  const originalClone = nodeType.prototype.clone;
+  nodeType.prototype.clone = function() {
+    const cloned = originalClone.apply(this, arguments);
+    cloned._isDuplication = true;
+    return cloned;
   };
 }
 

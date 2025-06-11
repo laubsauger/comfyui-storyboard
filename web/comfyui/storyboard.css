@@ -19,7 +19,7 @@
     Helvetica,
     Arial,
     sans-serif;
-  line-height: 1.4;
+  line-height: 1.3;
   color: #c8c8c8;
   padding: 0 12px 0 12px;
   width: 100%;
@@ -29,6 +29,7 @@
   overflow-x: hidden;
   box-sizing: border-box;
   flex: 1;
+  font-size: 13px;
 }
 .markdown-content::-webkit-scrollbar {
   width: 6px;
@@ -43,22 +44,29 @@
 .markdown-content::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
-.markdown-content h1,
-.markdown-content h2,
-.markdown-content h3 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  color: #ffffff;
+.markdown-content h1 {
+  font-size: 1.6em;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  color: #00d4ff;
   font-weight: 600;
 }
-.markdown-content h1 {
-  color: #00d4ff;
-}
 .markdown-content h2 {
+  font-size: 1.4em;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
   color: #00b8e6;
+  font-weight: 600;
 }
 .markdown-content h3 {
+  font-size: 1.2em;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
   color: #009fcc;
+  font-weight: 600;
+}
+.markdown-content p {
+  margin: 0.5em 0;
 }
 .markdown-content code {
   padding: 2px 4px;
@@ -69,36 +77,40 @@
     Consolas,
     monospace;
   color: #00d4ff;
+  font-size: 0.9em;
 }
 .markdown-content pre {
   background: #0a0a0a;
-  padding: 12px;
+  padding: 8px;
   border-radius: 4px;
   overflow-x: auto;
   color: #c8c8c8;
   border: 1px solid #1a1a1a;
+  font-size: 0.9em;
+  margin: 0.5em 0;
 }
 .markdown-content blockquote {
   border-left: 2px solid #007acc;
-  margin: 0;
-  padding-left: 12px;
+  margin: 0.5em 0;
+  padding: 6px 10px;
   color: #bbb;
   background: #0a0a0a;
-  padding: 8px 12px;
   border-radius: 0 3px 3px 0;
+  font-size: 0.95em;
 }
 .markdown-content table {
   border-collapse: collapse;
   width: 100%;
-  margin: 1em 0;
+  margin: 0.5em 0;
   border-radius: 4px;
   overflow: hidden;
   border: 1px solid #222;
+  font-size: 0.95em;
 }
 .markdown-content th,
 .markdown-content td {
   border: 1px solid #222;
-  padding: 8px;
+  padding: 6px;
 }
 .markdown-content th {
   background: #111;
@@ -112,6 +124,14 @@
 }
 .markdown-content a:hover {
   color: #00b8e6;
+}
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+.markdown-content li {
+  margin: 0.2em 0;
 }
 .markdown-editor {
   width: 100%;
@@ -160,16 +180,16 @@
   border: none;
   border-radius: 0 0 6px 6px;
   resize: none;
-  padding: 12px;
+  padding: 10px;
   font-family:
     "SF Mono",
     Monaco,
     Consolas,
     monospace;
-  font-size: 13px;
+  font-size: 12px;
   outline: none;
   overflow-y: auto;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 .markdown-toggle-group {
   display: flex;

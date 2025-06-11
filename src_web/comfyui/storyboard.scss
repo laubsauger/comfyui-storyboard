@@ -12,7 +12,7 @@
 
 .markdown-content {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.4;
+  line-height: 1.3;
   color: #c8c8c8;
   padding: 0 12px 0 12px;
   width: 100%;
@@ -22,6 +22,7 @@
   overflow-x: hidden;
   box-sizing: border-box;
   flex: 1;
+  font-size: 13px;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -40,68 +41,77 @@
     background: rgba(255, 255, 255, 0.3);
   }
 
-  h1,
-  h2,
-  h3 {
-    margin-top: 1.2em;
-    margin-bottom: 0.6em;
-    color: #ffffff;
+  h1 {
+    font-size: 1.6em;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    color: #00d4ff;
     font-weight: 600;
   }
 
-  h1 {
-    color: #00d4ff;
-  }
-
   h2 {
+    font-size: 1.4em;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
     color: #00b8e6;
+    font-weight: 600;
   }
 
   h3 {
+    font-size: 1.2em;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
     color: #009fcc;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0.5em 0;
   }
 
   code {
-    // background: #1a1a1a;
     padding: 2px 4px;
     border-radius: 4px;
     font-family: "SF Mono", Monaco, Consolas, monospace;
     color: #00d4ff;
-    // border: 1px solid #333;
+    font-size: 0.9em;
   }
 
   pre {
     background: #0a0a0a;
-    padding: 12px;
+    padding: 8px;
     border-radius: 4px;
     overflow-x: auto;
     color: #c8c8c8;
     border: 1px solid #1a1a1a;
+    font-size: 0.9em;
+    margin: 0.5em 0;
   }
 
   blockquote {
     border-left: 2px solid #007acc;
-    margin: 0;
-    padding-left: 12px;
+    margin: 0.5em 0;
+    padding: 6px 10px;
     color: #bbb;
     background: #0a0a0a;
-    padding: 8px 12px;
     border-radius: 0 3px 3px 0;
+    font-size: 0.95em;
   }
 
   table {
     border-collapse: collapse;
     width: 100%;
-    margin: 1em 0;
+    margin: 0.5em 0;
     border-radius: 4px;
     overflow: hidden;
     border: 1px solid #222;
+    font-size: 0.95em;
   }
 
   th,
   td {
     border: 1px solid #222;
-    padding: 8px;
+    padding: 6px;
   }
 
   th {
@@ -118,6 +128,15 @@
 
   a:hover {
     color: #00b8e6;
+  }
+
+  ul, ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+  }
+
+  li {
+    margin: 0.2em 0;
   }
 }
 
@@ -167,12 +186,12 @@
   border: none;
   border-radius: 0 0 6px 6px;
   resize: none;
-  padding: 12px;
+  padding: 10px;
   font-family: "SF Mono", Monaco, Consolas, monospace;
-  font-size: 13px;
+  font-size: 12px;
   outline: none;
   overflow-y: auto;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 .markdown-toggle-group {
