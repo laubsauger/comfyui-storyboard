@@ -1,7 +1,7 @@
 [project]
 name = "storyboard"
 description = "A ComfyUI node set for creating and managing visual storyboards. Includes nodes for markdown rendering, image composition, and storyboard sequence management."
-version = "1.0.10"
+version = "1.0.11"
 license = {file = "LICENSE"}
 dependencies = ["markdown2", "python-dotenv", "openai"]
 
@@ -12,5 +12,5 @@ Repository = "https://github.com/laubsauger/comfyui-storyboard"
 [tool.comfy]
 PublisherId = "laub"
 DisplayName = "comfyui-storyboard"
-Icon = "https://raw.githubusercontent.com/laubsauger/comfyui-storyboard/refs/heads/main/web/storyboard_icon_opt.png"
-Banner = "https://raw.githubusercontent.com/laubsauger/comfyui-storyboard/refs/heads/main/doc/storyboard_banner_opt.png"
+Icon = "https://raw.githubusercontent.com/laubsauger/comfyui-storyboard/refs/heads/main/docs/storyboard_icon_opt.png"
+Banner = "https://raw.githubusercontent.com/laubsauger/comfyui-storyboard/refs/heads/main/docs/storyboard_banner_opt.png"
