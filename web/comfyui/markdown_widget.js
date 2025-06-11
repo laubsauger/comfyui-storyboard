@@ -18,8 +18,12 @@ var __privateWrapper = (obj, member, setter, getter) => ({
   }
 });
 
-// src_web/comfyui/markdown_renderer.ts
+// src_web/comfyui/markdown_widget.ts
 import { app as app2 } from "/scripts/app.js";
+import { ComfyWidgets } from "/scripts/widgets.js";
+
+// src_web/comfyui/markdown_renderer.ts
+import { app } from "/scripts/app.js";
 
 // node_modules/dompurify/dist/purify.es.mjs
 var {
@@ -17257,12 +17261,356 @@ _StoryboardBaseNode.category = "storyboard";
 _StoryboardBaseNode._category = "storyboard";
 var StoryboardBaseNode = _StoryboardBaseNode;
 
-// src_web/comfyui/markdown_widget.ts
-import { app } from "/scripts/app.js";
-import { ComfyWidgets } from "/scripts/widgets.js";
-var LOG_VERBOSE = false;
-var log = (...args) => {
+// src_web/comfyui/common.ts
+var LOG_VERBOSE = true;
+var log = (prefix, ...args) => {
   if (LOG_VERBOSE) {
+    console.log(`[${prefix}]`, ...args);
+  }
+};
+var ALLOWED_TAGS = ["video", "source"];
+var ALLOWED_ATTRS = [
+  "controls",
+  "autoplay",
+  "loop",
+  "muted",
+  "preload",
+  "poster"
+];
+var MEDIA_SRC_REGEX = /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
+
+// src_web/comfyui/markdown_renderer.ts
+function createMarkdownRenderer(baseUrl) {
+  const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
+  const renderer = new _Renderer();
+  renderer.image = ({ href, title, text: text2 }) => {
+    let src = href;
+    if (normalizedBase && !/^(?:\/|https?:\/\/)/.test(href)) {
+      src = `${normalizedBase}/${href}`;
+    }
+    const titleAttr = title ? ` title="${title}"` : "";
+    return `<img src="${src}" alt="${text2}"${titleAttr} />`;
+  };
+  return renderer;
+}
+function renderMarkdownToHtml(markdown, baseUrl) {
+  if (!markdown) return "";
+  const markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
+  let html3 = marked.parse(markdownStr, {
+    renderer: createMarkdownRenderer(baseUrl),
+    gfm: true,
+    breaks: true
+  });
+  if (baseUrl) {
+    html3 = html3.replace(MEDIA_SRC_REGEX, `$1${baseUrl}$2$3`);
+  }
+  return purify.sanitize(html3, {
+    ADD_TAGS: ALLOWED_TAGS,
+    ADD_ATTR: ALLOWED_ATTRS
+  });
+}
+var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNode {
+  // Debounce timeout
+  constructor(title = _MarkdownRendererNode.title) {
+    super(title);
+    // Keep category consistent
+    this._hasInputConnection = false;
+    this._editableContent = "";
+    this._storedHtml = "";
+    this._sourceText = "";
+    this._hasReceivedData = false;
+    this._isUpdatingUI = false;
+    // Add flag to prevent concurrent UI updates
+    this._updateUITimeout = null;
+    log("MarkdownRenderer", "Constructor called");
+  }
+  onConstructed() {
+    var _a2, _b;
+    if (this.__constructed__) return false;
+    log("MarkdownRenderer", "Node constructed");
+    this._hasInputConnection = false;
+    this._editableContent = "";
+    this._storedHtml = "";
+    this._sourceText = "";
+    this._hasReceivedData = false;
+    this._isUpdatingUI = false;
+    this._updateUITimeout = null;
+    this.type = (_a2 = this.type) != null ? _a2 : void 0;
+    this.__constructed__ = true;
+    (_b = app.graph) == null ? void 0 : _b.trigger("nodeCreated", this);
+    log("MarkdownRenderer", "Node state initialized");
+    return this.__constructed__;
+  }
+  clone() {
+    log("MarkdownRenderer", "Cloning node");
+    const cloned = super.clone();
+    if (cloned) {
+      log("MarkdownRenderer", "Cloned node properties:", cloned.properties);
+      if (cloned.properties && !!window.structuredClone) {
+        cloned.properties = structuredClone(cloned.properties);
+        log("MarkdownRenderer", "Properties deep cloned");
+      }
+      cloned._hasInputConnection = this._hasInputConnection;
+      cloned._editableContent = this._editableContent;
+      cloned._storedHtml = this._storedHtml;
+      cloned._sourceText = this._sourceText;
+      cloned._hasReceivedData = this._hasReceivedData;
+      cloned._isUpdatingUI = false;
+      cloned._updateUITimeout = null;
+      log("MarkdownRenderer", "State properties copied");
+      if (!cloned.properties) cloned.properties = {};
+      cloned.properties["text"] = this._editableContent;
+      cloned.properties["storedHtml"] = this._storedHtml;
+      cloned.properties["sourceText"] = this._sourceText;
+      log("MarkdownRenderer", "Properties copied to cloned node");
+      if (cloned.widgets) {
+        cloned.widgets.length = 0;
+      }
+      cloned.onConstructed();
+      log("MarkdownRenderer", "Cloned node constructed");
+      if (cloned.size[0] < 400) cloned.size[0] = 400;
+      if (cloned.size[1] < 350) cloned.size[1] = 350;
+      cloned.updateUI();
+      log("MarkdownRenderer", "Cloned node UI updated");
+    }
+    return cloned;
+  }
+  onConnectionsChange(type, index, connected, linkInfo, inputOrOutput) {
+    if (type === 1 && index === 0) {
+      log("MarkdownRenderer", "Input connection changed:", connected);
+      this._hasInputConnection = connected;
+      if (!connected) {
+        this._hasReceivedData = false;
+      }
+      this.updateUI();
+    }
+  }
+  onExecute(result) {
+    log("MarkdownRenderer", "Node executed with result:", result);
+    if (result && result.ui) {
+      const { text: textArray, html: htmlArray } = result.ui;
+      if (textArray && textArray.length > 0) {
+        this._sourceText = Array.isArray(textArray) ? textArray.join("") : textArray;
+        this._editableContent = this._sourceText;
+        if (htmlArray && htmlArray.length > 0) {
+          this._storedHtml = Array.isArray(htmlArray) ? htmlArray.join("") : htmlArray;
+        } else {
+          this._storedHtml = renderMarkdownToHtml(this._sourceText);
+        }
+        this._hasReceivedData = true;
+        if (!this.properties) this.properties = {};
+        this.properties["storedHtml"] = this._storedHtml;
+        this.properties["sourceText"] = this._sourceText;
+        this.properties["text"] = this._sourceText;
+        log("MarkdownRenderer", "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
+        this.updateUI();
+      } else {
+        log("MarkdownRenderer", "Received empty data from backend");
+      }
+    } else {
+      log("MarkdownRenderer", "No valid data received from backend");
+    }
+  }
+  onExecuted(val) {
+    log("MarkdownRenderer", "onExecuted callback:", val);
+    const ui = val == null ? void 0 : val.ui;
+    if (!ui) return;
+    const txt = Array.isArray(ui.text) ? ui.text.join("") : ui.text || "";
+    const html3 = Array.isArray(ui.html) ? ui.html.join("") : ui.html || "";
+    this._sourceText = txt;
+    this._storedHtml = html3;
+    this._editableContent = txt;
+    this._hasReceivedData = true;
+    if (!this.properties) this.properties = {};
+    this.properties["storedHtml"] = html3;
+    this.properties["sourceText"] = txt;
+    this.properties["text"] = txt;
+    this.updateUI();
+  }
+  onConfigure(info) {
+    var _a2, _b;
+    log("MarkdownRenderer", "Configuring node with info:", info);
+    if (this.properties) {
+      const props = this.properties;
+      if (props["storedHtml"]) {
+        log("MarkdownRenderer", "Restoring stored HTML from properties");
+        this._storedHtml = String(props["storedHtml"]);
+        this._sourceText = String(props["sourceText"] || "");
+        this._hasReceivedData = true;
+      }
+      if (props["text"]) {
+        log("MarkdownRenderer", "Restoring text content from properties");
+        this._editableContent = String(props["text"]);
+      }
+    }
+    this.cleanupAllWidgets();
+    const hasConnection = Boolean((_b = (_a2 = this.inputs) == null ? void 0 : _a2[0]) == null ? void 0 : _b.link);
+    log("MarkdownRenderer", "Has input connection:", hasConnection, "Has received data:", this._hasReceivedData);
+    this._hasInputConnection = hasConnection;
+    if (!hasConnection) {
+      this._hasReceivedData = false;
+    }
+    if (this.size[0] < 400) this.size[0] = 400;
+    if (this.size[1] < 350) this.size[1] = 350;
+    this.updateUI();
+  }
+  onNodeCreated() {
+    log("MarkdownRenderer", "Node created");
+    if (this.inputs && this.inputs[0] && this.inputs[0].link) {
+      log("MarkdownRenderer", "Found existing input connection");
+      this._hasInputConnection = true;
+    } else {
+      this._hasInputConnection = false;
+      this._hasReceivedData = false;
+    }
+    this.updateUI();
+  }
+  updateUI() {
+    if (this._updateUITimeout !== null) {
+      clearTimeout(this._updateUITimeout);
+      this._updateUITimeout = null;
+    }
+    this._updateUITimeout = setTimeout(() => {
+      this._updateUITimeout = null;
+      this.doUpdateUI();
+    }, 25);
+  }
+  doUpdateUI() {
+    if (this._isUpdatingUI) {
+      log("MarkdownRenderer", "UI update already in progress, skipping");
+      return;
+    }
+    this._isUpdatingUI = true;
+    log("MarkdownRenderer", "Updating UI - hasInputConnection:", this._hasInputConnection, "hasReceivedData:", this._hasReceivedData, "hasContent:", Boolean(this._editableContent), "hasStoredHtml:", Boolean(this._storedHtml));
+    try {
+      this.cleanupAllWidgets();
+      if (this.size[0] < 480) this.size[0] = 480;
+      if (this.size[1] < 350) this.size[1] = 350;
+      if (this._hasInputConnection && !this._hasReceivedData && !this._storedHtml) {
+        log("MarkdownRenderer", "Showing waiting UI - connected but no data received");
+        showWaitingForInput(this);
+      } else {
+        log("MarkdownRenderer", "Showing editor - has content, data, or no connection");
+        showEditor(this);
+      }
+      if (typeof this.computeSize === "function") {
+        this.computeSize();
+      }
+      if (this.graph && typeof this.graph.setDirtyCanvas === "function") {
+        this.graph.setDirtyCanvas(true, true);
+      }
+    } finally {
+      this._isUpdatingUI = false;
+    }
+  }
+  cleanupAllWidgets() {
+    if (!this.widgets) return;
+    log("MarkdownRenderer", "Cleaning up widgets, current count:", this.widgets.length);
+    const widgetsToRemove = [...this.widgets];
+    for (const widget of widgetsToRemove) {
+      if (widget.name === "markdown_widget" || widget.name === "markdown_editor" || widget.name === "text") {
+        log("MarkdownRenderer", "Removing widget:", widget.name);
+        if (typeof widget.onRemove === "function") {
+          widget.onRemove();
+        }
+        if (typeof this.removeWidget === "function") {
+          this.removeWidget(widget);
+        } else {
+          const element = widget.element;
+          if (element && element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+          const index = this.widgets.indexOf(widget);
+          if (index > -1) {
+            this.widgets.splice(index, 1);
+          }
+        }
+      }
+    }
+    this.widgets = this.widgets.filter(
+      (w) => w.name !== "markdown_widget" && w.name !== "markdown_editor" && w.name !== "text"
+    );
+    log("MarkdownRenderer", "Widgets after cleanup:", this.widgets.length);
+  }
+  onRemoved() {
+    var _a2;
+    if (this._updateUITimeout !== null) {
+      clearTimeout(this._updateUITimeout);
+      this._updateUITimeout = null;
+    }
+    this.cleanupAllWidgets();
+    (_a2 = super.onRemoved) == null ? void 0 : _a2.call(this);
+  }
+  computeSize(out) {
+    return [480, 380];
+  }
+};
+_MarkdownRendererNode.title = "Markdown Renderer";
+_MarkdownRendererNode.type = "MarkdownRenderer";
+_MarkdownRendererNode.category = "storyboard";
+_MarkdownRendererNode._category = "storyboard";
+var MarkdownRendererNode = _MarkdownRendererNode;
+app.registerExtension({
+  name: "comfyui-storyboard.markdown-renderer",
+  async beforeRegisterNodeDef(nodeType, nodeData) {
+    if (nodeData.name === "MarkdownRenderer") {
+      log("MarkdownRenderer", "Registering node type");
+      log("MarkdownRenderer", "Node data:", nodeData);
+      const methods = [
+        "onConnectionsChange",
+        "onExecute",
+        "onExecuted",
+        "onConfigure",
+        "onNodeCreated",
+        "onRemoved",
+        "clone",
+        "onConstructed",
+        "checkAndRunOnConstructed",
+        "updateUI",
+        "doUpdateUI",
+        "cleanupAllWidgets",
+        "computeSize"
+      ];
+      for (const method of methods) {
+        const prototype = MarkdownRendererNode.prototype;
+        if (prototype[method]) {
+          nodeType.prototype[method] = prototype[method];
+          log("MarkdownRenderer", `Copied method: ${method}`);
+        }
+      }
+      nodeType.title = MarkdownRendererNode.title;
+      nodeType.type = MarkdownRendererNode.type;
+      nodeType.category = MarkdownRendererNode.category;
+      nodeType._category = MarkdownRendererNode._category;
+      log("MarkdownRenderer", "Static properties copied");
+      if (MarkdownRendererNode.type) {
+        log("MarkdownRenderer", "Registering node type with LiteGraph");
+        LiteGraph.registerNodeType(MarkdownRendererNode.type, nodeType);
+      }
+      MarkdownRendererNode.setUp();
+    }
+  },
+  nodeCreated(node2) {
+    var _a2;
+    if (node2.comfyClass === "MarkdownRenderer") {
+      log("MarkdownRenderer", "Node instance created");
+      log("MarkdownRenderer", "Node properties:", node2.properties);
+      node2._hasInputConnection = false;
+      node2._editableContent = "";
+      node2._storedHtml = "";
+      node2._sourceText = "";
+      node2._hasReceivedData = false;
+      log("MarkdownRenderer", "Node state initialized");
+      (_a2 = node2.onConstructed) == null ? void 0 : _a2.call(node2);
+      log("MarkdownRenderer", "Node constructed");
+    }
+  }
+});
+
+// src_web/comfyui/markdown_widget.ts
+var LOG_VERBOSE2 = false;
+var log2 = (...args) => {
+  if (LOG_VERBOSE2) {
     console.log(`[MarkdownWidget]`, ...args);
   }
 };
@@ -17279,7 +17627,7 @@ function createMarkdownWidget(node2, config) {
     node2,
     "text",
     ["STRING", { multiline: true }],
-    app
+    app2
   ).widget;
   textWidget.value = initialContent;
   textWidget.type = "multiline";
@@ -17469,13 +17817,53 @@ function createMarkdownWidget(node2, config) {
   };
   return widget;
 }
+function populateMarkdownWidget(node2, html3) {
+  var _a2;
+  log2("populateMarkdownWidget called");
+  if (!node2.widgets) return;
+  node2._hasReceivedData = true;
+  const finalHtml = Array.isArray(html3) ? html3.join("") : html3;
+  node2._storedHtml = finalHtml;
+  node2._sourceText = ((_a2 = node2.properties) == null ? void 0 : _a2.sourceText) || "";
+  node2._editableContent = node2._sourceText;
+  if (!node2.properties) node2.properties = {};
+  node2.properties.storedHtml = node2._storedHtml;
+  node2.properties.sourceText = node2._sourceText;
+  node2.properties.text = node2._sourceText;
+  node2.properties.markdown_widget = finalHtml;
+  let mdWidget = node2.widgets.find((w) => w.name === "markdown_widget");
+  if (mdWidget) {
+    const mainContainer = mdWidget.element;
+    const overlay = mainContainer.querySelector(".markdown-waiting-overlay");
+    if (overlay) {
+      overlay.remove();
+    }
+    const contentDiv = mainContainer.querySelector(".markdown-content");
+    if (contentDiv) {
+      contentDiv.innerHTML = finalHtml;
+    }
+    const textarea = mainContainer.querySelector(".markdown-editor-textarea");
+    if (textarea) {
+      textarea.value = node2._sourceText;
+    }
+  } else {
+    const sourceText = node2._sourceText ? Array.isArray(node2._sourceText) ? node2._sourceText.join("") : node2._sourceText : "";
+    createMarkdownWidget(node2, {
+      widgetName: "markdown_widget",
+      isEditable: false,
+      htmlContent: finalHtml,
+      sourceText,
+      initialContent: sourceText
+    });
+  }
+}
 function showEditor(node2) {
-  log("showEditor called, this:", node2);
+  log2("showEditor called, this:", node2);
   if (!node2._editableContent) {
     let existingContent = "";
     if (node2.properties && node2.properties.text && node2.properties.text.trim()) {
       existingContent = node2.properties.text;
-      log(
+      log2(
         "Restored content from node properties:",
         existingContent.substring(0, 50) + "..."
       );
@@ -17486,7 +17874,7 @@ function showEditor(node2) {
 - \`Code snippets\``;
   }
   if (node2._hasReceivedData && node2._storedHtml) {
-    log("showEditor", "Showing received data as read-only");
+    log2("showEditor", "Showing received data as read-only");
     createMarkdownWidget(node2, {
       widgetName: "markdown_widget",
       isEditable: false,
@@ -17495,7 +17883,7 @@ function showEditor(node2) {
       initialContent: node2._sourceText || ""
     });
   } else {
-    log("showEditor", "Showing editable editor");
+    log2("showEditor", "Showing editable editor");
     createMarkdownWidget(node2, {
       widgetName: "markdown_widget",
       isEditable: true,
@@ -17512,7 +17900,7 @@ function showEditor(node2) {
   if (node2.size[1] < 350) node2.size[1] = 350;
 }
 function showWaitingForInput(node2) {
-  log("showWaitingForInput called");
+  log2("showWaitingForInput called");
   if (!node2._editableContent) {
     node2._editableContent = `Write your **markdown** content here!
 - Bullet points
@@ -17540,362 +17928,28 @@ function showWaitingForInput(node2) {
   if (node2.size[0] < 480) node2.size[0] = 480;
   if (node2.size[1] < 350) node2.size[1] = 350;
 }
-
-// src_web/comfyui/common.ts
-var LOG_VERBOSE2 = true;
-var log2 = (prefix, ...args) => {
-  if (LOG_VERBOSE2) {
-    console.log(`[${prefix}]`, ...args);
+function restoreRenderedContent2(node2) {
+  log2("restoreRenderedContent called");
+  if (node2.properties && node2.properties.storedHtml) {
+    node2._storedHtml = node2.properties.storedHtml;
+    node2._sourceText = node2.properties.sourceText || [];
+    node2._hasReceivedData = true;
+    log2("Restored HTML and source from properties");
   }
-};
-var ALLOWED_TAGS = ["video", "source"];
-var ALLOWED_ATTRS = [
-  "controls",
-  "autoplay",
-  "loop",
-  "muted",
-  "preload",
-  "poster"
-];
-var MEDIA_SRC_REGEX = /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
-
-// src_web/comfyui/markdown_renderer.ts
-function createMarkdownRenderer(baseUrl) {
-  const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
-  const renderer = new _Renderer();
-  renderer.image = ({ href, title, text: text2 }) => {
-    let src = href;
-    if (normalizedBase && !/^(?:\/|https?:\/\/)/.test(href)) {
-      src = `${normalizedBase}/${href}`;
-    }
-    const titleAttr = title ? ` title="${title}"` : "";
-    return `<img src="${src}" alt="${text2}"${titleAttr} />`;
-  };
-  return renderer;
+  if (node2._storedHtml) {
+    log2("Populating widget with stored HTML");
+    populateMarkdownWidget(node2, node2._storedHtml);
+  } else {
+    log2("No stored HTML found, showing waiting UI");
+    showWaitingForInput(node2);
+  }
 }
-function renderMarkdownToHtml(markdown, baseUrl) {
-  if (!markdown) return "";
-  const markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
-  let html3 = marked.parse(markdownStr, {
-    renderer: createMarkdownRenderer(baseUrl),
-    gfm: true,
-    breaks: true
-  });
-  if (baseUrl) {
-    html3 = html3.replace(MEDIA_SRC_REGEX, `$1${baseUrl}$2$3`);
-  }
-  return purify.sanitize(html3, {
-    ADD_TAGS: ALLOWED_TAGS,
-    ADD_ATTR: ALLOWED_ATTRS
-  });
-}
-function setupMarkdownRenderer(nodeType, nodeData) {
-}
-function handleMarkdownRendererCreated(node2) {
-}
-var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNode {
-  // Debounce timeout
-  constructor(title = _MarkdownRendererNode.title) {
-    super(title);
-    // Keep category consistent
-    this._hasInputConnection = false;
-    this._editableContent = "";
-    this._storedHtml = "";
-    this._sourceText = "";
-    this._hasReceivedData = false;
-    this._isUpdatingUI = false;
-    // Add flag to prevent concurrent UI updates
-    this._updateUITimeout = null;
-    log2("MarkdownRenderer", "Constructor called");
-  }
-  onConstructed() {
-    var _a2, _b;
-    if (this.__constructed__) return false;
-    log2("MarkdownRenderer", "Node constructed");
-    this._hasInputConnection = false;
-    this._editableContent = "";
-    this._storedHtml = "";
-    this._sourceText = "";
-    this._hasReceivedData = false;
-    this._isUpdatingUI = false;
-    this._updateUITimeout = null;
-    this.type = (_a2 = this.type) != null ? _a2 : void 0;
-    this.__constructed__ = true;
-    (_b = app2.graph) == null ? void 0 : _b.trigger("nodeCreated", this);
-    log2("MarkdownRenderer", "Node state initialized");
-    return this.__constructed__;
-  }
-  clone() {
-    log2("MarkdownRenderer", "Cloning node");
-    const cloned = super.clone();
-    if (cloned) {
-      log2("MarkdownRenderer", "Cloned node properties:", cloned.properties);
-      if (cloned.properties && !!window.structuredClone) {
-        cloned.properties = structuredClone(cloned.properties);
-        log2("MarkdownRenderer", "Properties deep cloned");
-      }
-      cloned._hasInputConnection = this._hasInputConnection;
-      cloned._editableContent = this._editableContent;
-      cloned._storedHtml = this._storedHtml;
-      cloned._sourceText = this._sourceText;
-      cloned._hasReceivedData = this._hasReceivedData;
-      cloned._isUpdatingUI = false;
-      cloned._updateUITimeout = null;
-      log2("MarkdownRenderer", "State properties copied");
-      if (!cloned.properties) cloned.properties = {};
-      cloned.properties["text"] = this._editableContent;
-      cloned.properties["storedHtml"] = this._storedHtml;
-      cloned.properties["sourceText"] = this._sourceText;
-      log2("MarkdownRenderer", "Properties copied to cloned node");
-      if (cloned.widgets) {
-        cloned.widgets.length = 0;
-      }
-      cloned.onConstructed();
-      log2("MarkdownRenderer", "Cloned node constructed");
-      if (cloned.size[0] < 400) cloned.size[0] = 400;
-      if (cloned.size[1] < 350) cloned.size[1] = 350;
-      cloned.updateUI();
-      log2("MarkdownRenderer", "Cloned node UI updated");
-    }
-    return cloned;
-  }
-  onConnectionsChange(type, index, connected, linkInfo, inputOrOutput) {
-    if (type === 1 && index === 0) {
-      log2("MarkdownRenderer", "Input connection changed:", connected);
-      this._hasInputConnection = connected;
-      if (!connected) {
-        this._hasReceivedData = false;
-      }
-      this.updateUI();
-    }
-  }
-  onExecute(result) {
-    log2("MarkdownRenderer", "Node executed with result:", result);
-    if (result && result.ui) {
-      const { text: textArray, html: htmlArray } = result.ui;
-      if (textArray && textArray.length > 0) {
-        this._sourceText = Array.isArray(textArray) ? textArray.join("") : textArray;
-        this._editableContent = this._sourceText;
-        if (htmlArray && htmlArray.length > 0) {
-          this._storedHtml = Array.isArray(htmlArray) ? htmlArray.join("") : htmlArray;
-        } else {
-          this._storedHtml = renderMarkdownToHtml(this._sourceText);
-        }
-        this._hasReceivedData = true;
-        if (!this.properties) this.properties = {};
-        this.properties["storedHtml"] = this._storedHtml;
-        this.properties["sourceText"] = this._sourceText;
-        this.properties["text"] = this._sourceText;
-        log2("MarkdownRenderer", "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
-        this.updateUI();
-      } else {
-        log2("MarkdownRenderer", "Received empty data from backend");
-      }
-    } else {
-      log2("MarkdownRenderer", "No valid data received from backend");
-    }
-  }
-  onExecuted(val) {
-    log2("MarkdownRenderer", "onExecuted callback:", val);
-    const ui = val == null ? void 0 : val.ui;
-    if (!ui) return;
-    const txt = Array.isArray(ui.text) ? ui.text.join("") : ui.text || "";
-    const html3 = Array.isArray(ui.html) ? ui.html.join("") : ui.html || "";
-    this._sourceText = txt;
-    this._storedHtml = html3;
-    this._editableContent = txt;
-    this._hasReceivedData = true;
-    if (!this.properties) this.properties = {};
-    this.properties["storedHtml"] = html3;
-    this.properties["sourceText"] = txt;
-    this.properties["text"] = txt;
-    this.updateUI();
-  }
-  onConfigure(info) {
-    var _a2, _b;
-    log2("MarkdownRenderer", "Configuring node with info:", info);
-    if (this.properties) {
-      const props = this.properties;
-      if (props["storedHtml"]) {
-        log2("MarkdownRenderer", "Restoring stored HTML from properties");
-        this._storedHtml = String(props["storedHtml"]);
-        this._sourceText = String(props["sourceText"] || "");
-        this._hasReceivedData = true;
-      }
-      if (props["text"]) {
-        log2("MarkdownRenderer", "Restoring text content from properties");
-        this._editableContent = String(props["text"]);
-      }
-    }
-    this.cleanupAllWidgets();
-    const hasConnection = Boolean((_b = (_a2 = this.inputs) == null ? void 0 : _a2[0]) == null ? void 0 : _b.link);
-    log2("MarkdownRenderer", "Has input connection:", hasConnection, "Has received data:", this._hasReceivedData);
-    this._hasInputConnection = hasConnection;
-    if (!hasConnection) {
-      this._hasReceivedData = false;
-    }
-    if (this.size[0] < 400) this.size[0] = 400;
-    if (this.size[1] < 350) this.size[1] = 350;
-    this.updateUI();
-  }
-  onNodeCreated() {
-    log2("MarkdownRenderer", "Node created");
-    if (this.inputs && this.inputs[0] && this.inputs[0].link) {
-      log2("MarkdownRenderer", "Found existing input connection");
-      this._hasInputConnection = true;
-    } else {
-      this._hasInputConnection = false;
-      this._hasReceivedData = false;
-    }
-    this.updateUI();
-  }
-  updateUI() {
-    if (this._updateUITimeout !== null) {
-      clearTimeout(this._updateUITimeout);
-      this._updateUITimeout = null;
-    }
-    this._updateUITimeout = setTimeout(() => {
-      this._updateUITimeout = null;
-      this.doUpdateUI();
-    }, 25);
-  }
-  doUpdateUI() {
-    if (this._isUpdatingUI) {
-      log2("MarkdownRenderer", "UI update already in progress, skipping");
-      return;
-    }
-    this._isUpdatingUI = true;
-    log2("MarkdownRenderer", "Updating UI - hasInputConnection:", this._hasInputConnection, "hasReceivedData:", this._hasReceivedData, "hasContent:", Boolean(this._editableContent), "hasStoredHtml:", Boolean(this._storedHtml));
-    try {
-      this.cleanupAllWidgets();
-      if (this.size[0] < 480) this.size[0] = 480;
-      if (this.size[1] < 350) this.size[1] = 350;
-      if (this._hasInputConnection && !this._hasReceivedData && !this._storedHtml) {
-        log2("MarkdownRenderer", "Showing waiting UI - connected but no data received");
-        showWaitingForInput(this);
-      } else {
-        log2("MarkdownRenderer", "Showing editor - has content, data, or no connection");
-        showEditor(this);
-      }
-      if (typeof this.computeSize === "function") {
-        this.computeSize();
-      }
-      if (this.graph && typeof this.graph.setDirtyCanvas === "function") {
-        this.graph.setDirtyCanvas(true, true);
-      }
-    } finally {
-      this._isUpdatingUI = false;
-    }
-  }
-  cleanupAllWidgets() {
-    if (!this.widgets) return;
-    log2("MarkdownRenderer", "Cleaning up widgets, current count:", this.widgets.length);
-    const widgetsToRemove = [...this.widgets];
-    for (const widget of widgetsToRemove) {
-      if (widget.name === "markdown_widget" || widget.name === "markdown_editor" || widget.name === "text") {
-        log2("MarkdownRenderer", "Removing widget:", widget.name);
-        if (typeof widget.onRemove === "function") {
-          widget.onRemove();
-        }
-        if (typeof this.removeWidget === "function") {
-          this.removeWidget(widget);
-        } else {
-          const element = widget.element;
-          if (element && element.parentNode) {
-            element.parentNode.removeChild(element);
-          }
-          const index = this.widgets.indexOf(widget);
-          if (index > -1) {
-            this.widgets.splice(index, 1);
-          }
-        }
-      }
-    }
-    this.widgets = this.widgets.filter(
-      (w) => w.name !== "markdown_widget" && w.name !== "markdown_editor" && w.name !== "text"
-    );
-    log2("MarkdownRenderer", "Widgets after cleanup:", this.widgets.length);
-  }
-  onRemoved() {
-    var _a2;
-    if (this._updateUITimeout !== null) {
-      clearTimeout(this._updateUITimeout);
-      this._updateUITimeout = null;
-    }
-    this.cleanupAllWidgets();
-    (_a2 = super.onRemoved) == null ? void 0 : _a2.call(this);
-  }
-  computeSize(out) {
-    return [480, 380];
-  }
-};
-_MarkdownRendererNode.title = "Markdown Renderer";
-_MarkdownRendererNode.type = "MarkdownRenderer";
-_MarkdownRendererNode.category = "storyboard";
-_MarkdownRendererNode._category = "storyboard";
-var MarkdownRendererNode = _MarkdownRendererNode;
-app2.registerExtension({
-  name: "comfyui-storyboard.markdown-renderer",
-  async beforeRegisterNodeDef(nodeType, nodeData) {
-    if (nodeData.name === "MarkdownRenderer") {
-      log2("MarkdownRenderer", "Registering node type");
-      log2("MarkdownRenderer", "Node data:", nodeData);
-      const methods = [
-        "onConnectionsChange",
-        "onExecute",
-        "onExecuted",
-        "onConfigure",
-        "onNodeCreated",
-        "onRemoved",
-        "clone",
-        "onConstructed",
-        "checkAndRunOnConstructed",
-        "updateUI",
-        "doUpdateUI",
-        "cleanupAllWidgets",
-        "computeSize"
-      ];
-      for (const method of methods) {
-        const prototype = MarkdownRendererNode.prototype;
-        if (prototype[method]) {
-          nodeType.prototype[method] = prototype[method];
-          log2("MarkdownRenderer", `Copied method: ${method}`);
-        }
-      }
-      nodeType.title = MarkdownRendererNode.title;
-      nodeType.type = MarkdownRendererNode.type;
-      nodeType.category = MarkdownRendererNode.category;
-      nodeType._category = MarkdownRendererNode._category;
-      log2("MarkdownRenderer", "Static properties copied");
-      if (MarkdownRendererNode.type) {
-        log2("MarkdownRenderer", "Registering node type with LiteGraph");
-        LiteGraph.registerNodeType(MarkdownRendererNode.type, nodeType);
-      }
-      MarkdownRendererNode.setUp();
-    }
-  },
-  nodeCreated(node2) {
-    var _a2;
-    if (node2.comfyClass === "MarkdownRenderer") {
-      log2("MarkdownRenderer", "Node instance created");
-      log2("MarkdownRenderer", "Node properties:", node2.properties);
-      node2._hasInputConnection = false;
-      node2._editableContent = "";
-      node2._storedHtml = "";
-      node2._sourceText = "";
-      node2._hasReceivedData = false;
-      log2("MarkdownRenderer", "Node state initialized");
-      (_a2 = node2.onConstructed) == null ? void 0 : _a2.call(node2);
-      log2("MarkdownRenderer", "Node constructed");
-    }
-  }
-});
 export {
-  MarkdownRendererNode,
-  createMarkdownRenderer,
-  handleMarkdownRendererCreated,
-  renderMarkdownToHtml,
-  setupMarkdownRenderer
+  createMarkdownWidget,
+  populateMarkdownWidget,
+  restoreRenderedContent2 as restoreRenderedContent,
+  showEditor,
+  showWaitingForInput
 };
 /*! Bundled license information:
 

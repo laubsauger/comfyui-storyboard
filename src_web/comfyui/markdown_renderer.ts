@@ -1,27 +1,10 @@
 import { app } from "scripts/app.js";
-import { ComfyWidgets } from "scripts/widgets.js";
 import DOMPurify from "dompurify";
 import { marked, Renderer } from "marked";
-
-const LOG_VERBOSE = true;
-const log = (...args: any[]) => {
-  if (LOG_VERBOSE) {
-    console.log(`[MarkdownRenderer]`, ...args);
-  }
-};
-
-const ALLOWED_TAGS = ["video", "source"];
-const ALLOWED_ATTRS = [
-  "controls",
-  "autoplay",
-  "loop",
-  "muted",
-  "preload",
-  "poster",
-];
-
-const MEDIA_SRC_REGEX =
-  /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
+import { StoryboardBaseNode } from "./base_node.js";
+import { showEditor, showWaitingForInput, restoreRenderedContent } from "./markdown_widget.js";
+import { ALLOWED_TAGS, ALLOWED_ATTRS, MEDIA_SRC_REGEX, log } from "./common.js";
+import { LGraphNode, LiteGraph } from "@comfyorg/litegraph";
 
 export function createMarkdownRenderer(baseUrl?: string): Renderer {
   const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
@@ -50,7 +33,6 @@ export function renderMarkdownToHtml(
     renderer: createMarkdownRenderer(baseUrl),
     gfm: true,
     breaks: true,
-
   }) as string;
 
   if (baseUrl) {
@@ -63,601 +45,418 @@ export function renderMarkdownToHtml(
   });
 }
 
-function createMarkdownWidget(node: any, config: any) {
-  const {
-    widgetName = "markdown_widget",
-    isEditable = false,
-    initialContent = "",
-    htmlContent = "",
-    sourceText = "",
-    onContentChange = null,
-  } = config;
-
-  const mainContainer = document.createElement("div");
-  mainContainer.classList.add("storyboard-main-container");
-  mainContainer.style.position = "relative";
-  mainContainer.style.minWidth = "240px";
-  mainContainer.style.minHeight = "140px";
-  mainContainer.style.width = "100%";
-  mainContainer.style.height = "100%";
-  mainContainer.style.display = "flex";
-  mainContainer.style.flexDirection = "column";
-
-  mainContainer.addEventListener("click", (e) => {
-    e.stopPropagation();
-  });
-
-  const toolbar = document.createElement("div");
-  toolbar.className = "markdown-editor-toolbar";
-  toolbar.style.flex = "0 0 auto";
-  const charCount = document.createElement("div");
-  charCount.className = "markdown-char-count";
-  const toggleGroup = document.createElement("div");
-  toggleGroup.className = "markdown-toggle-group";
-  const markdownButton = document.createElement("button");
-  markdownButton.className = "markdown-editor-button active";
-  markdownButton.textContent = "MD";
-  const textButton = document.createElement("button");
-  textButton.className = "markdown-editor-button";
-  textButton.textContent = "Text";
-
-  const container = document.createElement("div");
-  container.className = "markdown-content";
-  container.style.flex = "1 1 auto";
-  container.style.minHeight = "140px";
-  container.style.overflow = "auto";
-  container.innerHTML = htmlContent || renderMarkdownToHtml(initialContent);
-  const textarea = document.createElement("textarea");
-  textarea.className = "markdown-editor-textarea";
-  textarea.style.display = "none";
-  textarea.style.flex = "1 1 auto";
-  textarea.style.minHeight = "120px";
-  textarea.style.width = "100%";
-  textarea.readOnly = !isEditable;
-  textarea.placeholder = isEditable
-    ? "Enter your markdown content here..."
-    : "Source markdown from connected input...";
-  textarea.value = sourceText || initialContent;
-
-  let isSourceMode = false;
-  let currentContent = initialContent;
-
-  const updateCharCount = () => {
-    const text = currentContent || "";
-    charCount.textContent = `${text.length} chars`;
-  };
-  updateCharCount();
-
-  function showMarkdown() {
-    container.style.display = "block";
-    textarea.style.display = "none";
-    markdownButton.classList.add("active");
-    textButton.classList.remove("active");
-    isSourceMode = false;
-    if (isEditable) {
-      container.innerHTML = renderMarkdownToHtml(currentContent);
-    }
-    updateCharCount();
-  }
-
-  function showText() {
-    textarea.style.display = "block";
-    container.style.display = "none";
-    textButton.classList.add("active");
-    markdownButton.classList.remove("active");
-    isSourceMode = true;
-    updateCharCount();
-    setTimeout(() => textarea.focus(), 0);
-  }
-
-  markdownButton.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (isSourceMode) {
-      showMarkdown();
-    } else {
-      showText();
-    }
-  });
-
-  textButton.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (isSourceMode) {
-      showMarkdown();
-    } else {
-      showText();
-    }
-  });
-
-  const warningIndicator = document.createElement("div");
-  warningIndicator.className = "markdown-warning-indicator";
-  warningIndicator.style.display = isEditable ? "none" : "block";
-  warningIndicator.textContent = "🔒 Read-only";
-  warningIndicator.title =
-    "Editing is disabled while input is connected. Disconnect the input to enable manual editing.";
-
-  if (isEditable) {
-    container.addEventListener("click", (e) => {
-      if (toolbar.contains(e.target as Node)) {
-        return;
-      }
-      e.stopPropagation();
-      if (!isSourceMode) {
-        showText();
-      }
-    });
-    container.style.cursor = "text";
-    textarea.addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
-  } else {
-    const tooltipText =
-      "Editing is disabled while input is connected. Disconnect the input to enable manual editing.";
-    container.title = tooltipText;
-    textarea.title = tooltipText;
-  }
-
-  if (isEditable) {
-    textarea.addEventListener("input", () => {
-      currentContent = textarea.value;
-      updateCharCount();
-      if (onContentChange) onContentChange(currentContent);
-    });
-
-    const autoSaveAndPreview = () => {
-      if (isSourceMode) {
-        if (textarea.value !== currentContent) {
-          currentContent = textarea.value;
-          if (onContentChange) onContentChange(currentContent);
-        }
-        showMarkdown();
-      }
-    };
-
-    const originalOnDeselected = node.onDeselected;
-    node.onDeselected = function (this: any) {
-      autoSaveAndPreview();
-      if (originalOnDeselected) originalOnDeselected.call(this);
-    };
-
-    const handleDocumentClick = (e: any) => {
-      if (!mainContainer.contains(e.target)) {
-        autoSaveAndPreview();
-      }
-    };
-    document.addEventListener("click", handleDocumentClick);
-  }
-
-  toggleGroup.append(markdownButton, textButton);
-  if (isEditable) {
-    toolbar.append(toggleGroup, charCount);
-  } else {
-    toolbar.append(toggleGroup, warningIndicator, charCount);
-  }
-  mainContainer.append(toolbar, container, textarea);
-
-  const widget = node.addDOMWidget(
-    widgetName,
-    "div",
-    mainContainer,
-    {}
-  );
-  widget.draw = () => { };
-  return widget;
-}
-
-export function populateMarkdownWidget(node: any, html: string | string[]) {
-  log("populateMarkdownWidget called");
-  if (!node.widgets) return;
-
-  // Update node state
-  node._hasReceivedData = true;
-  const finalHtml = Array.isArray(html) ? html.join("") : html;
-  node._storedHtml = finalHtml;
-  node._sourceText = node.properties?.sourceText || "";
-  node._editableContent = node._sourceText;
-
-  // Update properties
-  if (!node.properties) node.properties = {};
-  node.properties.storedHtml = node._storedHtml;
-  node.properties.sourceText = node._sourceText;
-  node.properties.text = node._sourceText;
-  node.properties.markdown_widget = finalHtml;
-
-  // Update or create widget
-  let mdWidget = node.widgets.find((w: any) => w.name === "markdown_widget");
-  if (mdWidget) {
-    const mainContainer = mdWidget.element;
-    const overlay = mainContainer.querySelector(".markdown-waiting-overlay");
-    if (overlay) {
-      overlay.remove();
-    }
-    const contentDiv = mainContainer.querySelector(".markdown-content");
-    if (contentDiv) {
-      contentDiv.innerHTML = finalHtml;
-    }
-    const textarea = mainContainer.querySelector(".markdown-editor-textarea");
-    if (textarea) {
-      (textarea as HTMLTextAreaElement).value = node._sourceText;
-    }
-  } else {
-    const sourceText = node._sourceText
-      ? Array.isArray(node._sourceText)
-        ? node._sourceText.join("")
-        : node._sourceText
-      : "";
-    const widget = createMarkdownWidget(node, {
-      widgetName: "markdown_widget",
-      isEditable: false,
-      htmlContent: finalHtml,
-      sourceText: sourceText,
-      initialContent: sourceText,
-    });
-    node.widgets.splice(node.widgets.indexOf(widget), 1);
-    node.addDOMWidget(widget.name, "div", widget.element, {});
-  }
-}
-
-export function showEditor(node: any) {
-  log("showEditor called, this:", node);
-
-  // Clean up any existing widgets first
-  if (node.widgets) {
-    const widgetsToRemove = [...node.widgets];
-    for (let widget of widgetsToRemove) {
-      widget.onRemove?.();
-      const index = node.widgets.indexOf(widget);
-      if (index > -1) {
-        node.widgets.splice(index, 1);
-      }
-    }
-  }
-
-  // Restore content from properties or default
-  if (!node._editableContent) {
-    let existingContent = "";
-    if (node.properties && node.properties.text && node.properties.text.trim()) {
-      existingContent = node.properties.text;
-      log(
-        "Restored content from node properties:",
-        existingContent.substring(0, 50) + "..."
-      );
-    }
-    node._editableContent =
-      existingContent ||
-      `Write your **markdown** content here!
-- Bullet points
-- *Italic text*
-- \`Code snippets\``;
-  }
-
-  // Create hidden text widget for storage
-  let textWidget = ComfyWidgets.STRING(
-    node,
-    "text",
-    ["STRING", { multiline: true }],
-    app
-  ).widget;
-  textWidget.value = node._editableContent || "";
-  (textWidget as any).type = "hidden";
-
-  // Create markdown editor widget
-  createMarkdownWidget(node, {
-    widgetName: "markdown_editor",
-    isEditable: true,
-    initialContent: node._editableContent,
-    onContentChange: (content: string) => {
-      node._editableContent = content;
-      if (textWidget) {
-        textWidget.value = content;
-      }
-      if (!node.properties) node.properties = {};
-      node.properties.text = content;
-      node.properties.markdown_editor = content;
-    },
-  });
-
-  if (node.size[0] < 400) node.size[0] = 400;
-  if (node.size[1] < 350) node.size[1] = 350;
-}
-
-export function showWaitingForInput(node: any) {
-  log("showWaitingForInput called");
-
-  // Clean up any existing widgets first
-  if (node.widgets) {
-    const widgetsToRemove = [...node.widgets];
-    for (let widget of widgetsToRemove) {
-      widget.onRemove?.();
-      const index = node.widgets.indexOf(widget);
-      if (index > -1) {
-        node.widgets.splice(index, 1);
-      }
-    }
-  }
-
-  if (!node._editableContent) {
-    node._editableContent = `Write your **markdown** content here!
-- Bullet points
-- *Italic text*
-- \`Code snippets\``;
-  }
-
-  const initialContent = Array.isArray(node._editableContent)
-    ? node._editableContent.join("")
-    : node._editableContent;
-
-  const widget = createMarkdownWidget(node, {
-    widgetName: "markdown_widget",
-    isEditable: false,
-    initialContent: initialContent,
-    htmlContent: renderMarkdownToHtml(initialContent),
-    sourceText: initialContent,
-  });
-
-  const mainContainer = widget.element;
-
-  const overlay = document.createElement("div");
-  overlay.className = "markdown-waiting-overlay";
-
-  overlay.innerHTML = `
-    <div class="markdown-waiting-icon">⏳</div>
-    <div class="markdown-waiting-title">Waiting for Input</div>
-    <div class="markdown-waiting-subtitle">This node is connected to an input source.</div>
-    <div class="markdown-waiting-note">Manual content will be overridden</div>
-  `;
-  mainContainer.appendChild(overlay);
-
-  if (node.size[0] < 400) node.size[0] = 400;
-  if (node.size[1] < 350) node.size[1] = 350;
-}
-
-export function restoreRenderedContent(node: any) {
-  log("restoreRenderedContent called");
-  if (node.properties && node.properties.storedHtml) {
-    node._storedHtml = node.properties.storedHtml;
-    node._sourceText = node.properties.sourceText || [];
-    node._hasReceivedData = true;
-    log("Restored HTML and source from properties");
-  }
-
-  if (node._storedHtml) {
-    log("Populating widget with stored HTML");
-    populateMarkdownWidget(node, node._storedHtml);
-  } else {
-    log("No stored HTML found, showing waiting UI");
-    showWaitingForInput(node);
-  }
-}
-
-// Helper function to log node state
-function logNodeState(node: any, context: string) {
-  if (!LOG_VERBOSE) return;
-
-  log(`${context} - Node State:`, {
-    hasInputConnection: node._hasInputConnection,
-    hasReceivedData: node._hasReceivedData,
-    storedHtml: node._storedHtml ? `[${node._storedHtml.length} chars]` : null,
-    sourceText: node._sourceText ? `[${node._sourceText.length} items]` : null,
-    editableContent: node._editableContent ? `[${node._editableContent.length} chars]` : null,
-    properties: node.properties ? {
-      storedHtml: node.properties.storedHtml ? `[${node.properties.storedHtml.length} chars]` : null,
-      sourceText: node.properties.sourceText ? `[${node.properties.sourceText.length} items]` : null,
-      text: node.properties.text ? `[${node.properties.text.length} chars]` : null
-    } : null,
-    widgets: node.widgets ? `[${node.widgets.length} widgets]` : null
-  });
+export function setupMarkdownRenderer(nodeType: any, nodeData: any) {
+  // Setup any node-specific configuration here
 }
 
 export function handleMarkdownRendererCreated(node: any) {
-  log("handleMarkdownRendererCreated called");
-  node.title = "📝 " + (node.title || "Markdown Renderer");
-
-  // Initialize state from properties
-  const hasInput = node.inputs?.[0]?.link;
-  node._hasInputConnection = hasInput || false;
-  log(`Initial input connection state: ${hasInput}`);
-
-  // Restore content from properties
-  if (node.properties) {
-    log("Restoring state from properties:", node.properties);
-    // For standalone nodes, use text property
-    if (!hasInput && node.properties.text) {
-      node._editableContent = node.properties.text;
-      node._storedHtml = renderMarkdownToHtml(node.properties.text);
-      node._sourceText = [node.properties.text];
-      node._hasReceivedData = true;
-      log("Restored content for standalone node:", node._editableContent);
-    } else if (hasInput) {
-      // For connected nodes, use storedHtml and sourceText
-      node._editableContent = node.properties.text || "";
-      node._storedHtml = node.properties.storedHtml || null;
-      node._sourceText = node.properties.sourceText || null;
-      node._hasReceivedData = !!node._storedHtml;
-      log("Restored content for connected node:", {
-        hasStoredHtml: !!node._storedHtml,
-        hasSourceText: !!node._sourceText
-      });
-    }
-  } else {
-    log("No properties found, initializing empty state");
-    node._editableContent = "";
-    node._storedHtml = null;
-    node._sourceText = null;
-    node._hasReceivedData = false;
-  }
-
-  logNodeState(node, "After initialization");
-
-  // Ensure widgets array exists
-  if (!node.widgets) {
-    node.widgets = [];
-  }
-
-  const originalOnConnectionsChange = node.onConnectionsChange;
-  node.onConnectionsChange = function (
-    type: number,
-    index: number,
-    connected: boolean,
-    link_info: any
-  ) {
-    originalOnConnectionsChange?.apply(this, arguments);
-    if (type === 1 && index === 0) {
-      this._hasInputConnection = connected;
-      if (!connected) {
-        showEditor(this);
-      } else {
-        showWaitingForInput(this);
-      }
-    }
-  };
-
-  // Initialize UI based on connection state and stored content
-  if (hasInput) {
-    if (node._storedHtml) {
-      log("Node has connection and stored HTML, restoring content");
-      restoreRenderedContent(node);
-    } else {
-      log("Node has connection but no stored HTML, showing waiting UI");
-      showWaitingForInput(node);
-    }
-  } else {
-    log("Node has no connection, showing editor");
-    showEditor(node);
-  }
+  // Handle any node creation specific logic here
 }
 
-export function setupMarkdownRenderer(nodeType: any, _nodeData: any) {
-  const onExecuted = nodeType.prototype.onExecuted;
-  nodeType.prototype.onExecuted = function (message: any) {
-    onExecuted?.apply(this, arguments);
-    log("onExecuted called with message:", message);
+export class MarkdownRendererNode extends StoryboardBaseNode {
+  static override title = "Markdown Renderer";
+  static override type = "MarkdownRenderer";
+  static override category = "storyboard";
+  static override _category = "storyboard"; // Keep category consistent
 
-    // Only process execution results if we have an input connection and HTML content
-    if (this._hasInputConnection && message.html) {
-      log("Processing execution message for connected node");
-      this._sourceText = message.text || [];
-      this._storedHtml = message.html;
-      this._hasReceivedData = true;
+  _hasInputConnection = false;
+  _editableContent = "";
+  _storedHtml = "";
+  _sourceText = "";
+  _hasReceivedData = false;
+  _isUpdatingUI = false; // Add flag to prevent concurrent UI updates
+  _updateUITimeout: number | null = null; // Debounce timeout
 
-      if (!this.properties) this.properties = {};
-      this.properties.storedHtml = message.html;
-      this.properties.sourceText = message.text || [];
-      this.properties.text = message.text || [];
-      this.properties.markdown_widget = message.html;
+  constructor(title = MarkdownRendererNode.title) {
+    super(title); // Remove skipOnConstructedCall parameter
+    log("MarkdownRenderer", "Constructor called");
+  }
 
-      logNodeState(this, "Before populating widget");
-      populateMarkdownWidget(this, message.html);
-      logNodeState(this, "After populating widget");
-    } else {
-      log("Skipping execution message - no input connection or HTML content");
-    }
-  };
+  protected override onConstructed() {
+    if (this.__constructed__) return false;
+    log("MarkdownRenderer", "Node constructed");
 
-  const onConfigure = nodeType.prototype.onConfigure;
-  nodeType.prototype.onConfigure = function () {
-    onConfigure?.apply(this, arguments);
-    log("onConfigure called");
+    // Initialize node state
+    this._hasInputConnection = false;
+    this._editableContent = "";
+    this._storedHtml = "";
+    this._sourceText = "";
+    this._hasReceivedData = false;
+    this._isUpdatingUI = false;
+    this._updateUITimeout = null;
 
-    // Skip UI initialization if this is a node duplication
-    if (this._isDuplication) {
-      log("Skipping UI initialization in onConfigure - node duplication detected");
-      return;
-    }
+    // This is kinda a hack, but if this.type is still null, then set it to undefined to match
+    this.type = this.type ?? undefined;
+    this.__constructed__ = true;
 
-    // Clean up any existing widgets first
-    if (this.widgets) {
-      const widgetsToRemove = [...this.widgets];
-      for (let widget of widgetsToRemove) {
-        if (widget.element) {
-          widget.element.remove();
-        }
-        widget.onRemove?.();
-        const index = this.widgets.indexOf(widget);
-        if (index > -1) {
-          this.widgets.splice(index, 1);
-        }
+    // Notify extensions that this node was created
+    app.graph?.trigger("nodeCreated", this);
+
+    log("MarkdownRenderer", "Node state initialized");
+    return this.__constructed__;
+  }
+
+  override clone() {
+    log("MarkdownRenderer", "Cloning node");
+    const cloned = super.clone()!;
+    if (cloned) {
+      log("MarkdownRenderer", "Cloned node properties:", cloned.properties);
+
+      // Deep clone properties using structuredClone if available
+      if (cloned.properties && !!window.structuredClone) {
+        cloned.properties = structuredClone(cloned.properties);
+        log("MarkdownRenderer", "Properties deep cloned");
       }
+
+      // Copy all state properties
+      (cloned as any)._hasInputConnection = this._hasInputConnection;
+      (cloned as any)._editableContent = this._editableContent;
+      (cloned as any)._storedHtml = this._storedHtml;
+      (cloned as any)._sourceText = this._sourceText;
+      (cloned as any)._hasReceivedData = this._hasReceivedData;
+      (cloned as any)._isUpdatingUI = false; // Reset UI update flag
+      (cloned as any)._updateUITimeout = null; // Reset timeout
+      log("MarkdownRenderer", "State properties copied");
+
+      // Ensure properties are properly copied
+      if (!cloned.properties) cloned.properties = {};
+      cloned.properties['text'] = this._editableContent;
+      cloned.properties['storedHtml'] = this._storedHtml;
+      cloned.properties['sourceText'] = this._sourceText;
+      log("MarkdownRenderer", "Properties copied to cloned node");
+
+      // Force clean widget removal from the clone
+      if (cloned.widgets) {
+        cloned.widgets.length = 0; // Clear widgets array completely
+      }
+
+      // Call onConstructed to ensure proper initialization
+      (cloned as any).onConstructed();
+      log("MarkdownRenderer", "Cloned node constructed");
+
+      // Set node size before UI update
+      if (cloned.size[0] < 400) cloned.size[0] = 400;
+      if (cloned.size[1] < 350) cloned.size[1] = 350;
+
+      // Update UI (now debounced to avoid race conditions)
+      (cloned as any).updateUI();
+      log("MarkdownRenderer", "Cloned node UI updated");
     }
+    return cloned;
+  }
+
+  override onConnectionsChange(type: number, index: number, connected: boolean, linkInfo: any, inputOrOutput: any) {
+    if (type === 1 && index === 0) { // type 1 = input, index 0 = first input
+      log("MarkdownRenderer", "Input connection changed:", connected);
+      this._hasInputConnection = connected;
+      // If we're disconnecting, reset the received data flag
+      if (!connected) {
+        this._hasReceivedData = false;
+      }
+      this.updateUI();
+    }
+  }
+
+  override onExecute(result: any) {
+    log("MarkdownRenderer", "Node executed with result:", result);
+
+    // The Python backend returns: { ui: { text: [...], html: [...] }, result: (...) }
+    if (result && result.ui) {
+      const { text: textArray, html: htmlArray } = result.ui;
+
+      if (textArray && textArray.length > 0) {
+        // Join arrays if multiple items, or use first item
+        this._sourceText = Array.isArray(textArray) ? textArray.join("") : textArray;
+        this._editableContent = this._sourceText;
+
+        if (htmlArray && htmlArray.length > 0) {
+          this._storedHtml = Array.isArray(htmlArray) ? htmlArray.join("") : htmlArray;
+        } else {
+          // Fallback: render markdown if no HTML provided
+          this._storedHtml = renderMarkdownToHtml(this._sourceText);
+        }
+
+        this._hasReceivedData = true;
+
+        // Update properties for persistence
+        if (!this.properties) this.properties = {};
+        this.properties['storedHtml'] = this._storedHtml;
+        this.properties['sourceText'] = this._sourceText;
+        this.properties['text'] = this._sourceText;
+
+        log("MarkdownRenderer", "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
+
+        // Update UI to show the received content
+        this.updateUI();
+      } else {
+        log("MarkdownRenderer", "Received empty data from backend");
+      }
+    } else {
+      log("MarkdownRenderer", "No valid data received from backend");
+    }
+  }
+
+  onExecuted(val: any) {
+    log("MarkdownRenderer", "onExecuted callback:", val);
+    const ui = val?.ui;
+    if (!ui) return;
+
+    const txt = Array.isArray(ui.text) ? ui.text.join("") : ui.text || "";
+    const html = Array.isArray(ui.html) ? ui.html.join("") : ui.html || "";
+
+    this._sourceText = txt;
+    this._storedHtml = html;
+    this._editableContent = txt;
+    this._hasReceivedData = true;
+
+    // persist
+    if (!this.properties) this.properties = {} as any;
+    this.properties["storedHtml"] = html;
+    this.properties["sourceText"] = txt;
+    this.properties["text"] = txt;
+
+    // swap UI
+    this.updateUI();
+  }
+
+  override onConfigure(info: any) {
+    log("MarkdownRenderer", "Configuring node with info:", info);
 
     // Restore stored content from properties if available
     if (this.properties) {
-      const hasConnection = this.inputs && this.inputs[0] && this.inputs[0].link;
-
-      if (hasConnection && this.properties.storedHtml) {
-        log("Restoring content from properties in onConfigure for connected node");
-        this._storedHtml = this.properties.storedHtml;
-        this._sourceText = this.properties.sourceText || [];
-        this._editableContent = this.properties.text || "";
-        this._hasReceivedData = true;
-      } else if (!hasConnection && this.properties.text) {
-        log("Restoring content from properties in onConfigure for standalone node");
-        this._editableContent = this.properties.text;
-        this._storedHtml = renderMarkdownToHtml(this.properties.text);
-        this._sourceText = [this.properties.text];
+      const props = this.properties as Record<string, any>;
+      if (props['storedHtml']) {
+        log("MarkdownRenderer", "Restoring stored HTML from properties");
+        this._storedHtml = String(props['storedHtml']);
+        this._sourceText = String(props['sourceText'] || "");
         this._hasReceivedData = true;
       }
-      logNodeState(this, "After restoring content");
+      if (props['text']) {
+        log("MarkdownRenderer", "Restoring text content from properties");
+        this._editableContent = String(props['text']);
+      }
     }
 
-    const hasConnection = this.inputs && this.inputs[0] && this.inputs[0].link;
-    log(`Input connection state in onConfigure: ${hasConnection}`);
+    // Clean up widgets before reconfiguring
+    this.cleanupAllWidgets();
+
+    // Check if we have an input connection
+    const hasConnection = Boolean(this.inputs?.[0]?.link);
+    log("MarkdownRenderer", "Has input connection:", hasConnection, "Has received data:", this._hasReceivedData);
 
     // Update connection state
     this._hasInputConnection = hasConnection;
+    if (!hasConnection) {
+      this._hasReceivedData = false;
+    }
 
-    // Initialize UI based on connection state
-    if (hasConnection) {
-      if (this._storedHtml) {
-        log("Node has connection and stored HTML, restoring content");
-        restoreRenderedContent(this);
-      } else {
-        log("Node has connection but no stored HTML, showing waiting UI");
+    // Set node size before UI update
+    if (this.size[0] < 400) this.size[0] = 400;
+    if (this.size[1] < 350) this.size[1] = 350;
+
+    // Update UI (now debounced)
+    this.updateUI();
+  }
+
+  override onNodeCreated() {
+    log("MarkdownRenderer", "Node created");
+    // Check for existing input connections (for loaded workflows)
+    if (this.inputs && this.inputs[0] && this.inputs[0].link) {
+      log("MarkdownRenderer", "Found existing input connection");
+      this._hasInputConnection = true;
+    } else {
+      // If no connection, ensure we're in standalone mode
+      this._hasInputConnection = false;
+      this._hasReceivedData = false;
+    }
+
+    this.updateUI();
+  }
+
+  private updateUI() {
+    // Clear any existing timeout
+    if (this._updateUITimeout !== null) {
+      clearTimeout(this._updateUITimeout);
+      this._updateUITimeout = null;
+    }
+
+    // Debounce UI updates to prevent multiple rapid calls
+    this._updateUITimeout = setTimeout(() => {
+      this._updateUITimeout = null;
+      this.doUpdateUI();
+    }, 25); // Short delay to debounce rapid calls
+  }
+
+  private doUpdateUI() {
+    // Prevent concurrent UI updates
+    if (this._isUpdatingUI) {
+      log("MarkdownRenderer", "UI update already in progress, skipping");
+      return;
+    }
+
+    this._isUpdatingUI = true;
+    log("MarkdownRenderer", "Updating UI - hasInputConnection:", this._hasInputConnection, "hasReceivedData:", this._hasReceivedData, "hasContent:", Boolean(this._editableContent), "hasStoredHtml:", Boolean(this._storedHtml));
+
+    try {
+      // Force complete widget cleanup
+      this.cleanupAllWidgets();
+
+      // Set node size before widget creation - increased width for better content display
+      if (this.size[0] < 480) this.size[0] = 480; // Increased minimum width to prevent cutoff
+      if (this.size[1] < 350) this.size[1] = 350;
+
+      // Show waiting UI if we have an input connection but no data received
+      // This takes priority over having editable content
+      if (this._hasInputConnection && !this._hasReceivedData && !this._storedHtml) {
+        log("MarkdownRenderer", "Showing waiting UI - connected but no data received");
         showWaitingForInput(this);
       }
-    } else {
-      log("Node has no connection, showing editor");
-      showEditor(this);
+      // Show editor in all other cases (no connection, has data, has stored content)
+      else {
+        log("MarkdownRenderer", "Showing editor - has content, data, or no connection");
+        showEditor(this);
+      }
+
+      // Force a size recalculation to remove any reserved space
+      if (typeof this.computeSize === 'function') {
+        this.computeSize();
+      }
+      if (this.graph && typeof this.graph.setDirtyCanvas === 'function') {
+        this.graph.setDirtyCanvas(true, true);
+      }
+    } finally {
+      this._isUpdatingUI = false;
     }
-  };
+  }
 
-  const originalOnDeselected = nodeType.prototype.onDeselected;
-  nodeType.prototype.onDeselected = function () {
-    originalOnDeselected?.apply(this, arguments);
-    // Clear duplication flag when node is deselected
-    this._isDuplication = false;
-  };
+  private cleanupAllWidgets() {
+    if (!this.widgets) return;
 
-  const originalOnSelected = nodeType.prototype.onSelected;
-  nodeType.prototype.onSelected = function () {
-    originalOnSelected?.apply(this, arguments);
-    // Clear duplication flag when node is selected
-    this._isDuplication = false;
-  };
+    log("MarkdownRenderer", "Cleaning up widgets, current count:", this.widgets.length);
 
-  const originalOnRemoved = nodeType.prototype.onRemoved;
-  nodeType.prototype.onRemoved = function () {
-    originalOnRemoved?.apply(this, arguments);
-    // Clean up widgets when node is removed
-    if (this.widgets) {
-      const widgetsToRemove = [...this.widgets];
-      for (let widget of widgetsToRemove) {
-        if (widget.element) {
-          widget.element.remove();
+    // Create a copy of the widgets array to avoid modification during iteration
+    const widgetsToRemove = [...this.widgets];
+
+    for (const widget of widgetsToRemove) {
+      if (widget.name === 'markdown_widget' || widget.name === 'markdown_editor' || widget.name === 'text') {
+        log("MarkdownRenderer", "Removing widget:", widget.name);
+
+        // Call widget's cleanup function first
+        if (typeof widget.onRemove === 'function') {
+          widget.onRemove();
         }
-        widget.onRemove?.();
-        const index = this.widgets.indexOf(widget);
-        if (index > -1) {
-          this.widgets.splice(index, 1);
+
+        // Use ComfyUI's removeWidget method if available
+        if (typeof this.removeWidget === 'function') {
+          this.removeWidget(widget);
+        } else {
+          // Fallback: manual removal
+          const element = (widget as any).element;
+          if (element && element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+
+          const index = this.widgets.indexOf(widget);
+          if (index > -1) {
+            this.widgets.splice(index, 1);
+          }
         }
       }
     }
-  };
 
-  // Add handler for node duplication
-  const originalClone = nodeType.prototype.clone;
-  nodeType.prototype.clone = function () {
-    const cloned = originalClone.apply(this, arguments);
-    cloned._isDuplication = true;
-    return cloned;
-  };
+    // Final cleanup: remove any remaining markdown widgets
+    this.widgets = this.widgets.filter(w =>
+      w.name !== 'markdown_widget' && w.name !== 'markdown_editor' && w.name !== 'text'
+    );
+
+    log("MarkdownRenderer", "Widgets after cleanup:", this.widgets.length);
+  }
+
+  override onRemoved(): void {
+    // Clear any pending UI update timeout
+    if (this._updateUITimeout !== null) {
+      clearTimeout(this._updateUITimeout);
+      this._updateUITimeout = null;
+    }
+
+    // Clean up all widgets
+    this.cleanupAllWidgets();
+
+    super.onRemoved?.();
+  }
+
+  override computeSize(out?: any): any {
+    return [480, 380] as any;
+  }
 }
+
+// Register the node type
+app.registerExtension({
+  name: "comfyui-storyboard.markdown-renderer",
+  async beforeRegisterNodeDef(nodeType: any, nodeData: any) {
+    if (nodeData.name === "MarkdownRenderer") {
+      log("MarkdownRenderer", "Registering node type");
+      log("MarkdownRenderer", "Node data:", nodeData);
+
+      // Copy methods individually to avoid prototype issues
+      const methods = [
+        "onConnectionsChange",
+        "onExecute",
+        "onExecuted",
+        "onConfigure",
+        "onNodeCreated",
+        "onRemoved",
+        "clone",
+        "onConstructed",
+        "checkAndRunOnConstructed",
+        "updateUI",
+        "doUpdateUI",
+        "cleanupAllWidgets",
+        "computeSize"
+      ];
+
+      for (const method of methods) {
+        const prototype = MarkdownRendererNode.prototype as any;
+        if (prototype[method]) {
+          nodeType.prototype[method] = prototype[method];
+          log("MarkdownRenderer", `Copied method: ${method}`);
+        }
+      }
+
+      // Copy static properties
+      nodeType.title = MarkdownRendererNode.title;
+      nodeType.type = MarkdownRendererNode.type;
+      nodeType.category = MarkdownRendererNode.category;
+      nodeType._category = MarkdownRendererNode._category;
+      log("MarkdownRenderer", "Static properties copied");
+
+      // Register the node type with LiteGraph
+      if (MarkdownRendererNode.type) {
+        log("MarkdownRenderer", "Registering node type with LiteGraph");
+        LiteGraph.registerNodeType(MarkdownRendererNode.type, nodeType);
+      }
+
+      // Set up the node type
+      MarkdownRendererNode.setUp();
+    }
+  },
+
+  nodeCreated(node: any) {
+    if (node.comfyClass === "MarkdownRenderer") {
+      log("MarkdownRenderer", "Node instance created");
+      log("MarkdownRenderer", "Node properties:", node.properties);
+
+      // Initialize node state
+      node._hasInputConnection = false;
+      node._editableContent = "";
+      node._storedHtml = "";
+      node._sourceText = "";
+      node._hasReceivedData = false;
+      log("MarkdownRenderer", "Node state initialized");
+
+      // Call onConstructed to ensure proper initialization
+      node.onConstructed?.();
+      log("MarkdownRenderer", "Node constructed");
+    }
+  }
+});
