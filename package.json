@@ -1,9 +1,11 @@
 {
   "name": "comfyui-storyboard",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "devDependencies": {
     "@comfyorg/comfyui-frontend-types": "^1.15.5",
     "@comfyorg/litegraph": "^0.11.3",
+    "dompurify": "^3.2.6",
+    "marked": "^15.0.12",
     "prettier": "^3.3.3",
     "sass": "^1.77.8",
     "typescript": "^5.5.4"

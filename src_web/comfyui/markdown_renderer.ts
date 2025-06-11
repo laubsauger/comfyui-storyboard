@@ -1,5 +1,7 @@
 import { app } from "scripts/app.js";
 import { ComfyWidgets } from "scripts/widgets.js";
+import DOMPurify from "dompurify";
+import { marked, Renderer } from "marked";
 
 const LOG_VERBOSE = true;
 const log = (...args: any[]) => {
@@ -7,6 +9,55 @@ const log = (...args: any[]) => {
     console.log(`[MarkdownRenderer]`, ...args);
   }
 };
+
+const ALLOWED_TAGS = ["video", "source"];
+const ALLOWED_ATTRS = [
+  "controls",
+  "autoplay",
+  "loop",
+  "muted",
+  "preload",
+  "poster",
+];
+
+const MEDIA_SRC_REGEX =
+  /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
+
+export function createMarkdownRenderer(baseUrl?: string): Renderer {
+  const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
+  const renderer = new Renderer();
+  renderer.image = ({ href, title, text }) => {
+    let src = href;
+    if (normalizedBase && !/^(?:\/|https?:\/\/)/.test(href)) {
+      src = `${normalizedBase}/${href}`;
+    }
+    const titleAttr = title ? ` title="${title}"` : "";
+    return `<img src="${src}" alt="${text}"${titleAttr} />`;
+  };
+  return renderer;
+}
+
+export function renderMarkdownToHtml(
+  markdown: string,
+  baseUrl?: string
+): string {
+  if (!markdown) return "";
+
+  let html = marked.parse(markdown, {
+    renderer: createMarkdownRenderer(baseUrl),
+    gfm: true,
+    breaks: true,
+  }) as string;
+
+  if (baseUrl) {
+    html = html.replace(MEDIA_SRC_REGEX, `$1${baseUrl}$2$3`);
+  }
+
+  return DOMPurify.sanitize(html, {
+    ADD_TAGS: ALLOWED_TAGS,
+    ADD_ATTR: ALLOWED_ATTRS,
+  });
+}
 
 function createMarkdownWidget(node: any, config: any) {
   const {
@@ -42,7 +93,7 @@ function createMarkdownWidget(node: any, config: any) {
   const container = document.createElement("div");
   container.className = "markdown-content";
   container.style.flex = "1";
-  container.innerHTML = htmlContent || parseMarkdownSimple(initialContent);
+  container.innerHTML = htmlContent || renderMarkdownToHtml(initialContent);
   const textarea = document.createElement("textarea");
   textarea.className = "markdown-editor-textarea";
   textarea.style.display = "none";
@@ -69,7 +120,7 @@ function createMarkdownWidget(node: any, config: any) {
     textButton.classList.remove("active");
     isSourceMode = false;
     if (isEditable) {
-      container.innerHTML = parseMarkdownSimple(currentContent);
+      container.innerHTML = renderMarkdownToHtml(currentContent);
     }
     updateCharCount();
   }
@@ -324,7 +375,7 @@ export function showWaitingForInput(node: any) {
     widgetName: "markdown_widget",
     isEditable: false,
     initialContent: node._editableContent,
-    htmlContent: parseMarkdownSimple(node._editableContent),
+    htmlContent: renderMarkdownToHtml(node._editableContent),
     sourceText: node._editableContent,
   });
 
@@ -351,16 +402,34 @@ export function setupMarkdownRenderer(nodeType: any, _nodeData: any) {
     onExecuted?.apply(this, arguments);
     log("Node executed with message:", message);
 
-    if (this._hasInputConnection && message.html) {
-      this._sourceText = message.text || [];
-      this._storedHtml = message.html;
+    if (this._hasInputConnection && (message.html || message.text)) {
       this._hasReceivedData = true;
+      let finalHtml;
+      let sourceText = message.text || [];
+
+      if (message.text) {
+        const markdown = Array.isArray(sourceText)
+          ? sourceText.join("\n")
+          : sourceText;
+        finalHtml = renderMarkdownToHtml(markdown);
+      } else {
+        const receivedHtml = Array.isArray(message.html)
+          ? message.html.join("")
+          : message.html;
+        finalHtml = DOMPurify.sanitize(receivedHtml, {
+          ADD_TAGS: ALLOWED_TAGS,
+          ADD_ATTR: ALLOWED_ATTRS,
+        });
+      }
+
+      this._sourceText = sourceText;
+      this._storedHtml = finalHtml;
 
       if (!this.properties) this.properties = {};
-      this.properties.storedHtml = message.html;
-      this.properties.sourceText = message.text || [];
+      this.properties.storedHtml = finalHtml;
+      this.properties.sourceText = sourceText;
 
-      populateMarkdownWidget(this, message.html);
+      populateMarkdownWidget(this, finalHtml);
     }
   };
 
@@ -440,71 +509,4 @@ export function handleMarkdownRendererCreated(node: any) {
     }
   };
   requestAnimationFrame(initializeUI);
-}
-
-export function parseMarkdownSimple(text: string): string {
-  if (!text) return "";
-  const lines = text.split('\n');
-  let html = '', inCodeBlock = false, inList = false, listType: 'ul' | 'ol' | null = null;
-
-  for (const line of lines) {
-    if (line.startsWith('```')) {
-      html += inCodeBlock ? '</code></pre>' : '<pre><code>';
-      inCodeBlock = !inCodeBlock;
-      continue;
-    }
-    if (inCodeBlock) {
-      html += escapeHtml(line) + '\n';
-      continue;
-    }
-
-    const closeList = () => {
-      if (inList) {
-        html += `</${listType}>`;
-        inList = false;
-        listType = null;
-      }
-    };
-
-    const trimmed = line.trim();
-    if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
-      if (!inList || listType !== 'ul') {
-        closeList();
-        html += '<ul>';
-        inList = true;
-        listType = 'ul';
-      }
-      html += `<li>${processInline(trimmed.substring(2))}</li>`;
-    } else if (/^\d+\.\s/.test(trimmed)) {
-      if (!inList || listType !== 'ol') {
-        closeList();
-        html += '<ol>';
-        inList = true;
-        listType = 'ol';
-      }
-      html += `<li>${processInline(trimmed.replace(/^\d+\.\s/, ''))}</li>`;
-    } else {
-      closeList();
-      if (trimmed.startsWith('# ')) html += `<h1>${processInline(trimmed.substring(2))}</h1>`;
-      else if (trimmed.startsWith('## ')) html += `<h2>${processInline(trimmed.substring(3))}</h2>`;
-      else if (trimmed.startsWith('### ')) html += `<h3>${processInline(trimmed.substring(4))}</h3>`;
-      else if (trimmed.startsWith('> ')) html += `<blockquote>${processInline(trimmed.substring(2))}</blockquote>`;
-      else if (trimmed) html += `<p>${processInline(line)}</p>`;
-    }
-  }
-  if (inList) html += `</${listType}>`;
-  return html;
-}
-
-function processInline(text: string): string {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/~~(.*?)~~/g, '<del>$1</del>')
-    .replace(/`(.*?)`/g, '<code>$1</code>')
-    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
-}
-
-export function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }

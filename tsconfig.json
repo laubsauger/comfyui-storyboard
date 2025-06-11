@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "es2019",
     "module": "ESNext",
+    "moduleResolution": "node",
     "baseUrl": "./",
     "paths": {
       "@comfyorg/litegraph": ["node_modules/@comfyorg/litegraph/dist/litegraph.d.ts"],
@@ -30,7 +31,8 @@
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "allowUnusedLabels": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": [
     "src_web/*.ts",
