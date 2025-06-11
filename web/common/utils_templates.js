@@ -1,5 +1,5 @@
-import * as dom from "./utils_dom";
-import { getObjectValue } from "./shared_utils";
+import * as dom from "./utils_dom.js";
+import { getObjectValue } from "./shared_utils.js";
 const CONFIG_DEFAULT = {
     attrBind: "data-bind",
     attrIf: "data-if",

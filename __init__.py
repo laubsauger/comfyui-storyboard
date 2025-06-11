@@ -24,7 +24,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     MarkdownRenderer.NAME: MarkdownRenderer.DISPLAY_NAME,
 }
 
-WEB_DIRECTORY = "./web/comfyui"
+WEB_DIRECTORY = "./web"
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 DIR_WEB = os.path.abspath(f"{THIS_DIR}/{WEB_DIRECTORY}")

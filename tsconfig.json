@@ -12,7 +12,7 @@
       "node_modules": ["node_modules/*"],
       "scripts/*":  ["src_web/scripts_comfy/*"]
     },
-    "outDir": "web/",
+    "outDir": "web",
     "removeComments": true,
     "strict": true,
     "noImplicitAny": true,

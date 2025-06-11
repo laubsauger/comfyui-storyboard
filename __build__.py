@@ -51,7 +51,9 @@ def build():
     if os.path.exists(DIR_WEB):
         shutil.rmtree(DIR_WEB)
     shutil.copytree(
-        DIR_SRC_WEB, DIR_WEB, ignore=shutil.ignore_patterns("*.ts", "*.scss", "typings")
+        DIR_SRC_WEB,
+        DIR_WEB,
+        ignore=shutil.ignore_patterns("*.ts", "*.scss", "typings*"),
     )
     log_step(status="Done")
 
@@ -107,58 +109,69 @@ def build():
             print(e.stderr.decode("utf-8"))
         return
 
-    log_step(msg="TypeScript Path Aliases")
+    log_step(msg="Removing unneeded directories")
+    scripts_comfy_path = os.path.join(DIR_WEB, "scripts_comfy")
+    if os.path.exists(scripts_comfy_path):
+        shutil.rmtree(scripts_comfy_path)
+    log_step(status="Done")
+
+    log_step(msg="Cleaning Imports")
     try:
         with open(os.path.join(THIS_DIR, "tsconfig.json"), "r") as f:
             tsconfig = json.load(f)
-
-        base_url = os.path.join(
-            THIS_DIR, tsconfig["compilerOptions"].get("baseUrl", ".")
-        )
         paths = tsconfig["compilerOptions"].get("paths", {})
 
-        out_dir = os.path.join(
-            THIS_DIR, tsconfig["compilerOptions"].get("outDir", DIR_WEB)
-        )
+        js_files = glob.glob(os.path.join(DIR_WEB, "**", "*.js"), recursive=True)
 
-        js_files = glob.glob(os.path.join(out_dir, "**", "*.js"), recursive=True)
-
-        for js_file in js_files:
-            with open(js_file, "r+") as f:
+        for file in js_files:
+            with open(file, "r+", encoding="utf-8") as f:
                 content = f.read()
                 new_content = content
 
-                # Find all import statements
-                for match in re.finditer(
-                    r'import\s+.*\s+from\s+[\'"]([^\'"]+)[\'"]', content
-                ):
-                    import_path = match.group(1)
+                for match in re.finditer(r'(from\s+[\'"])(.+?)([\'"])', content):
+                    full_match = match.group(0)
+                    prefix = match.group(1)
+                    import_path = match.group(2)
+                    suffix = match.group(3)
 
-                    # Try to resolve path alias
-                    resolved = False
-                    for alias, real_paths in paths.items():
-                        alias_base = alias.replace("/*", "")
-                        if import_path.startswith(alias_base):
-                            # This is a basic replacement, assumes one path and wildcard
-                            relative_path = import_path.replace(
-                                alias_base, real_paths[0].replace("/*", "")
-                            )
+                    new_import_path = None
 
-                            # Make it a relative path from the current file
-                            target_path = os.path.abspath(
-                                os.path.join(base_url, relative_path)
-                            )
-                            file_dir = os.path.dirname(js_file)
+                    if import_path.startswith("scripts/"):
+                        rel_path = file.replace(f"{DIR_WEB}{os.sep}", "")
+                        num = rel_path.count(os.sep)
+                        new_import_path = f'{"../" * (num + 1)}{import_path}'
 
-                            rel_path = os.path.relpath(target_path, file_dir)
-                            if not rel_path.startswith("."):
-                                rel_path = "./" + rel_path
+                    elif import_path.startswith("storyboard/"):
+                        for alias, real_paths in paths.items():
+                            alias_base = alias.replace("/*", "")
+                            if import_path.startswith(alias_base):
+                                real_path_base = real_paths[0].replace("/*", "")
+                                src_relative_path = import_path.replace(
+                                    alias_base, real_path_base
+                                )
+                                src_abs_path = os.path.abspath(
+                                    os.path.join(THIS_DIR, src_relative_path)
+                                )
+                                out_equivalent_path = src_abs_path.replace(
+                                    DIR_SRC_WEB, DIR_WEB
+                                )
 
-                            new_content = new_content.replace(
-                                f'"{import_path}"', f'"{rel_path}"'
-                            )
-                            resolved = True
-                            break  # First match wins
+                                new_import_path = os.path.relpath(
+                                    out_equivalent_path, os.path.dirname(file)
+                                ).replace("\\", "/")
+                                if not new_import_path.startswith("."):
+                                    new_import_path = "./" + new_import_path
+                                break
+
+                    if new_import_path:
+                        new_full_match = f"{prefix}{new_import_path}{suffix}"
+                        new_content = new_content.replace(full_match, new_full_match)
+
+                new_content, n = re.subn(
+                    r'(\s*from [\'"](?!.*[.]js[\'"]).*?)([\'"];)',
+                    "\\1.js\\2",
+                    new_content,
+                )
 
                 if new_content != content:
                     f.seek(0)
@@ -167,7 +180,7 @@ def build():
         log_step(status="Done")
     except Exception as e:
         log_step(status="Error")
-        print(f"Error resolving TypeScript path aliases: {e}")
+        print(f"Error cleaning imports: {e}")
         return
 
     end_time = time.time()
