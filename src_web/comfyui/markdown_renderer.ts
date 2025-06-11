@@ -282,7 +282,9 @@ export function populateMarkdownWidget(node: any, html: string | string[]) {
 export function showEditor(node: any) {
   log("showEditor called, this:", node);
   if (node.widgets) {
-    const widgetsToRemove = [...node.widgets];
+    const widgetsToRemove = node.widgets.filter(
+      (w: any) => w.name === "markdown_editor" || w.name === "markdown_widget"
+    );
     for (let widget of widgetsToRemove) {
       widget.onRemove?.();
       const index = node.widgets.indexOf(widget);
@@ -292,30 +294,31 @@ export function showEditor(node: any) {
     }
   }
 
-  if (!node._editableContent) {
-    let existingContent = "";
-    if (node.properties && node.properties.text && node.properties.text.trim()) {
-      existingContent = node.properties.text;
-      log(
-        "Restored content from node properties:",
-        existingContent.substring(0, 50) + "..."
-      );
-    }
+  let textWidget = node.widgets.find((w: any) => w.name === "text");
+
+  if (!textWidget) {
+    textWidget = ComfyWidgets.STRING(
+      node,
+      "text",
+      ["STRING", { multiline: true }],
+      app
+    ).widget;
+    textWidget.value = node.properties.text || "";
+  }
+
+  // Restore content: priority to widget value, then properties (for backward-compat)
+  if (textWidget.value) {
+    node._editableContent = textWidget.value;
+  } else if (node.properties && node.properties.text) {
+    node._editableContent = node.properties.text;
+  } else {
     node._editableContent =
-      existingContent ||
       `Write your **markdown** content here!
 - Bullet points
 - *Italic text*
 - \`Code snippets\``;
   }
-
-  let textWidget = ComfyWidgets.STRING(
-    node,
-    "text",
-    ["STRING", { multiline: true }],
-    app
-  ).widget;
-  textWidget.value = node._editableContent || "";
+  textWidget.value = node._editableContent;
   (textWidget as any).type = "hidden";
 
   createMarkdownWidget(node, {

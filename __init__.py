@@ -8,6 +8,7 @@
 import os
 import shutil
 from .py.markdown_renderer import MarkdownRenderer
+from .py.llm_api import OpenAIChatGPT, OpenAIAdvancedConfiguration, OpenAIAPIKeyManager
 from glob import glob
 import random
 
@@ -18,10 +19,16 @@ def log(message, color="GREEN"):
 
 NODE_CLASS_MAPPINGS = {
     MarkdownRenderer.NAME: MarkdownRenderer,
+    OpenAIChatGPT.NAME: OpenAIChatGPT,
+    OpenAIAdvancedConfiguration.NAME: OpenAIAdvancedConfiguration,
+    OpenAIAPIKeyManager.NAME: OpenAIAPIKeyManager,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     MarkdownRenderer.NAME: MarkdownRenderer.DISPLAY_NAME,
+    OpenAIChatGPT.NAME: OpenAIChatGPT.DISPLAY_NAME,
+    OpenAIAdvancedConfiguration.NAME: OpenAIAdvancedConfiguration.DISPLAY_NAME,
+    OpenAIAPIKeyManager.NAME: OpenAIAPIKeyManager.DISPLAY_NAME,
 }
 
 WEB_DIRECTORY = "./web"
@@ -50,9 +57,9 @@ for file in glob(os.path.join(DIR_PY, "*.py")) + glob(os.path.join(DIR_WEB, "*.j
         nodes.append("display_int")
 
 print()
-adjs = ["exciting", "extraordinary", "epic", "fantastic", "magnificent"]
+adjs = ["clutch", "banging", "rad", "fascinating", "marvelous"]
 log(
-    f"🎉 ComfyUI Storyboard: Loaded {len(nodes)} {random.choice(adjs)} nodes.",
+    f"[ComfyUI Storyboard] Loaded {len(nodes)} {random.choice(adjs)} nodes. 🦾",
     color="BRIGHT_GREEN",
 )
 print()

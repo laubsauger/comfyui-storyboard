@@ -46,3 +46,7 @@ userdata/
 userdata/**
 web/comfyui/testing/
 web/comfyui/tests/
+.pylintrc
+.style.yapf
+README.md
+config.json

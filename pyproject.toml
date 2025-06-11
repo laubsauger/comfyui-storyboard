@@ -1,9 +1,9 @@
 [project]
 name = "storyboard"
 description = "A ComfyUI node set for creating and managing visual storyboards. Includes nodes for markdown rendering, image composition, and storyboard sequence management."
-version = "1.0.5"
+version = "1.0.6"
 license = {file = "LICENSE"}
-dependencies = ["markdown2"]
+dependencies = ["markdown2", "python-dotenv", "openai"]
 
 [project.urls]
 Repository = "https://github.com/laubsauger/comfyui-storyboard"

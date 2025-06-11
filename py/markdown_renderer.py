@@ -8,11 +8,9 @@ class MarkdownRenderer:
     @classmethod
     def INPUT_TYPES(s):
         return {
-            "required": {
-                # "text": ("STRING", {"forceInput": False}),
-            },
+            "required": {},
             "optional": {
-                "text": ("STRING", {"forceInput": True}),
+                "text": ("STRING", {"multiline": True}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -23,7 +21,7 @@ class MarkdownRenderer:
     INPUT_IS_LIST = True
     RETURN_TYPES = ("STRING",)
     FUNCTION = "render_markdown"
-    CATEGORY = "storyboard"
+    CATEGORY = "storyboard/Markdown"
     OUTPUT_NODE = True
     OUTPUT_IS_LIST = (True,)
     MARKDOWN_EXTRAS = [
