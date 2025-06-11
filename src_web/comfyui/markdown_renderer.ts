@@ -1,7 +1,7 @@
 import { app } from "scripts/app.js";
 import { ComfyWidgets } from "scripts/widgets.js";
 
-const LOG_VERBOSE = false;
+const LOG_VERBOSE = true;
 const log = (...args: any[]) => {
   if (LOG_VERBOSE) {
     console.log(`[MarkdownRenderer]`, ...args);
@@ -327,6 +327,103 @@ export function showWaitingForInput(node: any) {
   node.addDOMWidget("waiting_overlay", "div", mainContainer, {});
   if (node.size[0] < 400) node.size[0] = 400;
   if (node.size[1] < 350) node.size[1] = 350;
+}
+
+export function setupMarkdownRenderer(nodeType: any, _nodeData: any) {
+  const onExecuted = nodeType.prototype.onExecuted;
+  nodeType.prototype.onExecuted = function (message: any) {
+    onExecuted?.apply(this, arguments);
+    log("Node executed with message:", message);
+
+    if (this._hasInputConnection && message.html) {
+      this._sourceText = message.text || [];
+      this._storedHtml = message.html;
+      this._hasReceivedData = true;
+
+      if (!this.properties) this.properties = {};
+      this.properties.storedHtml = message.html;
+      this.properties.sourceText = message.text || [];
+
+      populateMarkdownWidget(this, message.html);
+    }
+  };
+
+  const onConfigure = nodeType.prototype.onConfigure;
+  nodeType.prototype.onConfigure = function () {
+    onConfigure?.apply(this, arguments);
+
+    if (this.properties) {
+      if (this.properties.storedHtml) {
+        this._storedHtml = this.properties.storedHtml;
+        this._sourceText = this.properties.sourceText || [];
+        this._hasReceivedData = true;
+        log("Restored stored content in onConfigure");
+      }
+    }
+
+    if (this.widgets_values?.length) {
+      const hasConnection =
+        this.inputs && this.inputs[0] && this.inputs[0].link;
+      if (hasConnection) {
+        requestAnimationFrame(() => {
+          populateMarkdownWidget(this, this.widgets_values);
+        });
+      }
+    }
+  };
+}
+
+export function handleMarkdownRendererCreated(node: any) {
+  node.title = "📝 " + (node.title || "Markdown Renderer");
+  node._hasInputConnection = false;
+  node._editableContent = "";
+  node._hasReceivedData = false;
+  node._storedHtml = null;
+  node._sourceText = null;
+
+  if (node.inputs && node.inputs[0] && node.inputs[0].link) {
+    node._hasInputConnection = true;
+    log("Found existing input connection");
+  }
+
+  const originalOnConnectionsChange = node.onConnectionsChange;
+  node.onConnectionsChange = function (
+    type: number,
+    index: number,
+    connected: boolean,
+    link_info: any
+  ) {
+    originalOnConnectionsChange?.apply(this, arguments);
+    if (type === 1 && index === 0) {
+      this._hasInputConnection = connected;
+      if (!connected) {
+        this._hasReceivedData = false;
+        showEditor(this);
+      } else {
+        this._hasReceivedData = false;
+        showWaitingForInput(this);
+      }
+    }
+  };
+
+  const initializeUI = () => {
+    const hasConnection =
+      node.inputs && node.inputs[0] && node.inputs[0].link;
+    node._hasInputConnection = !!hasConnection;
+
+    if (!node._hasInputConnection) {
+      showEditor(node);
+    } else {
+      const hasStoredContent =
+        node._storedHtml || (node.properties && node.properties.storedHtml);
+      if (hasStoredContent) {
+        restoreRenderedContent(node);
+      } else {
+        showWaitingForInput(node);
+      }
+    }
+  };
+  requestAnimationFrame(initializeUI);
 }
 
 export function parseMarkdownSimple(text: string): string {
