@@ -3167,7 +3167,8 @@ function createMarkdownRenderer(baseUrl) {
 }
 function renderMarkdownToHtml(markdown, baseUrl) {
   if (!markdown) return "";
-  let html3 = marked.parse(markdown, {
+  const markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
+  let html3 = marked.parse(markdownStr, {
     renderer: createMarkdownRenderer(baseUrl),
     gfm: true,
     breaks: true
@@ -3192,11 +3193,18 @@ function createMarkdownWidget(node, config) {
   const mainContainer = document.createElement("div");
   mainContainer.classList.add("storyboard-main-container");
   mainContainer.style.position = "relative";
+  mainContainer.style.minWidth = "240px";
+  mainContainer.style.minHeight = "140px";
+  mainContainer.style.width = "100%";
+  mainContainer.style.height = "100%";
+  mainContainer.style.display = "flex";
+  mainContainer.style.flexDirection = "column";
   mainContainer.addEventListener("click", (e) => {
     e.stopPropagation();
   });
   const toolbar = document.createElement("div");
   toolbar.className = "markdown-editor-toolbar";
+  toolbar.style.flex = "0 0 auto";
   const charCount = document.createElement("div");
   charCount.className = "markdown-char-count";
   const toggleGroup = document.createElement("div");
@@ -3209,12 +3217,16 @@ function createMarkdownWidget(node, config) {
   textButton.textContent = "Text";
   const container = document.createElement("div");
   container.className = "markdown-content";
-  container.style.flex = "1";
+  container.style.flex = "1 1 auto";
+  container.style.minHeight = "140px";
+  container.style.overflow = "auto";
   container.innerHTML = htmlContent || renderMarkdownToHtml(initialContent);
   const textarea = document.createElement("textarea");
   textarea.className = "markdown-editor-textarea";
   textarea.style.display = "none";
-  textarea.style.flex = "1";
+  textarea.style.flex = "1 1 auto";
+  textarea.style.minHeight = "120px";
+  textarea.style.width = "100%";
   textarea.readOnly = !isEditable;
   textarea.placeholder = isEditable ? "Enter your markdown content here..." : "Source markdown from connected input...";
   textarea.value = sourceText || initialContent;
@@ -3337,7 +3349,11 @@ function populateMarkdownWidget(node, html3) {
   const finalHtml = Array.isArray(html3) ? html3.join("") : html3;
   node._storedHtml = finalHtml;
   node._sourceText = ((_a2 = node.properties) == null ? void 0 : _a2.sourceText) || "";
+  node._editableContent = node._sourceText;
   node.properties.storedHtml = node._storedHtml;
+  node.properties.sourceText = node._sourceText;
+  node.properties.text = node._sourceText;
+  node.properties.markdown_widget = finalHtml;
   let mdWidget = node.widgets.find(
     (w) => w.name === "markdown_widget"
   );
@@ -3377,9 +3393,7 @@ function showEditor(node) {
   var _a2;
   log("showEditor called, this:", node);
   if (node.widgets) {
-    const widgetsToRemove = node.widgets.filter(
-      (w) => w.name === "markdown_editor" || w.name === "markdown_widget"
-    );
+    const widgetsToRemove = [...node.widgets];
     for (let widget of widgetsToRemove) {
       (_a2 = widget.onRemove) == null ? void 0 : _a2.call(widget);
       const index = node.widgets.indexOf(widget);
@@ -3388,27 +3402,27 @@ function showEditor(node) {
       }
     }
   }
-  let textWidget = node.widgets.find((w) => w.name === "text");
-  if (!textWidget) {
-    textWidget = ComfyWidgets.STRING(
-      node,
-      "text",
-      ["STRING", { multiline: true }],
-      app
-    ).widget;
-    textWidget.value = node.properties.text || "";
-  }
-  if (textWidget.value) {
-    node._editableContent = textWidget.value;
-  } else if (node.properties && node.properties.text) {
-    node._editableContent = node.properties.text;
-  } else {
-    node._editableContent = `Write your **markdown** content here!
+  if (!node._editableContent) {
+    let existingContent = "";
+    if (node.properties && node.properties.text && node.properties.text.trim()) {
+      existingContent = node.properties.text;
+      log(
+        "Restored content from node properties:",
+        existingContent.substring(0, 50) + "..."
+      );
+    }
+    node._editableContent = existingContent || `Write your **markdown** content here!
 - Bullet points
 - *Italic text*
 - \`Code snippets\``;
   }
-  textWidget.value = node._editableContent;
+  let textWidget = ComfyWidgets.STRING(
+    node,
+    "text",
+    ["STRING", { multiline: true }],
+    app
+  ).widget;
+  textWidget.value = node._editableContent || "";
   textWidget.type = "hidden";
   createMarkdownWidget(node, {
     widgetName: "markdown_editor",
@@ -3421,24 +3435,11 @@ function showEditor(node) {
       }
       if (!node.properties) node.properties = {};
       node.properties.text = content;
+      node.properties.markdown_editor = content;
     }
   });
   if (node.size[0] < 400) node.size[0] = 400;
   if (node.size[1] < 350) node.size[1] = 350;
-}
-function restoreRenderedContent(node) {
-  log("restoreRenderedContent called");
-  if (node.properties && node.properties.storedHtml) {
-    node._storedHtml = node.properties.storedHtml;
-    node._sourceText = node.properties.sourceText || [];
-    node._hasReceivedData = true;
-    log("Restored HTML and source from properties");
-  }
-  if (node._storedHtml) {
-    populateMarkdownWidget(node, node._storedHtml);
-  } else {
-    showWaitingForInput(node);
-  }
 }
 function showWaitingForInput(node) {
   var _a2;
@@ -3459,12 +3460,13 @@ function showWaitingForInput(node) {
 - *Italic text*
 - \`Code snippets\``;
   }
+  const initialContent = Array.isArray(node._editableContent) ? node._editableContent.join("") : node._editableContent;
   const widget = createMarkdownWidget(node, {
     widgetName: "markdown_widget",
     isEditable: false,
-    initialContent: node._editableContent,
-    htmlContent: renderMarkdownToHtml(node._editableContent),
-    sourceText: node._editableContent
+    initialContent,
+    htmlContent: renderMarkdownToHtml(initialContent),
+    sourceText: initialContent
   });
   const mainContainer = widget.element;
   const overlay = document.createElement("div");
@@ -3472,38 +3474,43 @@ function showWaitingForInput(node) {
   overlay.innerHTML = `
     <div class="markdown-waiting-icon">\u23F3</div>
     <div class="markdown-waiting-title">Waiting for Input</div>
-    <div class="markdown-waiting-subtitle">This node is connected to an input source. Execute the workflow to see the rendered markdown content.</div>
+    <div class="markdown-waiting-subtitle">This node is connected to an input source.</div>
     <div class="markdown-waiting-note">Manual content will be overridden</div>
   `;
   mainContainer.appendChild(overlay);
   if (node.size[0] < 400) node.size[0] = 400;
   if (node.size[1] < 350) node.size[1] = 350;
 }
+function restoreRenderedContent(node) {
+  log("restoreRenderedContent called");
+  if (node.properties && node.properties.storedHtml) {
+    node._storedHtml = node.properties.storedHtml;
+    node._sourceText = node.properties.sourceText || "";
+    node._editableContent = node._sourceText;
+    node._hasReceivedData = true;
+    log("Restored HTML and source from properties");
+  }
+  if (node._storedHtml) {
+    populateMarkdownWidget(node, node._storedHtml);
+  } else {
+    showWaitingForInput(node);
+  }
+}
 function setupMarkdownRenderer(nodeType, _nodeData) {
   const onExecuted = nodeType.prototype.onExecuted;
   nodeType.prototype.onExecuted = function(message) {
     onExecuted == null ? void 0 : onExecuted.apply(this, arguments);
     log("Node executed with message:", message);
-    if (this._hasInputConnection && (message.html || message.text)) {
+    if (this._hasInputConnection && message.html) {
+      this._sourceText = message.text || [];
+      this._storedHtml = message.html;
       this._hasReceivedData = true;
-      let finalHtml;
-      let sourceText = message.text || [];
-      if (message.text) {
-        const markdown = Array.isArray(sourceText) ? sourceText.join("\n") : sourceText;
-        finalHtml = renderMarkdownToHtml(markdown);
-      } else {
-        const receivedHtml = Array.isArray(message.html) ? message.html.join("") : message.html;
-        finalHtml = purify.sanitize(receivedHtml, {
-          ADD_TAGS: ALLOWED_TAGS,
-          ADD_ATTR: ALLOWED_ATTRS
-        });
-      }
-      this._sourceText = sourceText;
-      this._storedHtml = finalHtml;
       if (!this.properties) this.properties = {};
-      this.properties.storedHtml = finalHtml;
-      this.properties.sourceText = sourceText;
-      populateMarkdownWidget(this, finalHtml);
+      this.properties.storedHtml = message.html;
+      this.properties.sourceText = message.text || [];
+      this.properties.text = message.text || [];
+      this.properties.markdown_widget = message.html;
+      populateMarkdownWidget(this, message.html);
     }
   };
   const onConfigure = nodeType.prototype.onConfigure;
@@ -3514,30 +3521,44 @@ function setupMarkdownRenderer(nodeType, _nodeData) {
       if (this.properties.storedHtml) {
         this._storedHtml = this.properties.storedHtml;
         this._sourceText = this.properties.sourceText || [];
+        this._editableContent = this._sourceText;
         this._hasReceivedData = true;
         log("Restored stored content in onConfigure");
       }
     }
-    if ((_a2 = this.widgets_values) == null ? void 0 : _a2.length) {
-      const hasConnection = this.inputs && this.inputs[0] && this.inputs[0].link;
-      if (hasConnection) {
-        requestAnimationFrame(() => {
-          populateMarkdownWidget(this, this.widgets_values);
-        });
-      }
+    const hasConnection = this.inputs && this.inputs[0] && this.inputs[0].link;
+    if (hasConnection && ((_a2 = this.widgets_values) == null ? void 0 : _a2.length)) {
+      requestAnimationFrame(() => {
+        populateMarkdownWidget(this, this.widgets_values);
+      });
+    } else if (!hasConnection) {
+      showEditor(this);
     }
   };
 }
 function handleMarkdownRendererCreated(node) {
+  var _a2, _b;
   node.title = "\u{1F4DD} " + (node.title || "Markdown Renderer");
-  node._hasInputConnection = false;
-  node._editableContent = "";
-  node._hasReceivedData = false;
-  node._storedHtml = null;
-  node._sourceText = null;
-  if (node.inputs && node.inputs[0] && node.inputs[0].link) {
-    node._hasInputConnection = true;
-    log("Found existing input connection");
+  const hasInput = (_b = (_a2 = node.inputs) == null ? void 0 : _a2[0]) == null ? void 0 : _b.link;
+  node._hasInputConnection = hasInput || false;
+  if (node.properties) {
+    node._editableContent = node.properties.sourceText || "";
+    node._storedHtml = node.properties.storedHtml || null;
+    node._sourceText = node.properties.sourceText || null;
+    node._hasReceivedData = !!node._storedHtml;
+  } else {
+    node._editableContent = "";
+    node._storedHtml = null;
+    node._sourceText = null;
+    node._hasReceivedData = false;
+  }
+  if (!node.widgets) {
+    node.widgets = [];
+  }
+  const textWidget = node.widgets.find((w) => w.name === "text");
+  if (textWidget) {
+    textWidget.type = "hidden";
+    textWidget.hidden = true;
   }
   const originalOnConnectionsChange = node.onConnectionsChange;
   node.onConnectionsChange = function(type, index, connected, link_info) {
@@ -3545,29 +3566,21 @@ function handleMarkdownRendererCreated(node) {
     if (type === 1 && index === 0) {
       this._hasInputConnection = connected;
       if (!connected) {
-        this._hasReceivedData = false;
         showEditor(this);
       } else {
-        this._hasReceivedData = false;
         showWaitingForInput(this);
       }
     }
   };
-  const initializeUI = () => {
-    const hasConnection = node.inputs && node.inputs[0] && node.inputs[0].link;
-    node._hasInputConnection = !!hasConnection;
-    if (!node._hasInputConnection) {
-      showEditor(node);
+  if (hasInput) {
+    if (node._storedHtml) {
+      restoreRenderedContent(node);
     } else {
-      const hasStoredContent = node._storedHtml || node.properties && node.properties.storedHtml;
-      if (hasStoredContent) {
-        restoreRenderedContent(node);
-      } else {
-        showWaitingForInput(node);
-      }
+      showWaitingForInput(node);
     }
-  };
-  requestAnimationFrame(initializeUI);
+  } else {
+    showEditor(node);
+  }
 }
 
 // src_web/comfyui/storyboard.ts

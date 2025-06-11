@@ -38,12 +38,15 @@ export function createMarkdownRenderer(baseUrl?: string): Renderer {
 }
 
 export function renderMarkdownToHtml(
-  markdown: string,
+  markdown: string | string[],
   baseUrl?: string
 ): string {
   if (!markdown) return "";
 
-  let html = marked.parse(markdown, {
+  // Convert array to string if needed
+  const markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
+
+  let html = marked.parse(markdownStr, {
     renderer: createMarkdownRenderer(baseUrl),
     gfm: true,
     breaks: true,
@@ -72,6 +75,12 @@ function createMarkdownWidget(node: any, config: any) {
   const mainContainer = document.createElement("div");
   mainContainer.classList.add("storyboard-main-container");
   mainContainer.style.position = "relative";
+  mainContainer.style.minWidth = "240px";
+  mainContainer.style.minHeight = "140px";
+  mainContainer.style.width = "100%";
+  mainContainer.style.height = "100%";
+  mainContainer.style.display = "flex";
+  mainContainer.style.flexDirection = "column";
 
   mainContainer.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -79,6 +88,7 @@ function createMarkdownWidget(node: any, config: any) {
 
   const toolbar = document.createElement("div");
   toolbar.className = "markdown-editor-toolbar";
+  toolbar.style.flex = "0 0 auto";
   const charCount = document.createElement("div");
   charCount.className = "markdown-char-count";
   const toggleGroup = document.createElement("div");
@@ -92,12 +102,16 @@ function createMarkdownWidget(node: any, config: any) {
 
   const container = document.createElement("div");
   container.className = "markdown-content";
-  container.style.flex = "1";
+  container.style.flex = "1 1 auto";
+  container.style.minHeight = "140px";
+  container.style.overflow = "auto";
   container.innerHTML = htmlContent || renderMarkdownToHtml(initialContent);
   const textarea = document.createElement("textarea");
   textarea.className = "markdown-editor-textarea";
   textarea.style.display = "none";
-  textarea.style.flex = "1";
+  textarea.style.flex = "1 1 auto";
+  textarea.style.minHeight = "120px";
+  textarea.style.width = "100%";
   textarea.readOnly = !isEditable;
   textarea.placeholder = isEditable
     ? "Enter your markdown content here..."
@@ -237,7 +251,11 @@ export function populateMarkdownWidget(node: any, html: string | string[]) {
   const finalHtml = Array.isArray(html) ? html.join("") : html;
   node._storedHtml = finalHtml;
   node._sourceText = node.properties?.sourceText || "";
+  node._editableContent = node._sourceText;
   node.properties.storedHtml = node._storedHtml;
+  node.properties.sourceText = node._sourceText;
+  node.properties.text = node._sourceText;
+  node.properties.markdown_widget = finalHtml;
 
   let mdWidget = node.widgets.find(
     (w: any) => w.name === "markdown_widget"
@@ -282,9 +300,7 @@ export function populateMarkdownWidget(node: any, html: string | string[]) {
 export function showEditor(node: any) {
   log("showEditor called, this:", node);
   if (node.widgets) {
-    const widgetsToRemove = node.widgets.filter(
-      (w: any) => w.name === "markdown_editor" || w.name === "markdown_widget"
-    );
+    const widgetsToRemove = [...node.widgets];
     for (let widget of widgetsToRemove) {
       widget.onRemove?.();
       const index = node.widgets.indexOf(widget);
@@ -294,33 +310,35 @@ export function showEditor(node: any) {
     }
   }
 
-  let textWidget = node.widgets.find((w: any) => w.name === "text");
-
-  if (!textWidget) {
-    textWidget = ComfyWidgets.STRING(
-      node,
-      "text",
-      ["STRING", { multiline: true }],
-      app
-    ).widget;
-    textWidget.value = node.properties.text || "";
-  }
-
-  // Restore content: priority to widget value, then properties (for backward-compat)
-  if (textWidget.value) {
-    node._editableContent = textWidget.value;
-  } else if (node.properties && node.properties.text) {
-    node._editableContent = node.properties.text;
-  } else {
+  // Restore content from properties or default
+  if (!node._editableContent) {
+    let existingContent = "";
+    if (node.properties && node.properties.text && node.properties.text.trim()) {
+      existingContent = node.properties.text;
+      log(
+        "Restored content from node properties:",
+        existingContent.substring(0, 50) + "..."
+      );
+    }
     node._editableContent =
+      existingContent ||
       `Write your **markdown** content here!
 - Bullet points
 - *Italic text*
 - \`Code snippets\``;
   }
-  textWidget.value = node._editableContent;
+
+  // Create hidden text widget for storage
+  let textWidget = ComfyWidgets.STRING(
+    node,
+    "text",
+    ["STRING", { multiline: true }],
+    app
+  ).widget;
+  textWidget.value = node._editableContent || "";
   (textWidget as any).type = "hidden";
 
+  // Create markdown editor widget
   createMarkdownWidget(node, {
     widgetName: "markdown_editor",
     isEditable: true,
@@ -332,27 +350,12 @@ export function showEditor(node: any) {
       }
       if (!node.properties) node.properties = {};
       node.properties.text = content;
+      node.properties.markdown_editor = content;
     },
   });
 
   if (node.size[0] < 400) node.size[0] = 400;
   if (node.size[1] < 350) node.size[1] = 350;
-}
-
-export function restoreRenderedContent(node: any) {
-  log("restoreRenderedContent called");
-  if (node.properties && node.properties.storedHtml) {
-    node._storedHtml = node.properties.storedHtml;
-    node._sourceText = node.properties.sourceText || [];
-    node._hasReceivedData = true;
-    log("Restored HTML and source from properties");
-  }
-
-  if (node._storedHtml) {
-    populateMarkdownWidget(node, node._storedHtml);
-  } else {
-    showWaitingForInput(node);
-  }
 }
 
 export function showWaitingForInput(node: any) {
@@ -374,12 +377,17 @@ export function showWaitingForInput(node: any) {
 - *Italic text*
 - \`Code snippets\``;
   }
+
+  const initialContent = Array.isArray(node._editableContent)
+    ? node._editableContent.join("")
+    : node._editableContent;
+
   const widget = createMarkdownWidget(node, {
     widgetName: "markdown_widget",
     isEditable: false,
-    initialContent: node._editableContent,
-    htmlContent: renderMarkdownToHtml(node._editableContent),
-    sourceText: node._editableContent,
+    initialContent: initialContent,
+    htmlContent: renderMarkdownToHtml(initialContent),
+    sourceText: initialContent,
   });
 
   const mainContainer = widget.element;
@@ -390,7 +398,7 @@ export function showWaitingForInput(node: any) {
   overlay.innerHTML = `
     <div class="markdown-waiting-icon">⏳</div>
     <div class="markdown-waiting-title">Waiting for Input</div>
-    <div class="markdown-waiting-subtitle">This node is connected to an input source. Execute the workflow to see the rendered markdown content.</div>
+    <div class="markdown-waiting-subtitle">This node is connected to an input source.</div>
     <div class="markdown-waiting-note">Manual content will be overridden</div>
   `;
   mainContainer.appendChild(overlay);
@@ -399,40 +407,41 @@ export function showWaitingForInput(node: any) {
   if (node.size[1] < 350) node.size[1] = 350;
 }
 
+export function restoreRenderedContent(node: any) {
+  log("restoreRenderedContent called");
+  if (node.properties && node.properties.storedHtml) {
+    node._storedHtml = node.properties.storedHtml;
+    node._sourceText = node.properties.sourceText || "";
+    node._editableContent = node._sourceText;
+    node._hasReceivedData = true;
+    log("Restored HTML and source from properties");
+  }
+
+  if (node._storedHtml) {
+    populateMarkdownWidget(node, node._storedHtml);
+  } else {
+    showWaitingForInput(node);
+  }
+}
+
 export function setupMarkdownRenderer(nodeType: any, _nodeData: any) {
   const onExecuted = nodeType.prototype.onExecuted;
   nodeType.prototype.onExecuted = function (message: any) {
     onExecuted?.apply(this, arguments);
     log("Node executed with message:", message);
 
-    if (this._hasInputConnection && (message.html || message.text)) {
+    if (this._hasInputConnection && message.html) {
+      this._sourceText = message.text || [];
+      this._storedHtml = message.html;
       this._hasReceivedData = true;
-      let finalHtml;
-      let sourceText = message.text || [];
-
-      if (message.text) {
-        const markdown = Array.isArray(sourceText)
-          ? sourceText.join("\n")
-          : sourceText;
-        finalHtml = renderMarkdownToHtml(markdown);
-      } else {
-        const receivedHtml = Array.isArray(message.html)
-          ? message.html.join("")
-          : message.html;
-        finalHtml = DOMPurify.sanitize(receivedHtml, {
-          ADD_TAGS: ALLOWED_TAGS,
-          ADD_ATTR: ALLOWED_ATTRS,
-        });
-      }
-
-      this._sourceText = sourceText;
-      this._storedHtml = finalHtml;
 
       if (!this.properties) this.properties = {};
-      this.properties.storedHtml = finalHtml;
-      this.properties.sourceText = sourceText;
+      this.properties.storedHtml = message.html;
+      this.properties.sourceText = message.text || [];
+      this.properties.text = message.text || [];
+      this.properties.markdown_widget = message.html;
 
-      populateMarkdownWidget(this, finalHtml);
+      populateMarkdownWidget(this, message.html);
     }
   };
 
@@ -444,34 +453,53 @@ export function setupMarkdownRenderer(nodeType: any, _nodeData: any) {
       if (this.properties.storedHtml) {
         this._storedHtml = this.properties.storedHtml;
         this._sourceText = this.properties.sourceText || [];
+        this._editableContent = this._sourceText;
         this._hasReceivedData = true;
         log("Restored stored content in onConfigure");
       }
     }
 
-    if (this.widgets_values?.length) {
-      const hasConnection =
-        this.inputs && this.inputs[0] && this.inputs[0].link;
-      if (hasConnection) {
-        requestAnimationFrame(() => {
-          populateMarkdownWidget(this, this.widgets_values);
-        });
-      }
+    const hasConnection = this.inputs && this.inputs[0] && this.inputs[0].link;
+    if (hasConnection && this.widgets_values?.length) {
+      requestAnimationFrame(() => {
+        populateMarkdownWidget(this, this.widgets_values);
+      });
+    } else if (!hasConnection) {
+      showEditor(this);
     }
   };
 }
 
 export function handleMarkdownRendererCreated(node: any) {
   node.title = "📝 " + (node.title || "Markdown Renderer");
-  node._hasInputConnection = false;
-  node._editableContent = "";
-  node._hasReceivedData = false;
-  node._storedHtml = null;
-  node._sourceText = null;
 
-  if (node.inputs && node.inputs[0] && node.inputs[0].link) {
-    node._hasInputConnection = true;
-    log("Found existing input connection");
+  // Initialize state from properties
+  const hasInput = node.inputs?.[0]?.link;
+  node._hasInputConnection = hasInput || false;
+
+  // Restore content from properties
+  if (node.properties) {
+    node._editableContent = node.properties.sourceText || "";
+    node._storedHtml = node.properties.storedHtml || null;
+    node._sourceText = node.properties.sourceText || null;
+    node._hasReceivedData = !!node._storedHtml;
+  } else {
+    node._editableContent = "";
+    node._storedHtml = null;
+    node._sourceText = null;
+    node._hasReceivedData = false;
+  }
+
+  // Ensure widgets array exists
+  if (!node.widgets) {
+    node.widgets = [];
+  }
+
+  // Hide the text widget but keep it functional
+  const textWidget = node.widgets.find((w: any) => w.name === "text");
+  if (textWidget) {
+    textWidget.type = "hidden";
+    textWidget.hidden = true;
   }
 
   const originalOnConnectionsChange = node.onConnectionsChange;
@@ -485,31 +513,21 @@ export function handleMarkdownRendererCreated(node: any) {
     if (type === 1 && index === 0) {
       this._hasInputConnection = connected;
       if (!connected) {
-        this._hasReceivedData = false;
         showEditor(this);
       } else {
-        this._hasReceivedData = false;
         showWaitingForInput(this);
       }
     }
   };
 
-  const initializeUI = () => {
-    const hasConnection =
-      node.inputs && node.inputs[0] && node.inputs[0].link;
-    node._hasInputConnection = !!hasConnection;
-
-    if (!node._hasInputConnection) {
-      showEditor(node);
+  // Initialize UI based on connection state
+  if (hasInput) {
+    if (node._storedHtml) {
+      restoreRenderedContent(node);
     } else {
-      const hasStoredContent =
-        node._storedHtml || (node.properties && node.properties.storedHtml);
-      if (hasStoredContent) {
-        restoreRenderedContent(node);
-      } else {
-        showWaitingForInput(node);
-      }
+      showWaitingForInput(node);
     }
-  };
-  requestAnimationFrame(initializeUI);
+  } else {
+    showEditor(node);
+  }
 }

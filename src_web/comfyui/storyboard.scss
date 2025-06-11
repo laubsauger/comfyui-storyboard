@@ -62,12 +62,12 @@
   }
 
   code {
-    background: #1a1a1a;
+    // background: #1a1a1a;
     padding: 2px 4px;
-    border-radius: 3px;
+    border-radius: 4px;
     font-family: "SF Mono", Monaco, Consolas, monospace;
     color: #00d4ff;
-    border: 1px solid #333;
+    // border: 1px solid #333;
   }
 
   pre {
@@ -247,8 +247,8 @@
 }
 
 .markdown-waiting-icon {
-  font-size: 42px;
-  margin-bottom: 12px;
+  font-size: 32px;
+  margin-bottom: 8px;
   animation: pulse 2s ease-in-out infinite;
   filter: grayscale(30%);
 }
@@ -263,7 +263,7 @@
 .markdown-waiting-subtitle {
   font-size: 13px;
   opacity: 0.8;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   max-width: 280px;
   line-height: 1.3;
   color: #ccc;

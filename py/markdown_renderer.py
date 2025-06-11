@@ -10,7 +10,7 @@ class MarkdownRenderer:
         return {
             "required": {},
             "optional": {
-                "text": ("STRING", {"multiline": True}),
+                "text": ("STRING", {"forceInput": True, "hidden": True}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -78,6 +78,8 @@ class MarkdownRenderer:
             html_content = [""]
 
         print(f"[MarkdownRenderer] Converted {len(html_content)} items to HTML")
+        print(f"[MarkdownRenderer] Text content: {text_content}")
+        print(f"[MarkdownRenderer] HTML content: {html_content}")
 
         # Store in workflow metadata if available
         if unique_id is not None and extra_pnginfo is not None:
