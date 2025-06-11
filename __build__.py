@@ -5,6 +5,8 @@ import os
 import time
 import shutil
 import glob
+import re
+import json
 
 # Simple color definitions
 COLORS = {
@@ -49,7 +51,7 @@ def build():
     if os.path.exists(DIR_WEB):
         shutil.rmtree(DIR_WEB)
     shutil.copytree(
-        DIR_SRC_WEB, DIR_WEB, ignore=shutil.ignore_patterns("*.ts", "typings")
+        DIR_SRC_WEB, DIR_WEB, ignore=shutil.ignore_patterns("*.ts", "*.scss", "typings")
     )
     log_step(status="Done")
 
@@ -103,6 +105,69 @@ def build():
             print(e.stdout.decode("utf-8"))
         if e.stderr:
             print(e.stderr.decode("utf-8"))
+        return
+
+    log_step(msg="TypeScript Path Aliases")
+    try:
+        with open(os.path.join(THIS_DIR, "tsconfig.json"), "r") as f:
+            tsconfig = json.load(f)
+
+        base_url = os.path.join(
+            THIS_DIR, tsconfig["compilerOptions"].get("baseUrl", ".")
+        )
+        paths = tsconfig["compilerOptions"].get("paths", {})
+
+        out_dir = os.path.join(
+            THIS_DIR, tsconfig["compilerOptions"].get("outDir", DIR_WEB)
+        )
+
+        js_files = glob.glob(os.path.join(out_dir, "**", "*.js"), recursive=True)
+
+        for js_file in js_files:
+            with open(js_file, "r+") as f:
+                content = f.read()
+                new_content = content
+
+                # Find all import statements
+                for match in re.finditer(
+                    r'import\s+.*\s+from\s+[\'"]([^\'"]+)[\'"]', content
+                ):
+                    import_path = match.group(1)
+
+                    # Try to resolve path alias
+                    resolved = False
+                    for alias, real_paths in paths.items():
+                        alias_base = alias.replace("/*", "")
+                        if import_path.startswith(alias_base):
+                            # This is a basic replacement, assumes one path and wildcard
+                            relative_path = import_path.replace(
+                                alias_base, real_paths[0].replace("/*", "")
+                            )
+
+                            # Make it a relative path from the current file
+                            target_path = os.path.abspath(
+                                os.path.join(base_url, relative_path)
+                            )
+                            file_dir = os.path.dirname(js_file)
+
+                            rel_path = os.path.relpath(target_path, file_dir)
+                            if not rel_path.startswith("."):
+                                rel_path = "./" + rel_path
+
+                            new_content = new_content.replace(
+                                f'"{import_path}"', f'"{rel_path}"'
+                            )
+                            resolved = True
+                            break  # First match wins
+
+                if new_content != content:
+                    f.seek(0)
+                    f.write(new_content)
+                    f.truncate()
+        log_step(status="Done")
+    except Exception as e:
+        log_step(status="Error")
+        print(f"Error resolving TypeScript path aliases: {e}")
         return
 
     end_time = time.time()

@@ -1,5 +1,5 @@
-import { app } from "scripts/app.js";
-import { ComfyWidgets } from "scripts/widgets.js";
+import { app } from "../../src_web/scripts_comfy/app.js";
+import { ComfyWidgets } from "../../src_web/scripts_comfy/widgets.js";
 const LOG_VERBOSE = false;
 const log = (...args) => {
     if (LOG_VERBOSE) {

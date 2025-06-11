@@ -1,4 +1,4 @@
-import { app } from "scripts/app.js";
+import { app } from "../../src_web/scripts_comfy/app.js";
 import { showEditor, restoreRenderedContent, showWaitingForInput, populateMarkdownWidget, } from "./markdown_renderer.js";
 const LOG_LEVEL = 4;
 const LOGGER_PREFIX = "[Storyboard]";

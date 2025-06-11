@@ -9,6 +9,6 @@
     "@comfyorg/comfyui-frontend-types": "^1.15.5"
   },
   "scripts": {
-    "build": "python3 __build__.py"
+    "build": "./__build__.py || python .\\__build__.py"
   }
 }
