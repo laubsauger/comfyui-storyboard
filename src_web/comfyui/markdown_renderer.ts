@@ -2,9 +2,9 @@ import { app } from "scripts/app.js";
 import DOMPurify from "dompurify";
 import { marked, Renderer } from "marked";
 import { StoryboardBaseNode } from "./base_node.js";
-import { showEditor, showWaitingForInput, restoreRenderedContent } from "./markdown_widget.js";
+import { showEditor, showWaitingForInput } from "./markdown_widget.js";
 import { ALLOWED_TAGS, ALLOWED_ATTRS, MEDIA_SRC_REGEX, log } from "./common.js";
-import { LGraphNode, LiteGraph } from "@comfyorg/litegraph";
+import { LiteGraph } from "@comfyorg/litegraph";
 
 export function createMarkdownRenderer(baseUrl?: string): Renderer {
   const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
@@ -157,14 +157,19 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
     }
   }
 
-  override onExecute(result: any) {
+  override onExecute() {
+    // This is a placeholder, backend execution is handled by onExecuted
+  }
+
+  onExecuted(result: any) {
     log("MarkdownRenderer", "Node executed with result:", result);
 
-    // The Python backend returns: { ui: { text: [...], html: [...] }, result: (...) }
-    if (result && result.ui) {
-      const { text: textArray, html: htmlArray } = result.ui;
+    // The Python backend returns the content of the "ui" key.
+    // result should be: { text: [...], html: [...] }
+    if (result && result.text) {
+      const { text: textArray, html: htmlArray } = result;
 
-      if (textArray && textArray.length > 0) {
+      if (textArray.length > 0) {
         // Join arrays if multiple items, or use first item
         this._sourceText = Array.isArray(textArray) ? textArray.join("") : textArray;
         this._editableContent = this._sourceText;
@@ -194,29 +199,6 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
     } else {
       log("MarkdownRenderer", "No valid data received from backend");
     }
-  }
-
-  onExecuted(val: any) {
-    log("MarkdownRenderer", "onExecuted callback:", val);
-    const ui = val?.ui;
-    if (!ui) return;
-
-    const txt = Array.isArray(ui.text) ? ui.text.join("") : ui.text || "";
-    const html = Array.isArray(ui.html) ? ui.html.join("") : ui.html || "";
-
-    this._sourceText = txt;
-    this._storedHtml = html;
-    this._editableContent = txt;
-    this._hasReceivedData = true;
-
-    // persist
-    if (!this.properties) this.properties = {} as any;
-    this.properties["storedHtml"] = html;
-    this.properties["sourceText"] = txt;
-    this.properties["text"] = txt;
-
-    // swap UI
-    this.updateUI();
   }
 
   override onConfigure(info: any) {
@@ -387,18 +369,18 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
 
   override computeSize(out?: any): any {
     // Respect current node size but enforce minimum dimensions
-    const minW = 340;
-    const minH = 320; // Increased default height for better editor area
+    const minW = 250;
+    const minH = 220; // Increased default height for better editor area
     // If this.size is defined, ensure we don't shrink the node when the user has resized it manually
     const curW = Array.isArray(this.size) ? this.size[0] : minW;
     const curH = Array.isArray(this.size) ? this.size[1] : minH;
     return [Math.max(curW, minW), Math.max(curH, minH)] as any;
   }
 
-  override onResize(size: any): void {
-    (this as any).updateDOMSize?.();
-    super.onResize?.(size);
-  }
+  // override onResize(size: any): void {
+  //   (this as any).updateDOMSize?.();
+  //   super.onResize?.(size);
+  // }
 }
 
 // Register the node type

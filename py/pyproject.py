@@ -42,17 +42,17 @@ _DATA = read_pyproject()
 # We would want these to fail if they don't exist, so assume they do.
 VERSION: str = _DATA["project"]["version"]
 NAME: str = _DATA["project"]["name"]
-LOGO_URL: str = _DATA["tool"]["comfy"]["Icon"]
+# LOGO_URL: str = _DATA["tool"]["comfy"]["Icon"]
 
-if not LOGO_URL.endswith(".svg"):
-    raise ValueError("Bad logo url.")
+# if not LOGO_URL.endswith(".svg"):
+#     raise ValueError("Bad logo url.")
 
-# Fetch the logo so we have any updated markup.
-try:
-    LOGO_SVG = requests.get(
-        LOGO_URL, headers={"user-agent": f"comfyui-storyboard/{VERSION}"}, timeout=10
-    ).text
-    LOGO_SVG = re.sub(r'(id="bg".*fill=)"[^\"]+"', r'\1"{bg}"', LOGO_SVG)
-    LOGO_SVG = re.sub(r'(id="fg".*fill=)"[^\"]+"', r'\1"{fg}"', LOGO_SVG)
-except Exception:
-    LOGO_SVG = "<svg></svg>"
+# # Fetch the logo so we have any updated markup.
+# try:
+#     LOGO_SVG = requests.get(
+#         LOGO_URL, headers={"user-agent": f"comfyui-storyboard/{VERSION}"}, timeout=10
+#     ).text
+#     LOGO_SVG = re.sub(r'(id="bg".*fill=)"[^\"]+"', r'\1"{bg}"', LOGO_SVG)
+#     LOGO_SVG = re.sub(r'(id="fg".*fill=)"[^\"]+"', r'\1"{fg}"', LOGO_SVG)
+# except Exception:
+#     LOGO_SVG = "<svg></svg>"

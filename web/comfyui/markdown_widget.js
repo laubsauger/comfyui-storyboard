@@ -3177,7 +3177,7 @@ function renderMarkdownToHtml(markdown, baseUrl) {
 
 // src_web/comfyui/markdown_widget.ts
 var LOG_VERBOSE = false;
-var log2 = (...args) => {
+var log = (...args) => {
   if (LOG_VERBOSE) {
     console.log(`[MarkdownWidget]`, ...args);
   }
@@ -3194,14 +3194,20 @@ function createMarkdownWidget(node, config) {
   let textWidget = ComfyWidgets.STRING(
     node,
     "text",
-    ["STRING", { multiline: true, hidden: true }],
+    ["STRING", { hidden: true }],
     app
   ).widget;
   textWidget.value = initialContent;
-  textWidget.type = "multiline";
   textWidget.draw = () => {
   };
-  textWidget.computeSize = () => [0, 0];
+  textWidget.computeLayoutSize = () => {
+    return {
+      minHeight: 0,
+      maxHeight: 0,
+      minWidth: 0,
+      maxWidth: 0
+    };
+  };
   const originalCallback = textWidget.callback;
   textWidget.callback = function(v) {
     if (originalCallback) originalCallback.call(this, v);
@@ -3216,8 +3222,8 @@ function createMarkdownWidget(node, config) {
   mainContainer.style.position = "relative";
   mainContainer.style.width = "100%";
   mainContainer.style.height = "100%";
-  mainContainer.style.minWidth = "300px";
-  mainContainer.style.minHeight = "120px";
+  mainContainer.style.minWidth = "150px";
+  mainContainer.style.minHeight = "60px";
   mainContainer.style.display = "flex";
   mainContainer.style.flexDirection = "column";
   mainContainer.style.boxSizing = "border-box";
@@ -3228,6 +3234,8 @@ function createMarkdownWidget(node, config) {
   const toolbar = document.createElement("div");
   toolbar.className = "markdown-editor-toolbar";
   toolbar.style.flex = "0 0 auto";
+  toolbar.style.background = "#141414";
+  toolbar.style.borderBottom = "1px solid #444";
   const charCount = document.createElement("div");
   charCount.className = "markdown-char-count";
   const toggleGroup = document.createElement("div");
@@ -3242,7 +3250,7 @@ function createMarkdownWidget(node, config) {
   container.className = "markdown-content";
   container.style.flex = "1 1 0";
   container.style.height = "100%";
-  container.style.minHeight = "120px";
+  container.style.minHeight = "60px";
   container.style.overflow = "auto";
   container.innerHTML = htmlContent || renderMarkdownToHtml(initialContent);
   const textarea = document.createElement("textarea");
@@ -3250,7 +3258,7 @@ function createMarkdownWidget(node, config) {
   textarea.style.display = "none";
   textarea.style.flex = "1 1 0";
   textarea.style.height = "100%";
-  textarea.style.minHeight = "120px";
+  textarea.style.minHeight = "60px";
   textarea.style.width = "100%";
   textarea.readOnly = !isEditable;
   textarea.placeholder = isEditable ? "Enter your markdown content here..." : "Source markdown from connected input...";
@@ -3383,7 +3391,7 @@ function createMarkdownWidget(node, config) {
     const inputsHeight = (((_a2 = node.inputs) == null ? void 0 : _a2.length) || 0) * 21;
     const widgetPadding = 4;
     const availableHeight = nodeHeight - titleHeight - inputsHeight - widgetPadding;
-    return [width, Math.max(120, availableHeight)];
+    return [width, Math.max(60, availableHeight)];
   };
   widget.onRemove = () => {
     if (node._markdownWidgetElement === mainContainer && mainContainer.parentNode) {
@@ -3395,7 +3403,7 @@ function createMarkdownWidget(node, config) {
 }
 function populateMarkdownWidget(node, html3) {
   var _a2;
-  log2("populateMarkdownWidget called");
+  log("populateMarkdownWidget called");
   if (!node.widgets) return;
   node._hasReceivedData = true;
   const finalHtml = Array.isArray(html3) ? html3.join("") : html3;
@@ -3435,12 +3443,12 @@ function populateMarkdownWidget(node, html3) {
 }
 function showEditor(node) {
   var _a2, _b, _c, _d, _e;
-  log2("showEditor called, this:", node);
+  log("showEditor called, this:", node);
   if (!node._editableContent) {
     let existingContent = "";
     if (node.properties && node.properties.text && node.properties.text.trim()) {
       existingContent = node.properties.text;
-      log2(
+      log(
         "Restored content from node properties:",
         existingContent.substring(0, 50) + "..."
       );
@@ -3450,8 +3458,8 @@ function showEditor(node) {
 - *Italic text*
 - \`Code snippets\``;
   }
-  if (node._hasReceivedData && node._storedHtml) {
-    log2("showEditor", "Showing received data as read-only");
+  if (node._hasInputConnection) {
+    log("showEditor", "Showing content as read-only due to input connection");
     createMarkdownWidget(node, {
       widgetName: "markdown_widget",
       isEditable: false,
@@ -3460,7 +3468,7 @@ function showEditor(node) {
       initialContent: node._sourceText || ""
     });
   } else {
-    log2("showEditor", "Showing editable editor");
+    log("showEditor", "Showing editable editor");
     createMarkdownWidget(node, {
       widgetName: "markdown_widget",
       isEditable: true,
@@ -3480,14 +3488,14 @@ function showEditor(node) {
     );
     if (overlayElements && overlayElements.length) {
       overlayElements.forEach((el) => el.remove());
-      log2("showEditor", "Removed lingering waiting overlay");
+      log("showEditor", "Removed lingering waiting overlay");
     }
   } catch (err) {
-    log2("showEditor", "Error while removing waiting overlay", err);
+    log("showEditor", "Error while removing waiting overlay", err);
   }
 }
 function showWaitingForInput(node) {
-  log2("showWaitingForInput called");
+  log("showWaitingForInput called");
   if (!node._editableContent) {
     node._editableContent = `Write your **markdown** content here!
 - Bullet points
@@ -3508,24 +3516,23 @@ function showWaitingForInput(node) {
   overlay.innerHTML = `
     <div class="markdown-waiting-icon">\u23F3</div>
     <div class="markdown-waiting-title">Waiting for Input</div>
-    <div class="markdown-waiting-subtitle">This node is connected to an input source.</div>
     <div class="markdown-waiting-note">Manual content will be overridden</div>
   `;
   mainContainer.appendChild(overlay);
 }
 function restoreRenderedContent(node) {
-  log2("restoreRenderedContent called");
+  log("restoreRenderedContent called");
   if (node.properties && node.properties.storedHtml) {
     node._storedHtml = node.properties.storedHtml;
     node._sourceText = node.properties.sourceText || [];
     node._hasReceivedData = true;
-    log2("Restored HTML and source from properties");
+    log("Restored HTML and source from properties");
   }
   if (node._storedHtml) {
-    log2("Populating widget with stored HTML");
+    log("Populating widget with stored HTML");
     populateMarkdownWidget(node, node._storedHtml);
   } else {
-    log2("No stored HTML found, showing waiting UI");
+    log("No stored HTML found, showing waiting UI");
     showWaitingForInput(node);
   }
 }

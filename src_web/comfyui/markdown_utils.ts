@@ -1,6 +1,6 @@
 import DOMPurify from "dompurify";
 import { marked, Renderer } from "marked";
-import { ALLOWED_TAGS, ALLOWED_ATTRS, MEDIA_SRC_REGEX, log } from "./common.js";
+import { ALLOWED_TAGS, ALLOWED_ATTRS, MEDIA_SRC_REGEX } from "./common.js";
 
 export function createMarkdownRenderer(baseUrl?: string): Renderer {
   const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";

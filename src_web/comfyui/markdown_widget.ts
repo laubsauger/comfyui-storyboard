@@ -24,15 +24,22 @@ export function createMarkdownWidget(node: any, config: any) {
   let textWidget = ComfyWidgets.STRING(
     node,
     "text",
-    ["STRING", { multiline: true, hidden: true }],
+    ["STRING", { hidden: true }],
     app
   ).widget;
 
   textWidget.value = initialContent;
-  textWidget.type = "multiline";
+  // textWidget.type = "text";
   // prevent canvas drawing for hidden widget
   textWidget.draw = () => { };
-  textWidget.computeSize = () => [0, 0]; // Ensure hidden widget occupies no canvas space
+  textWidget.computeLayoutSize = () => {
+    return {
+      minHeight: 0,
+      maxHeight: 0,
+      minWidth: 0,
+      maxWidth: 0,
+    };
+  }; // Ensure hidden widget occupies no canvas space
 
   // Add callback to update when widget value changes
   const originalCallback = textWidget.callback;
@@ -50,8 +57,8 @@ export function createMarkdownWidget(node: any, config: any) {
   mainContainer.style.position = "relative";
   mainContainer.style.width = "100%";
   mainContainer.style.height = "100%";
-  mainContainer.style.minWidth = "300px";
-  mainContainer.style.minHeight = "120px";
+  mainContainer.style.minWidth = "150px";
+  mainContainer.style.minHeight = "60px";
   mainContainer.style.display = "flex";
   mainContainer.style.flexDirection = "column";
   mainContainer.style.boxSizing = "border-box";
@@ -64,6 +71,8 @@ export function createMarkdownWidget(node: any, config: any) {
   const toolbar = document.createElement("div");
   toolbar.className = "markdown-editor-toolbar";
   toolbar.style.flex = "0 0 auto";
+  toolbar.style.background = "#141414";
+  toolbar.style.borderBottom = "1px solid #444";
   const charCount = document.createElement("div");
   charCount.className = "markdown-char-count";
   const toggleGroup = document.createElement("div");
@@ -79,7 +88,7 @@ export function createMarkdownWidget(node: any, config: any) {
   container.className = "markdown-content";
   container.style.flex = "1 1 0";
   container.style.height = "100%"; // Ensure it fills remaining space
-  container.style.minHeight = "120px";
+  container.style.minHeight = "60px";
   container.style.overflow = "auto";
   container.innerHTML = htmlContent || renderMarkdownToHtml(initialContent);
   const textarea = document.createElement("textarea");
@@ -87,7 +96,7 @@ export function createMarkdownWidget(node: any, config: any) {
   textarea.style.display = "none";
   textarea.style.flex = "1 1 0";
   textarea.style.height = "100%"; // Fill remaining space
-  textarea.style.minHeight = "120px";
+  textarea.style.minHeight = "60px";
   textarea.style.width = "100%";
   textarea.readOnly = !isEditable;
   textarea.placeholder = isEditable
@@ -248,7 +257,7 @@ export function createMarkdownWidget(node: any, config: any) {
     const inputsHeight = (node.inputs?.length || 0) * 21;
     const widgetPadding = 4;
     const availableHeight = nodeHeight - titleHeight - inputsHeight - widgetPadding;
-    return [width, Math.max(120, availableHeight)];
+    return [width, Math.max(60, availableHeight)];
   }
 
   widget.onRemove = () => {
@@ -332,9 +341,10 @@ export function showEditor(node: any) {
       `Write your **markdown** content here!\n- Bullet points\n- *Italic text*\n- \`Code snippets\``;
   }
 
-  // If we have received data (stored HTML), show it as read-only
-  if (node._hasReceivedData && node._storedHtml) {
-    log("showEditor", "Showing received data as read-only");
+  // If there's an input connection, the widget should be read-only.
+  // Otherwise, it's an editable, standalone node.
+  if (node._hasInputConnection) {
+    log("showEditor", "Showing content as read-only due to input connection");
     createMarkdownWidget(node, {
       widgetName: "markdown_widget",
       isEditable: false,
@@ -404,7 +414,6 @@ export function showWaitingForInput(node: any) {
   overlay.innerHTML = `
     <div class="markdown-waiting-icon">⏳</div>
     <div class="markdown-waiting-title">Waiting for Input</div>
-    <div class="markdown-waiting-subtitle">This node is connected to an input source.</div>
     <div class="markdown-waiting-note">Manual content will be overridden</div>
   `;
   mainContainer.appendChild(overlay);

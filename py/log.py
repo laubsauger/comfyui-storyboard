@@ -74,8 +74,13 @@ def log_node(node_name, message, msg_color='RESET'):
 
 
 def _log_node(color, node_name, message, msg_color='RESET'):
-  """Logs for a node message."""
-  log(message, color=color, prefix=node_name.replace(" (rgthree)", ""), msg_color=msg_color)
+    """Logs for a node message."""
+    log(
+        message,
+        color=color,
+        prefix=node_name.replace(" (storyboard)", ""),
+        msg_color=msg_color,
+    )
 
 
 def log(message, color=None, msg_color=None, prefix=None):
