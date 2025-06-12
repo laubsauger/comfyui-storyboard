@@ -19949,7 +19949,7 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
   }
   computeSize(out) {
     const minW = 250;
-    const minH = 220;
+    const minH = 240;
     const curW = Array.isArray(this.size) ? this.size[0] : minW;
     const curH = Array.isArray(this.size) ? this.size[1] : minH;
     return [Math.max(curW, minW), Math.max(curH, minH)];
