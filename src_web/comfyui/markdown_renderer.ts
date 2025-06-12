@@ -127,37 +127,29 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
     log(this.type, "Node executed with result:", result);
 
     // The Python backend returns the content of the "ui" key.
-    // result should be: { text: [...], html: [...] }
+    // result should be: { text: string, html: string }
     if (result && result.text) {
-      const { text: textArray, html: htmlArray } = result;
+      // Get the text content directly as a string
+      // Ensure we're treating it as a single string, not an array
+      const textContent = Array.isArray(result.text) ? result.text.join('') : result.text;
+      this._sourceText = textContent;
+      this._editableContent = this._sourceText;
 
-      if (textArray.length > 0) {
-        // Join arrays if multiple items, or use first item
-        this._sourceText = Array.isArray(textArray) ? textArray.join("") : textArray;
-        this._editableContent = this._sourceText;
+      // Always use frontend renderer for HTML content
+      this._storedHtml = renderMarkdownToHtml(this._sourceText);
 
-        if (htmlArray && htmlArray.length > 0) {
-          this._storedHtml = Array.isArray(htmlArray) ? htmlArray.join("") : htmlArray;
-        } else {
-          // Fallback: render markdown if no HTML provided
-          this._storedHtml = renderMarkdownToHtml(this._sourceText);
-        }
+      this._hasReceivedData = true;
 
-        this._hasReceivedData = true;
+      // Update properties for persistence
+      if (!this.properties) this.properties = {};
+      this.properties['storedHtml'] = this._storedHtml;
+      this.properties['sourceText'] = this._sourceText;
+      this.properties['text'] = this._sourceText;
 
-        // Update properties for persistence
-        if (!this.properties) this.properties = {};
-        this.properties['storedHtml'] = this._storedHtml;
-        this.properties['sourceText'] = this._sourceText;
-        this.properties['text'] = this._sourceText;
+      log(this.type, "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
 
-        log(this.type, "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
-
-        // Update UI to show the received content
-        this.updateUI();
-      } else {
-        log(this.type, "Received empty data from backend");
-      }
+      // Update UI to show the received content
+      this.updateUI();
     } else {
       log(this.type, "No valid data received from backend");
     }

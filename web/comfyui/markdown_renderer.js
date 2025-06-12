@@ -19839,25 +19839,17 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
   onExecuted(result) {
     log(this.type, "Node executed with result:", result);
     if (result && result.text) {
-      const { text: textArray, html: htmlArray } = result;
-      if (textArray.length > 0) {
-        this._sourceText = Array.isArray(textArray) ? textArray.join("") : textArray;
-        this._editableContent = this._sourceText;
-        if (htmlArray && htmlArray.length > 0) {
-          this._storedHtml = Array.isArray(htmlArray) ? htmlArray.join("") : htmlArray;
-        } else {
-          this._storedHtml = renderMarkdownToHtml(this._sourceText);
-        }
-        this._hasReceivedData = true;
-        if (!this.properties) this.properties = {};
-        this.properties["storedHtml"] = this._storedHtml;
-        this.properties["sourceText"] = this._sourceText;
-        this.properties["text"] = this._sourceText;
-        log(this.type, "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
-        this.updateUI();
-      } else {
-        log(this.type, "Received empty data from backend");
-      }
+      const textContent = Array.isArray(result.text) ? result.text.join("") : result.text;
+      this._sourceText = textContent;
+      this._editableContent = this._sourceText;
+      this._storedHtml = renderMarkdownToHtml(this._sourceText);
+      this._hasReceivedData = true;
+      if (!this.properties) this.properties = {};
+      this.properties["storedHtml"] = this._storedHtml;
+      this.properties["sourceText"] = this._sourceText;
+      this.properties["text"] = this._sourceText;
+      log(this.type, "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
+      this.updateUI();
     } else {
       log(this.type, "No valid data received from backend");
     }

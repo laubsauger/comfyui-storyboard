@@ -5550,15 +5550,14 @@ function populateMarkdownWidget(node, html3) {
   log(node.type, "populateMarkdownWidget called");
   if (!node.widgets) return;
   node._hasReceivedData = true;
-  const finalHtml = Array.isArray(html3) ? html3.join("") : html3;
-  node._storedHtml = finalHtml;
+  node._storedHtml = html3;
   node._sourceText = ((_a2 = node.properties) == null ? void 0 : _a2.sourceText) || "";
   node._editableContent = node._sourceText;
   if (!node.properties) node.properties = {};
   node.properties.storedHtml = node._storedHtml;
   node.properties.sourceText = node._sourceText;
   node.properties.text = node._sourceText;
-  node.properties.markdown_widget = finalHtml;
+  node.properties.markdown_widget = html3;
   let mdWidget = node.widgets.find((w) => w.name === "markdown_widget");
   if (mdWidget) {
     const mainContainer = mdWidget.element;
@@ -5568,20 +5567,20 @@ function populateMarkdownWidget(node, html3) {
     }
     const contentDiv = mainContainer.querySelector(".markdown-content");
     if (contentDiv) {
-      contentDiv.innerHTML = finalHtml;
+      contentDiv.innerHTML = renderMarkdownToHtml(node._sourceText);
     }
     const textarea = mainContainer.querySelector(".markdown-editor-textarea");
     if (textarea) {
       textarea.value = node._sourceText;
     }
   } else {
-    const sourceText = node._sourceText ? Array.isArray(node._sourceText) ? node._sourceText.join("") : node._sourceText : "";
     createMarkdownWidget(node, {
       widgetName: "markdown_widget",
       isEditable: false,
-      htmlContent: finalHtml,
-      sourceText,
-      initialContent: sourceText
+      htmlContent: renderMarkdownToHtml(node._sourceText),
+      // Always use frontend renderer
+      sourceText: node._sourceText,
+      initialContent: node._sourceText
     });
   }
 }

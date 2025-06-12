@@ -266,14 +266,13 @@ export function createMarkdownWidget(node: any, config: any) {
   return widget;
 }
 
-export function populateMarkdownWidget(node: any, html: string | string[]) {
+export function populateMarkdownWidget(node: any, html: string) {
   log(node.type, "populateMarkdownWidget called");
   if (!node.widgets) return;
 
   // Update node state
   node._hasReceivedData = true;
-  const finalHtml = Array.isArray(html) ? html.join("") : html;
-  node._storedHtml = finalHtml;
+  node._storedHtml = html;
   node._sourceText = node.properties?.sourceText || "";
   node._editableContent = node._sourceText;
 
@@ -282,7 +281,7 @@ export function populateMarkdownWidget(node: any, html: string | string[]) {
   node.properties.storedHtml = node._storedHtml;
   node.properties.sourceText = node._sourceText;
   node.properties.text = node._sourceText;
-  node.properties.markdown_widget = finalHtml;
+  node.properties.markdown_widget = html;
 
   // Update or create widget
   let mdWidget = node.widgets.find((w: any) => w.name === "markdown_widget");
@@ -294,24 +293,20 @@ export function populateMarkdownWidget(node: any, html: string | string[]) {
     }
     const contentDiv = mainContainer.querySelector(".markdown-content");
     if (contentDiv) {
-      contentDiv.innerHTML = finalHtml;
+      // Always use frontend renderer for content
+      contentDiv.innerHTML = renderMarkdownToHtml(node._sourceText);
     }
     const textarea = mainContainer.querySelector(".markdown-editor-textarea");
     if (textarea) {
       (textarea as HTMLTextAreaElement).value = node._sourceText;
     }
   } else {
-    const sourceText = node._sourceText
-      ? Array.isArray(node._sourceText)
-        ? node._sourceText.join("")
-        : node._sourceText
-      : "";
     createMarkdownWidget(node, {
       widgetName: "markdown_widget",
       isEditable: false,
-      htmlContent: finalHtml,
-      sourceText: sourceText,
-      initialContent: sourceText,
+      htmlContent: renderMarkdownToHtml(node._sourceText), // Always use frontend renderer
+      sourceText: node._sourceText,
+      initialContent: node._sourceText,
     });
     // Note: createMarkdownWidget already calls addDOMWidget internally
   }

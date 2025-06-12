@@ -1,2 +1,2 @@
-markdown2
+python-dotenv
 openai
