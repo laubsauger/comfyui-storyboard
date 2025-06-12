@@ -135,8 +135,8 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
       log("MarkdownRenderer", "Cloned node constructed");
 
       // Set node size before UI update
-      if (cloned.size[0] < 400) cloned.size[0] = 400;
-      if (cloned.size[1] < 350) cloned.size[1] = 350;
+      // if (cloned.size[0] < 400) cloned.size[0] = 400;
+      // if (cloned.size[1] < 350) cloned.size[1] = 350;
 
       // Update UI (now debounced to avoid race conditions)
       (cloned as any).updateUI();
@@ -251,8 +251,8 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
     }
 
     // Set node size before UI update
-    if (this.size[0] < 400) this.size[0] = 400;
-    if (this.size[1] < 350) this.size[1] = 350;
+    // if (this.size[0] < 400) this.size[0] = 400;
+    // if (this.size[1] < 350) this.size[1] = 350;
 
     // Update UI (now debounced)
     this.updateUI();
@@ -302,8 +302,8 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
       this.cleanupAllWidgets();
 
       // Set node size before widget creation - increased width for better content display
-      if (this.size[0] < 480) this.size[0] = 480; // Increased minimum width to prevent cutoff
-      if (this.size[1] < 350) this.size[1] = 350;
+      // if (this.size[0] < 480) this.size[0] = 480; // Increased minimum width to prevent cutoff
+      // if (this.size[1] < 350) this.size[1] = 350;
 
       // Show waiting UI if we have an input connection but no data received
       // This takes priority over having editable content
@@ -386,77 +386,93 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
   }
 
   override computeSize(out?: any): any {
-    return [480, 380] as any;
+    // Respect current node size but enforce minimum dimensions
+    const minW = 340;
+    const minH = 320; // Increased default height for better editor area
+    // If this.size is defined, ensure we don't shrink the node when the user has resized it manually
+    const curW = Array.isArray(this.size) ? this.size[0] : minW;
+    const curH = Array.isArray(this.size) ? this.size[1] : minH;
+    return [Math.max(curW, minW), Math.max(curH, minH)] as any;
+  }
+
+  override onResize(size: any): void {
+    (this as any).updateDOMSize?.();
+    super.onResize?.(size);
   }
 }
 
 // Register the node type
-app.registerExtension({
-  name: "comfyui-storyboard.markdown-renderer",
-  async beforeRegisterNodeDef(nodeType: any, nodeData: any) {
-    if (nodeData.name === "MarkdownRenderer") {
-      log("MarkdownRenderer", "Registering node type");
-      log("MarkdownRenderer", "Node data:", nodeData);
+if (!(window as any).__mdRendererRegistered) {
+  (window as any).__mdRendererRegistered = true;
 
-      // Copy methods individually to avoid prototype issues
-      const methods = [
-        "onConnectionsChange",
-        "onExecute",
-        "onExecuted",
-        "onConfigure",
-        "onNodeCreated",
-        "onRemoved",
-        "clone",
-        "onConstructed",
-        "checkAndRunOnConstructed",
-        "updateUI",
-        "doUpdateUI",
-        "cleanupAllWidgets",
-        "computeSize"
-      ];
+  app.registerExtension({
+    name: "comfyui-storyboard.markdown-renderer",
+    async beforeRegisterNodeDef(nodeType: any, nodeData: any) {
+      if (nodeData.name === "MarkdownRenderer") {
+        log("MarkdownRenderer", "Registering node type");
+        log("MarkdownRenderer", "Node data:", nodeData);
 
-      for (const method of methods) {
-        const prototype = MarkdownRendererNode.prototype as any;
-        if (prototype[method]) {
-          nodeType.prototype[method] = prototype[method];
-          log("MarkdownRenderer", `Copied method: ${method}`);
+        // Copy methods individually to avoid prototype issues
+        const methods = [
+          "onConnectionsChange",
+          "onExecute",
+          "onExecuted",
+          "onConfigure",
+          "onNodeCreated",
+          "onRemoved",
+          "clone",
+          "onConstructed",
+          "checkAndRunOnConstructed",
+          "updateUI",
+          "doUpdateUI",
+          "cleanupAllWidgets",
+          "computeSize",
+          "onResize"
+        ];
+
+        for (const method of methods) {
+          const prototype = MarkdownRendererNode.prototype as any;
+          if (prototype[method]) {
+            nodeType.prototype[method] = prototype[method];
+            log("MarkdownRenderer", `Copied method: ${method}`);
+          }
         }
+
+        // Copy static properties
+        nodeType.title = MarkdownRendererNode.title;
+        nodeType.type = MarkdownRendererNode.type;
+        nodeType.category = MarkdownRendererNode.category;
+        nodeType._category = MarkdownRendererNode._category;
+        log("MarkdownRenderer", "Static properties copied");
+
+        // Register the node type with LiteGraph
+        if (MarkdownRendererNode.type) {
+          log("MarkdownRenderer", "Registering node type with LiteGraph");
+          LiteGraph.registerNodeType(MarkdownRendererNode.type, nodeType);
+        }
+
+        // Set up the node type
+        MarkdownRendererNode.setUp();
       }
+    },
 
-      // Copy static properties
-      nodeType.title = MarkdownRendererNode.title;
-      nodeType.type = MarkdownRendererNode.type;
-      nodeType.category = MarkdownRendererNode.category;
-      nodeType._category = MarkdownRendererNode._category;
-      log("MarkdownRenderer", "Static properties copied");
+    nodeCreated(node: any) {
+      if (node.comfyClass === "MarkdownRenderer") {
+        log("MarkdownRenderer", "Node instance created");
+        log("MarkdownRenderer", "Node properties:", node.properties);
 
-      // Register the node type with LiteGraph
-      if (MarkdownRendererNode.type) {
-        log("MarkdownRenderer", "Registering node type with LiteGraph");
-        LiteGraph.registerNodeType(MarkdownRendererNode.type, nodeType);
+        // Initialize node state
+        node._hasInputConnection = false;
+        node._editableContent = "";
+        node._storedHtml = "";
+        node._sourceText = "";
+        node._hasReceivedData = false;
+        log("MarkdownRenderer", "Node state initialized");
+
+        // Call onConstructed to ensure proper initialization
+        node.onConstructed?.();
+        log("MarkdownRenderer", "Node constructed");
       }
-
-      // Set up the node type
-      MarkdownRendererNode.setUp();
     }
-  },
-
-  nodeCreated(node: any) {
-    if (node.comfyClass === "MarkdownRenderer") {
-      log("MarkdownRenderer", "Node instance created");
-      log("MarkdownRenderer", "Node properties:", node.properties);
-
-      // Initialize node state
-      node._hasInputConnection = false;
-      node._editableContent = "";
-      node._storedHtml = "";
-      node._sourceText = "";
-      node._hasReceivedData = false;
-      log("MarkdownRenderer", "Node state initialized");
-
-      // Call onConstructed to ensure proper initialization
-      node.onConstructed?.();
-      log("MarkdownRenderer", "Node constructed");
-    }
-  }
-});
+  });
+}

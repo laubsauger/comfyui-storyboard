@@ -17260,9 +17260,60 @@ var StoryboardBaseNode = _StoryboardBaseNode;
 // src_web/comfyui/markdown_widget.ts
 import { app } from "/scripts/app.js";
 import { ComfyWidgets } from "/scripts/widgets.js";
-var LOG_VERBOSE = false;
-var log = (...args) => {
+
+// src_web/comfyui/common.ts
+var LOG_VERBOSE = true;
+var log = (prefix, ...args) => {
   if (LOG_VERBOSE) {
+    console.log(`[${prefix}]`, ...args);
+  }
+};
+var ALLOWED_TAGS = ["video", "source"];
+var ALLOWED_ATTRS = [
+  "controls",
+  "autoplay",
+  "loop",
+  "muted",
+  "preload",
+  "poster"
+];
+var MEDIA_SRC_REGEX = /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
+
+// src_web/comfyui/markdown_utils.ts
+function createMarkdownRenderer(baseUrl) {
+  const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
+  const renderer = new _Renderer();
+  renderer.image = ({ href, title, text: text2 }) => {
+    let src = href;
+    if (normalizedBase && !/^(?:\/|https?:\/\/)/.test(href)) {
+      src = `${normalizedBase}/${href}`;
+    }
+    const titleAttr = title ? ` title="${title}"` : "";
+    return `<img src="${src}" alt="${text2}"${titleAttr} />`;
+  };
+  return renderer;
+}
+function renderMarkdownToHtml(markdown, baseUrl) {
+  if (!markdown) return "";
+  const markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
+  let html3 = marked.parse(markdownStr, {
+    renderer: createMarkdownRenderer(baseUrl),
+    gfm: true,
+    breaks: true
+  });
+  if (baseUrl) {
+    html3 = html3.replace(MEDIA_SRC_REGEX, `$1${baseUrl}$2$3`);
+  }
+  return purify.sanitize(html3, {
+    ADD_TAGS: ALLOWED_TAGS,
+    ADD_ATTR: ALLOWED_ATTRS
+  });
+}
+
+// src_web/comfyui/markdown_widget.ts
+var LOG_VERBOSE2 = false;
+var log3 = (...args) => {
+  if (LOG_VERBOSE2) {
     console.log(`[MarkdownWidget]`, ...args);
   }
 };
@@ -17278,11 +17329,13 @@ function createMarkdownWidget(node2, config) {
   let textWidget = ComfyWidgets.STRING(
     node2,
     "text",
-    ["STRING", { multiline: true }],
+    ["STRING", { multiline: true, hidden: true }],
     app
   ).widget;
   textWidget.value = initialContent;
   textWidget.type = "multiline";
+  textWidget.draw = () => {
+  };
   textWidget.computeSize = () => [0, 0];
   const originalCallback = textWidget.callback;
   textWidget.callback = function(v2) {
@@ -17296,11 +17349,10 @@ function createMarkdownWidget(node2, config) {
   const mainContainer = document.createElement("div");
   mainContainer.classList.add("storyboard-main-container");
   mainContainer.style.position = "relative";
-  mainContainer.style.minWidth = "300px";
-  mainContainer.style.minHeight = "140px";
   mainContainer.style.width = "100%";
   mainContainer.style.height = "100%";
-  mainContainer.style.maxWidth = "100%";
+  mainContainer.style.minWidth = "300px";
+  mainContainer.style.minHeight = "120px";
   mainContainer.style.display = "flex";
   mainContainer.style.flexDirection = "column";
   mainContainer.style.boxSizing = "border-box";
@@ -17323,14 +17375,16 @@ function createMarkdownWidget(node2, config) {
   textButton.textContent = "Text";
   const container = document.createElement("div");
   container.className = "markdown-content";
-  container.style.flex = "1 1 auto";
-  container.style.minHeight = "140px";
+  container.style.flex = "1 1 0";
+  container.style.height = "100%";
+  container.style.minHeight = "120px";
   container.style.overflow = "auto";
   container.innerHTML = htmlContent || renderMarkdownToHtml(initialContent);
   const textarea = document.createElement("textarea");
   textarea.className = "markdown-editor-textarea";
   textarea.style.display = "none";
-  textarea.style.flex = "1 1 auto";
+  textarea.style.flex = "1 1 0";
+  textarea.style.height = "100%";
   textarea.style.minHeight = "120px";
   textarea.style.width = "100%";
   textarea.readOnly = !isEditable;
@@ -17446,20 +17500,25 @@ function createMarkdownWidget(node2, config) {
     mainContainer,
     {}
   );
-  widget.draw = function(ctx, nodeInstance, widgetWidth, y, widgetHeight) {
-    if (mainContainer) {
-      const actualWidth = Math.max(widgetWidth - 10, 0);
-      const actualHeight = Math.max(widgetHeight, 300);
-      mainContainer.style.width = `${actualWidth}px`;
-      mainContainer.style.height = `${actualHeight}px`;
-      mainContainer.style.maxWidth = `${actualWidth}px`;
-      mainContainer.style.overflow = "hidden";
-    }
+  function updateDOMSize() {
+    mainContainer.style.width = "100%";
+    mainContainer.style.height = "100%";
+  }
+  node2.updateDOMSize = updateDOMSize;
+  updateDOMSize();
+  widget.draw = () => {
   };
   widget.computeSize = function(width2) {
-    const minWidth = 480;
-    const minHeight = 300;
-    return [Math.max(width2, minWidth), Math.max(minHeight, 350)];
+    var _a2;
+    if (!node2 || node2.is_collapsed) {
+      return [width2, 0];
+    }
+    const nodeHeight = node2.size[1];
+    const titleHeight = 26;
+    const inputsHeight = (((_a2 = node2.inputs) == null ? void 0 : _a2.length) || 0) * 21;
+    const widgetPadding = 4;
+    const availableHeight = nodeHeight - titleHeight - inputsHeight - widgetPadding;
+    return [width2, Math.max(120, availableHeight)];
   };
   widget.onRemove = () => {
     if (node2._markdownWidgetElement === mainContainer && mainContainer.parentNode) {
@@ -17470,12 +17529,13 @@ function createMarkdownWidget(node2, config) {
   return widget;
 }
 function showEditor(node2) {
-  log("showEditor called, this:", node2);
+  var _a2, _b, _c, _d, _e;
+  log3("showEditor called, this:", node2);
   if (!node2._editableContent) {
     let existingContent = "";
     if (node2.properties && node2.properties.text && node2.properties.text.trim()) {
       existingContent = node2.properties.text;
-      log(
+      log3(
         "Restored content from node properties:",
         existingContent.substring(0, 50) + "..."
       );
@@ -17486,7 +17546,7 @@ function showEditor(node2) {
 - \`Code snippets\``;
   }
   if (node2._hasReceivedData && node2._storedHtml) {
-    log("showEditor", "Showing received data as read-only");
+    log3("showEditor", "Showing received data as read-only");
     createMarkdownWidget(node2, {
       widgetName: "markdown_widget",
       isEditable: false,
@@ -17495,7 +17555,7 @@ function showEditor(node2) {
       initialContent: node2._sourceText || ""
     });
   } else {
-    log("showEditor", "Showing editable editor");
+    log3("showEditor", "Showing editable editor");
     createMarkdownWidget(node2, {
       widgetName: "markdown_widget",
       isEditable: true,
@@ -17508,11 +17568,21 @@ function showEditor(node2) {
       }
     });
   }
-  if (node2.size[0] < 480) node2.size[0] = 480;
-  if (node2.size[1] < 350) node2.size[1] = 350;
+  try {
+    const overlayElements = (_e = (_d = node2._markdownWidgetElement || ((_c = (_b = (_a2 = node2 == null ? void 0 : node2.widgets) == null ? void 0 : _a2.find) == null ? void 0 : _b.call(_a2, (w) => w.name === "markdown_widget")) == null ? void 0 : _c.element)) == null ? void 0 : _d.querySelectorAll) == null ? void 0 : _e.call(
+      _d,
+      ".markdown-waiting-overlay"
+    );
+    if (overlayElements && overlayElements.length) {
+      overlayElements.forEach((el) => el.remove());
+      log3("showEditor", "Removed lingering waiting overlay");
+    }
+  } catch (err) {
+    log3("showEditor", "Error while removing waiting overlay", err);
+  }
 }
 function showWaitingForInput(node2) {
-  log("showWaitingForInput called");
+  log3("showWaitingForInput called");
   if (!node2._editableContent) {
     node2._editableContent = `Write your **markdown** content here!
 - Bullet points
@@ -17537,30 +17607,10 @@ function showWaitingForInput(node2) {
     <div class="markdown-waiting-note">Manual content will be overridden</div>
   `;
   mainContainer.appendChild(overlay);
-  if (node2.size[0] < 480) node2.size[0] = 480;
-  if (node2.size[1] < 350) node2.size[1] = 350;
 }
 
-// src_web/comfyui/common.ts
-var LOG_VERBOSE2 = true;
-var log2 = (prefix, ...args) => {
-  if (LOG_VERBOSE2) {
-    console.log(`[${prefix}]`, ...args);
-  }
-};
-var ALLOWED_TAGS = ["video", "source"];
-var ALLOWED_ATTRS = [
-  "controls",
-  "autoplay",
-  "loop",
-  "muted",
-  "preload",
-  "poster"
-];
-var MEDIA_SRC_REGEX = /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
-
 // src_web/comfyui/markdown_renderer.ts
-function createMarkdownRenderer(baseUrl) {
+function createMarkdownRenderer2(baseUrl) {
   const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
   const renderer = new _Renderer();
   renderer.image = ({ href, title, text: text2 }) => {
@@ -17573,11 +17623,11 @@ function createMarkdownRenderer(baseUrl) {
   };
   return renderer;
 }
-function renderMarkdownToHtml(markdown, baseUrl) {
+function renderMarkdownToHtml2(markdown, baseUrl) {
   if (!markdown) return "";
   const markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
   let html3 = marked.parse(markdownStr, {
-    renderer: createMarkdownRenderer(baseUrl),
+    renderer: createMarkdownRenderer2(baseUrl),
     gfm: true,
     breaks: true
   });
@@ -17606,12 +17656,12 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
     this._isUpdatingUI = false;
     // Add flag to prevent concurrent UI updates
     this._updateUITimeout = null;
-    log2("MarkdownRenderer", "Constructor called");
+    log("MarkdownRenderer", "Constructor called");
   }
   onConstructed() {
     var _a2, _b;
     if (this.__constructed__) return false;
-    log2("MarkdownRenderer", "Node constructed");
+    log("MarkdownRenderer", "Node constructed");
     this._hasInputConnection = false;
     this._editableContent = "";
     this._storedHtml = "";
@@ -17622,17 +17672,17 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
     this.type = (_a2 = this.type) != null ? _a2 : void 0;
     this.__constructed__ = true;
     (_b = app2.graph) == null ? void 0 : _b.trigger("nodeCreated", this);
-    log2("MarkdownRenderer", "Node state initialized");
+    log("MarkdownRenderer", "Node state initialized");
     return this.__constructed__;
   }
   clone() {
-    log2("MarkdownRenderer", "Cloning node");
+    log("MarkdownRenderer", "Cloning node");
     const cloned = super.clone();
     if (cloned) {
-      log2("MarkdownRenderer", "Cloned node properties:", cloned.properties);
+      log("MarkdownRenderer", "Cloned node properties:", cloned.properties);
       if (cloned.properties && !!window.structuredClone) {
         cloned.properties = structuredClone(cloned.properties);
-        log2("MarkdownRenderer", "Properties deep cloned");
+        log("MarkdownRenderer", "Properties deep cloned");
       }
       cloned._hasInputConnection = this._hasInputConnection;
       cloned._editableContent = this._editableContent;
@@ -17641,27 +17691,25 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
       cloned._hasReceivedData = this._hasReceivedData;
       cloned._isUpdatingUI = false;
       cloned._updateUITimeout = null;
-      log2("MarkdownRenderer", "State properties copied");
+      log("MarkdownRenderer", "State properties copied");
       if (!cloned.properties) cloned.properties = {};
       cloned.properties["text"] = this._editableContent;
       cloned.properties["storedHtml"] = this._storedHtml;
       cloned.properties["sourceText"] = this._sourceText;
-      log2("MarkdownRenderer", "Properties copied to cloned node");
+      log("MarkdownRenderer", "Properties copied to cloned node");
       if (cloned.widgets) {
         cloned.widgets.length = 0;
       }
       cloned.onConstructed();
-      log2("MarkdownRenderer", "Cloned node constructed");
-      if (cloned.size[0] < 400) cloned.size[0] = 400;
-      if (cloned.size[1] < 350) cloned.size[1] = 350;
+      log("MarkdownRenderer", "Cloned node constructed");
       cloned.updateUI();
-      log2("MarkdownRenderer", "Cloned node UI updated");
+      log("MarkdownRenderer", "Cloned node UI updated");
     }
     return cloned;
   }
   onConnectionsChange(type, index, connected, linkInfo, inputOrOutput) {
     if (type === 1 && index === 0) {
-      log2("MarkdownRenderer", "Input connection changed:", connected);
+      log("MarkdownRenderer", "Input connection changed:", connected);
       this._hasInputConnection = connected;
       if (!connected) {
         this._hasReceivedData = false;
@@ -17670,7 +17718,7 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
     }
   }
   onExecute(result) {
-    log2("MarkdownRenderer", "Node executed with result:", result);
+    log("MarkdownRenderer", "Node executed with result:", result);
     if (result && result.ui) {
       const { text: textArray, html: htmlArray } = result.ui;
       if (textArray && textArray.length > 0) {
@@ -17679,24 +17727,24 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
         if (htmlArray && htmlArray.length > 0) {
           this._storedHtml = Array.isArray(htmlArray) ? htmlArray.join("") : htmlArray;
         } else {
-          this._storedHtml = renderMarkdownToHtml(this._sourceText);
+          this._storedHtml = renderMarkdownToHtml2(this._sourceText);
         }
         this._hasReceivedData = true;
         if (!this.properties) this.properties = {};
         this.properties["storedHtml"] = this._storedHtml;
         this.properties["sourceText"] = this._sourceText;
         this.properties["text"] = this._sourceText;
-        log2("MarkdownRenderer", "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
+        log("MarkdownRenderer", "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
         this.updateUI();
       } else {
-        log2("MarkdownRenderer", "Received empty data from backend");
+        log("MarkdownRenderer", "Received empty data from backend");
       }
     } else {
-      log2("MarkdownRenderer", "No valid data received from backend");
+      log("MarkdownRenderer", "No valid data received from backend");
     }
   }
   onExecuted(val) {
-    log2("MarkdownRenderer", "onExecuted callback:", val);
+    log("MarkdownRenderer", "onExecuted callback:", val);
     const ui = val == null ? void 0 : val.ui;
     if (!ui) return;
     const txt = Array.isArray(ui.text) ? ui.text.join("") : ui.text || "";
@@ -17713,35 +17761,33 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
   }
   onConfigure(info) {
     var _a2, _b;
-    log2("MarkdownRenderer", "Configuring node with info:", info);
+    log("MarkdownRenderer", "Configuring node with info:", info);
     if (this.properties) {
       const props = this.properties;
       if (props["storedHtml"]) {
-        log2("MarkdownRenderer", "Restoring stored HTML from properties");
+        log("MarkdownRenderer", "Restoring stored HTML from properties");
         this._storedHtml = String(props["storedHtml"]);
         this._sourceText = String(props["sourceText"] || "");
         this._hasReceivedData = true;
       }
       if (props["text"]) {
-        log2("MarkdownRenderer", "Restoring text content from properties");
+        log("MarkdownRenderer", "Restoring text content from properties");
         this._editableContent = String(props["text"]);
       }
     }
     this.cleanupAllWidgets();
     const hasConnection = Boolean((_b = (_a2 = this.inputs) == null ? void 0 : _a2[0]) == null ? void 0 : _b.link);
-    log2("MarkdownRenderer", "Has input connection:", hasConnection, "Has received data:", this._hasReceivedData);
+    log("MarkdownRenderer", "Has input connection:", hasConnection, "Has received data:", this._hasReceivedData);
     this._hasInputConnection = hasConnection;
     if (!hasConnection) {
       this._hasReceivedData = false;
     }
-    if (this.size[0] < 400) this.size[0] = 400;
-    if (this.size[1] < 350) this.size[1] = 350;
     this.updateUI();
   }
   onNodeCreated() {
-    log2("MarkdownRenderer", "Node created");
+    log("MarkdownRenderer", "Node created");
     if (this.inputs && this.inputs[0] && this.inputs[0].link) {
-      log2("MarkdownRenderer", "Found existing input connection");
+      log("MarkdownRenderer", "Found existing input connection");
       this._hasInputConnection = true;
     } else {
       this._hasInputConnection = false;
@@ -17761,20 +17807,18 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
   }
   doUpdateUI() {
     if (this._isUpdatingUI) {
-      log2("MarkdownRenderer", "UI update already in progress, skipping");
+      log("MarkdownRenderer", "UI update already in progress, skipping");
       return;
     }
     this._isUpdatingUI = true;
-    log2("MarkdownRenderer", "Updating UI - hasInputConnection:", this._hasInputConnection, "hasReceivedData:", this._hasReceivedData, "hasContent:", Boolean(this._editableContent), "hasStoredHtml:", Boolean(this._storedHtml));
+    log("MarkdownRenderer", "Updating UI - hasInputConnection:", this._hasInputConnection, "hasReceivedData:", this._hasReceivedData, "hasContent:", Boolean(this._editableContent), "hasStoredHtml:", Boolean(this._storedHtml));
     try {
       this.cleanupAllWidgets();
-      if (this.size[0] < 480) this.size[0] = 480;
-      if (this.size[1] < 350) this.size[1] = 350;
       if (this._hasInputConnection && !this._hasReceivedData && !this._storedHtml) {
-        log2("MarkdownRenderer", "Showing waiting UI - connected but no data received");
+        log("MarkdownRenderer", "Showing waiting UI - connected but no data received");
         showWaitingForInput(this);
       } else {
-        log2("MarkdownRenderer", "Showing editor - has content, data, or no connection");
+        log("MarkdownRenderer", "Showing editor - has content, data, or no connection");
         showEditor(this);
       }
       if (typeof this.computeSize === "function") {
@@ -17789,11 +17833,11 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
   }
   cleanupAllWidgets() {
     if (!this.widgets) return;
-    log2("MarkdownRenderer", "Cleaning up widgets, current count:", this.widgets.length);
+    log("MarkdownRenderer", "Cleaning up widgets, current count:", this.widgets.length);
     const widgetsToRemove = [...this.widgets];
     for (const widget of widgetsToRemove) {
       if (widget.name === "markdown_widget" || widget.name === "markdown_editor" || widget.name === "text") {
-        log2("MarkdownRenderer", "Removing widget:", widget.name);
+        log("MarkdownRenderer", "Removing widget:", widget.name);
         if (typeof widget.onRemove === "function") {
           widget.onRemove();
         }
@@ -17814,7 +17858,7 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
     this.widgets = this.widgets.filter(
       (w) => w.name !== "markdown_widget" && w.name !== "markdown_editor" && w.name !== "text"
     );
-    log2("MarkdownRenderer", "Widgets after cleanup:", this.widgets.length);
+    log("MarkdownRenderer", "Widgets after cleanup:", this.widgets.length);
   }
   onRemoved() {
     var _a2;
@@ -17826,7 +17870,16 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
     (_a2 = super.onRemoved) == null ? void 0 : _a2.call(this);
   }
   computeSize(out) {
-    return [480, 380];
+    const minW = 340;
+    const minH = 320;
+    const curW = Array.isArray(this.size) ? this.size[0] : minW;
+    const curH = Array.isArray(this.size) ? this.size[1] : minH;
+    return [Math.max(curW, minW), Math.max(curH, minH)];
+  }
+  onResize(size) {
+    var _a2, _b;
+    (_a2 = this.updateDOMSize) == null ? void 0 : _a2.call(this);
+    (_b = super.onResize) == null ? void 0 : _b.call(this, size);
   }
 };
 _MarkdownRendererNode.title = "Markdown Renderer";
@@ -17834,67 +17887,71 @@ _MarkdownRendererNode.type = "MarkdownRenderer";
 _MarkdownRendererNode.category = "storyboard";
 _MarkdownRendererNode._category = "storyboard";
 var MarkdownRendererNode = _MarkdownRendererNode;
-app2.registerExtension({
-  name: "comfyui-storyboard.markdown-renderer",
-  async beforeRegisterNodeDef(nodeType, nodeData) {
-    if (nodeData.name === "MarkdownRenderer") {
-      log2("MarkdownRenderer", "Registering node type");
-      log2("MarkdownRenderer", "Node data:", nodeData);
-      const methods = [
-        "onConnectionsChange",
-        "onExecute",
-        "onExecuted",
-        "onConfigure",
-        "onNodeCreated",
-        "onRemoved",
-        "clone",
-        "onConstructed",
-        "checkAndRunOnConstructed",
-        "updateUI",
-        "doUpdateUI",
-        "cleanupAllWidgets",
-        "computeSize"
-      ];
-      for (const method of methods) {
-        const prototype = MarkdownRendererNode.prototype;
-        if (prototype[method]) {
-          nodeType.prototype[method] = prototype[method];
-          log2("MarkdownRenderer", `Copied method: ${method}`);
+if (!window.__mdRendererRegistered) {
+  window.__mdRendererRegistered = true;
+  app2.registerExtension({
+    name: "comfyui-storyboard.markdown-renderer",
+    async beforeRegisterNodeDef(nodeType, nodeData) {
+      if (nodeData.name === "MarkdownRenderer") {
+        log("MarkdownRenderer", "Registering node type");
+        log("MarkdownRenderer", "Node data:", nodeData);
+        const methods = [
+          "onConnectionsChange",
+          "onExecute",
+          "onExecuted",
+          "onConfigure",
+          "onNodeCreated",
+          "onRemoved",
+          "clone",
+          "onConstructed",
+          "checkAndRunOnConstructed",
+          "updateUI",
+          "doUpdateUI",
+          "cleanupAllWidgets",
+          "computeSize",
+          "onResize"
+        ];
+        for (const method of methods) {
+          const prototype = MarkdownRendererNode.prototype;
+          if (prototype[method]) {
+            nodeType.prototype[method] = prototype[method];
+            log("MarkdownRenderer", `Copied method: ${method}`);
+          }
         }
+        nodeType.title = MarkdownRendererNode.title;
+        nodeType.type = MarkdownRendererNode.type;
+        nodeType.category = MarkdownRendererNode.category;
+        nodeType._category = MarkdownRendererNode._category;
+        log("MarkdownRenderer", "Static properties copied");
+        if (MarkdownRendererNode.type) {
+          log("MarkdownRenderer", "Registering node type with LiteGraph");
+          LiteGraph.registerNodeType(MarkdownRendererNode.type, nodeType);
+        }
+        MarkdownRendererNode.setUp();
       }
-      nodeType.title = MarkdownRendererNode.title;
-      nodeType.type = MarkdownRendererNode.type;
-      nodeType.category = MarkdownRendererNode.category;
-      nodeType._category = MarkdownRendererNode._category;
-      log2("MarkdownRenderer", "Static properties copied");
-      if (MarkdownRendererNode.type) {
-        log2("MarkdownRenderer", "Registering node type with LiteGraph");
-        LiteGraph.registerNodeType(MarkdownRendererNode.type, nodeType);
+    },
+    nodeCreated(node2) {
+      var _a2;
+      if (node2.comfyClass === "MarkdownRenderer") {
+        log("MarkdownRenderer", "Node instance created");
+        log("MarkdownRenderer", "Node properties:", node2.properties);
+        node2._hasInputConnection = false;
+        node2._editableContent = "";
+        node2._storedHtml = "";
+        node2._sourceText = "";
+        node2._hasReceivedData = false;
+        log("MarkdownRenderer", "Node state initialized");
+        (_a2 = node2.onConstructed) == null ? void 0 : _a2.call(node2);
+        log("MarkdownRenderer", "Node constructed");
       }
-      MarkdownRendererNode.setUp();
     }
-  },
-  nodeCreated(node2) {
-    var _a2;
-    if (node2.comfyClass === "MarkdownRenderer") {
-      log2("MarkdownRenderer", "Node instance created");
-      log2("MarkdownRenderer", "Node properties:", node2.properties);
-      node2._hasInputConnection = false;
-      node2._editableContent = "";
-      node2._storedHtml = "";
-      node2._sourceText = "";
-      node2._hasReceivedData = false;
-      log2("MarkdownRenderer", "Node state initialized");
-      (_a2 = node2.onConstructed) == null ? void 0 : _a2.call(node2);
-      log2("MarkdownRenderer", "Node constructed");
-    }
-  }
-});
+  });
+}
 export {
   MarkdownRendererNode,
-  createMarkdownRenderer,
+  createMarkdownRenderer2 as createMarkdownRenderer,
   handleMarkdownRendererCreated,
-  renderMarkdownToHtml,
+  renderMarkdownToHtml2 as renderMarkdownToHtml,
   setupMarkdownRenderer
 };
 /*! Bundled license information:

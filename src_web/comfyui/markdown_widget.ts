@@ -1,6 +1,6 @@
 import { app } from "scripts/app.js";
 import { ComfyWidgets } from "scripts/widgets.js";
-import { renderMarkdownToHtml } from "./markdown_renderer.js";
+import { renderMarkdownToHtml } from "./markdown_utils.js";
 
 const LOG_VERBOSE = false;
 const log = (...args: any[]) => {
@@ -24,13 +24,15 @@ export function createMarkdownWidget(node: any, config: any) {
   let textWidget = ComfyWidgets.STRING(
     node,
     "text",
-    ["STRING", { multiline: true }],
+    ["STRING", { multiline: true, hidden: true }],
     app
   ).widget;
 
   textWidget.value = initialContent;
   textWidget.type = "multiline";
-  textWidget.computeSize = () => [0, 0]; // No visual size - this will hide it effectively
+  // prevent canvas drawing for hidden widget
+  textWidget.draw = () => { };
+  textWidget.computeSize = () => [0, 0]; // Ensure hidden widget occupies no canvas space
 
   // Add callback to update when widget value changes
   const originalCallback = textWidget.callback;
@@ -46,15 +48,14 @@ export function createMarkdownWidget(node: any, config: any) {
   const mainContainer = document.createElement("div");
   mainContainer.classList.add("storyboard-main-container");
   mainContainer.style.position = "relative";
-  mainContainer.style.minWidth = "300px";
-  mainContainer.style.minHeight = "140px";
   mainContainer.style.width = "100%";
   mainContainer.style.height = "100%";
-  mainContainer.style.maxWidth = "100%"; // Prevent overflow
+  mainContainer.style.minWidth = "300px";
+  mainContainer.style.minHeight = "120px";
   mainContainer.style.display = "flex";
   mainContainer.style.flexDirection = "column";
-  mainContainer.style.boxSizing = "border-box"; // Include padding in size calculations
-  mainContainer.style.overflow = "hidden"; // Prevent content overflow
+  mainContainer.style.boxSizing = "border-box";
+  mainContainer.style.overflow = "hidden";
 
   mainContainer.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -76,14 +77,16 @@ export function createMarkdownWidget(node: any, config: any) {
 
   const container = document.createElement("div");
   container.className = "markdown-content";
-  container.style.flex = "1 1 auto";
-  container.style.minHeight = "140px";
+  container.style.flex = "1 1 0";
+  container.style.height = "100%"; // Ensure it fills remaining space
+  container.style.minHeight = "120px";
   container.style.overflow = "auto";
   container.innerHTML = htmlContent || renderMarkdownToHtml(initialContent);
   const textarea = document.createElement("textarea");
   textarea.className = "markdown-editor-textarea";
   textarea.style.display = "none";
-  textarea.style.flex = "1 1 auto";
+  textarea.style.flex = "1 1 0";
+  textarea.style.height = "100%"; // Fill remaining space
   textarea.style.minHeight = "120px";
   textarea.style.width = "100%";
   textarea.readOnly = !isEditable;
@@ -224,27 +227,29 @@ export function createMarkdownWidget(node: any, config: any) {
     {}
   );
 
-  // Improved widget draw function for proper sizing
-  widget.draw = function (ctx: any, nodeInstance: any, widgetWidth: number, y: number, widgetHeight: number) {
-    // This is called during ComfyUI's rendering cycle
-    // Ensure the container matches the widget dimensions
-    if (mainContainer) {
-      // Account for node padding/margins - typically 10-20px on each side
-      const actualWidth = Math.max(widgetWidth - 10, 0);
-      const actualHeight = Math.max(widgetHeight, 300);
+  // Sync DOM size with node size
+  function updateDOMSize() {
+    mainContainer.style.width = "100%";
+    mainContainer.style.height = "100%"; // wrapper height already excludes title bar
+  }
 
-      mainContainer.style.width = `${actualWidth}px`;
-      mainContainer.style.height = `${actualHeight}px`;
-      mainContainer.style.maxWidth = `${actualWidth}px`; // Prevent overflow
-      mainContainer.style.overflow = 'hidden'; // Ensure content doesn't overflow
+  // Expose so node.onResize can call it
+  (node as any).updateDOMSize = updateDOMSize;
+  updateDOMSize();
+
+  // Widget no longer affects sizing itself
+  widget.draw = () => { };
+  widget.computeSize = function (width: number): [number, number] {
+    if (!node || node.is_collapsed) {
+      return [width, 0];
     }
-  };
-
-  widget.computeSize = function (width: number) {
-    const minWidth = 480;
-    const minHeight = 300;
-    return [Math.max(width, minWidth), Math.max(minHeight, 350)];
-  };
+    const nodeHeight = node.size[1];
+    const titleHeight = 26;
+    const inputsHeight = (node.inputs?.length || 0) * 21;
+    const widgetPadding = 4;
+    const availableHeight = nodeHeight - titleHeight - inputsHeight - widgetPadding;
+    return [width, Math.max(120, availableHeight)];
+  }
 
   widget.onRemove = () => {
     if (node._markdownWidgetElement === mainContainer && mainContainer.parentNode) {
@@ -353,8 +358,20 @@ export function showEditor(node: any) {
     });
   }
 
-  if (node.size[0] < 480) node.size[0] = 480;
-  if (node.size[1] < 350) node.size[1] = 350;
+  // Safeguard: remove any lingering waiting overlay that might still be attached to the DOM
+  try {
+    const overlayElements = (node._markdownWidgetElement || node?.widgets?.find?.((w: any) => w.name === "markdown_widget")?.element)?.querySelectorAll?.(
+      ".markdown-waiting-overlay"
+    );
+    if (overlayElements && overlayElements.length) {
+      overlayElements.forEach((el: Element) => el.remove());
+      log("showEditor", "Removed lingering waiting overlay");
+    }
+  } catch (err) {
+    log("showEditor", "Error while removing waiting overlay", err);
+  }
+
+  // no forced size here either
 }
 
 export function showWaitingForInput(node: any) {
@@ -392,8 +409,7 @@ export function showWaitingForInput(node: any) {
   `;
   mainContainer.appendChild(overlay);
 
-  if (node.size[0] < 480) node.size[0] = 480;
-  if (node.size[1] < 350) node.size[1] = 350;
+  // no forced size here either
 }
 
 export function restoreRenderedContent(node: any) {
