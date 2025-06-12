@@ -1,7 +1,42 @@
 // src_web/comfyui/llm_api.ts
 import { app } from "/scripts/app.js";
+
+// src_web/comfyui/common.ts
+var LOG_VERBOSE = false;
+var log = (prefix, ...args) => {
+  if (LOG_VERBOSE) {
+    console.log(`[${prefix}]`, ...args);
+  }
+};
+
+// src_web/comfyui/llm_api.ts
 app.registerExtension({
   name: "comfy.llm.OpenAIChatGPT",
+  async beforeRegisterNodeDef(nodeType, nodeData) {
+    log("beforeRegisterNodeDef", nodeType, nodeData);
+    if (nodeData.name === "OpenAI Chat GPT") {
+      const onExecuted = nodeType.prototype.onExecuted;
+      nodeType.prototype.onExecuted = function(message) {
+        var _a;
+        onExecuted == null ? void 0 : onExecuted.apply(this, arguments);
+        log("OpenAIChatGPT", `onExecuted for node ${this.id}. Message:`, message);
+        const widget = (_a = this.widgets) == null ? void 0 : _a.find(
+          (w) => w.name === "use_caching"
+        );
+        log("OpenAIChatGPT", "Found widget:", widget);
+        if (widget) {
+          let label = "use_caching";
+          if (message == null ? void 0 : message.cache_status) {
+            const status = message.cache_status[0];
+            label += ` [ ${status} ]`;
+          }
+          widget.label = label;
+          log("OpenAIChatGPT", `New widget label: ${widget.label}`);
+        }
+        this.setDirtyCanvas(true, true);
+      };
+    }
+  },
   registerCustomNodes() {
   }
 });

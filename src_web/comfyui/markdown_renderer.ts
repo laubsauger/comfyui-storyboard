@@ -1,49 +1,11 @@
 import { app } from "scripts/app.js";
-import DOMPurify from "dompurify";
-import { marked, Renderer } from "marked";
 import { StoryboardBaseNode } from "./base_node.js";
 import { showEditor, showWaitingForInput } from "./markdown_widget.js";
-import { ALLOWED_TAGS, ALLOWED_ATTRS, MEDIA_SRC_REGEX, log } from "./common.js";
+import { log } from "./common.js";
 import { LiteGraph } from "@comfyorg/litegraph";
+import { renderMarkdownToHtml } from "./markdown_utils.js";
 
-export function createMarkdownRenderer(baseUrl?: string): Renderer {
-  const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
-  const renderer = new Renderer();
-  renderer.image = ({ href, title, text }) => {
-    let src = href;
-    if (normalizedBase && !/^(?:\/|https?:\/\/)/.test(href)) {
-      src = `${normalizedBase}/${href}`;
-    }
-    const titleAttr = title ? ` title="${title}"` : "";
-    return `<img src="${src}" alt="${text}"${titleAttr} />`;
-  };
-  return renderer;
-}
-
-export function renderMarkdownToHtml(
-  markdown: string | string[],
-  baseUrl?: string
-): string {
-  if (!markdown) return "";
-
-  // Convert array to string if needed
-  const markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
-
-  let html = marked.parse(markdownStr, {
-    renderer: createMarkdownRenderer(baseUrl),
-    gfm: true,
-    breaks: true,
-  }) as string;
-
-  if (baseUrl) {
-    html = html.replace(MEDIA_SRC_REGEX, `$1${baseUrl}$2$3`);
-  }
-
-  return DOMPurify.sanitize(html, {
-    ADD_TAGS: ALLOWED_TAGS,
-    ADD_ATTR: ALLOWED_ATTRS,
-  });
-}
+console.log("=== MARKDOWN_RENDERER_MODULE_LOADED ===");
 
 export function setupMarkdownRenderer(nodeType: any, nodeData: any) {
   // Setup any node-specific configuration here
@@ -69,12 +31,12 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
 
   constructor(title = MarkdownRendererNode.title) {
     super(title); // Remove skipOnConstructedCall parameter
-    log("MarkdownRenderer", "Constructor called");
+    log(this.type, "Constructor called");
   }
 
   protected override onConstructed() {
     if (this.__constructed__) return false;
-    log("MarkdownRenderer", "Node constructed");
+    log(this.type, "Node constructed");
 
     // Initialize node state
     this._hasInputConnection = false;
@@ -92,20 +54,20 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
     // Notify extensions that this node was created
     app.graph?.trigger("nodeCreated", this);
 
-    log("MarkdownRenderer", "Node state initialized");
+    log(this.type, "Node state initialized");
     return this.__constructed__;
   }
 
   override clone() {
-    log("MarkdownRenderer", "Cloning node");
+    log(this.type, "Cloning node");
     const cloned = super.clone()!;
     if (cloned) {
-      log("MarkdownRenderer", "Cloned node properties:", cloned.properties);
+      log(this.type, "Cloned node properties:", cloned.properties);
 
       // Deep clone properties using structuredClone if available
       if (cloned.properties && !!window.structuredClone) {
         cloned.properties = structuredClone(cloned.properties);
-        log("MarkdownRenderer", "Properties deep cloned");
+        log(this.type, "Properties deep cloned");
       }
 
       // Copy all state properties
@@ -116,14 +78,14 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
       (cloned as any)._hasReceivedData = this._hasReceivedData;
       (cloned as any)._isUpdatingUI = false; // Reset UI update flag
       (cloned as any)._updateUITimeout = null; // Reset timeout
-      log("MarkdownRenderer", "State properties copied");
+      log(this.type, "State properties copied");
 
       // Ensure properties are properly copied
       if (!cloned.properties) cloned.properties = {};
       cloned.properties['text'] = this._editableContent;
       cloned.properties['storedHtml'] = this._storedHtml;
       cloned.properties['sourceText'] = this._sourceText;
-      log("MarkdownRenderer", "Properties copied to cloned node");
+      log(this.type, "Properties copied to cloned node");
 
       // Force clean widget removal from the clone
       if (cloned.widgets) {
@@ -132,7 +94,7 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
 
       // Call onConstructed to ensure proper initialization
       (cloned as any).onConstructed();
-      log("MarkdownRenderer", "Cloned node constructed");
+      log(this.type, "Cloned node constructed");
 
       // Set node size before UI update
       // if (cloned.size[0] < 400) cloned.size[0] = 400;
@@ -140,14 +102,14 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
 
       // Update UI (now debounced to avoid race conditions)
       (cloned as any).updateUI();
-      log("MarkdownRenderer", "Cloned node UI updated");
+      log(this.type, "Cloned node UI updated");
     }
     return cloned;
   }
 
   override onConnectionsChange(type: number, index: number, connected: boolean, linkInfo: any, inputOrOutput: any) {
     if (type === 1 && index === 0) { // type 1 = input, index 0 = first input
-      log("MarkdownRenderer", "Input connection changed:", connected);
+      log(this.type, "Input connection changed:", connected);
       this._hasInputConnection = connected;
       // If we're disconnecting, reset the received data flag
       if (!connected) {
@@ -162,7 +124,7 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
   }
 
   onExecuted(result: any) {
-    log("MarkdownRenderer", "Node executed with result:", result);
+    log(this.type, "Node executed with result:", result);
 
     // The Python backend returns the content of the "ui" key.
     // result should be: { text: [...], html: [...] }
@@ -189,32 +151,32 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
         this.properties['sourceText'] = this._sourceText;
         this.properties['text'] = this._sourceText;
 
-        log("MarkdownRenderer", "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
+        log(this.type, "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
 
         // Update UI to show the received content
         this.updateUI();
       } else {
-        log("MarkdownRenderer", "Received empty data from backend");
+        log(this.type, "Received empty data from backend");
       }
     } else {
-      log("MarkdownRenderer", "No valid data received from backend");
+      log(this.type, "No valid data received from backend");
     }
   }
 
   override onConfigure(info: any) {
-    log("MarkdownRenderer", "Configuring node with info:", info);
+    log(this.type, "Configuring node with info:", info);
 
     // Restore stored content from properties if available
     if (this.properties) {
       const props = this.properties as Record<string, any>;
       if (props['storedHtml']) {
-        log("MarkdownRenderer", "Restoring stored HTML from properties");
+        log(this.type, "Restoring stored HTML from properties");
         this._storedHtml = String(props['storedHtml']);
         this._sourceText = String(props['sourceText'] || "");
         this._hasReceivedData = true;
       }
       if (props['text']) {
-        log("MarkdownRenderer", "Restoring text content from properties");
+        log(this.type, "Restoring text content from properties");
         this._editableContent = String(props['text']);
       }
     }
@@ -224,7 +186,7 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
 
     // Check if we have an input connection
     const hasConnection = Boolean(this.inputs?.[0]?.link);
-    log("MarkdownRenderer", "Has input connection:", hasConnection, "Has received data:", this._hasReceivedData);
+    log(this.type, "Has input connection:", hasConnection, "Has received data:", this._hasReceivedData);
 
     // Update connection state
     this._hasInputConnection = hasConnection;
@@ -241,10 +203,10 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
   }
 
   override onNodeCreated() {
-    log("MarkdownRenderer", "Node created");
+    log(this.type, "Node created");
     // Check for existing input connections (for loaded workflows)
     if (this.inputs && this.inputs[0] && this.inputs[0].link) {
-      log("MarkdownRenderer", "Found existing input connection");
+      log(this.type, "Found existing input connection");
       this._hasInputConnection = true;
     } else {
       // If no connection, ensure we're in standalone mode
@@ -272,12 +234,12 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
   private doUpdateUI() {
     // Prevent concurrent UI updates
     if (this._isUpdatingUI) {
-      log("MarkdownRenderer", "UI update already in progress, skipping");
+      log(this.type, "UI update already in progress, skipping");
       return;
     }
 
     this._isUpdatingUI = true;
-    log("MarkdownRenderer", "Updating UI - hasInputConnection:", this._hasInputConnection, "hasReceivedData:", this._hasReceivedData, "hasContent:", Boolean(this._editableContent), "hasStoredHtml:", Boolean(this._storedHtml));
+    log(this.type, "Updating UI - hasInputConnection:", this._hasInputConnection, "hasReceivedData:", this._hasReceivedData, "hasContent:", Boolean(this._editableContent), "hasStoredHtml:", Boolean(this._storedHtml));
 
     try {
       // Force complete widget cleanup
@@ -290,12 +252,12 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
       // Show waiting UI if we have an input connection but no data received
       // This takes priority over having editable content
       if (this._hasInputConnection && !this._hasReceivedData && !this._storedHtml) {
-        log("MarkdownRenderer", "Showing waiting UI - connected but no data received");
+        log(this.type, "Showing waiting UI - connected but no data received");
         showWaitingForInput(this);
       }
       // Show editor in all other cases (no connection, has data, has stored content)
       else {
-        log("MarkdownRenderer", "Showing editor - has content, data, or no connection");
+        log(this.type, "Showing editor - has content, data, or no connection");
         showEditor(this);
       }
 
@@ -314,14 +276,14 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
   private cleanupAllWidgets() {
     if (!this.widgets) return;
 
-    log("MarkdownRenderer", "Cleaning up widgets, current count:", this.widgets.length);
+    log(this.type, "Cleaning up widgets, current count:", this.widgets.length);
 
     // Create a copy of the widgets array to avoid modification during iteration
     const widgetsToRemove = [...this.widgets];
 
     for (const widget of widgetsToRemove) {
       if (widget.name === 'markdown_widget' || widget.name === 'markdown_editor' || widget.name === 'text') {
-        log("MarkdownRenderer", "Removing widget:", widget.name);
+        log(this.type, "Removing widget:", widget.name);
 
         // Call widget's cleanup function first
         if (typeof widget.onRemove === 'function') {
@@ -351,7 +313,7 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
       w.name !== 'markdown_widget' && w.name !== 'markdown_editor' && w.name !== 'text'
     );
 
-    log("MarkdownRenderer", "Widgets after cleanup:", this.widgets.length);
+    log(this.type, "Widgets after cleanup:", this.widgets.length);
   }
 
   override onRemoved(): void {

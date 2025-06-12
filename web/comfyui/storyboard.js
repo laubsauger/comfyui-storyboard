@@ -14,6 +14,11 @@ var Storyboard = class extends EventTarget {
     link.type = "text/css";
     link.href = "extensions/comfyui-storyboard/comfyui/storyboard.css";
     document.head.appendChild(link);
+    let link2 = document.createElement("link");
+    link2.rel = "stylesheet";
+    link2.type = "text/css";
+    link2.href = "extensions/comfyui-storyboard/comfyui/a11y-dark.min.css";
+    document.head.appendChild(link2);
   }
   log(level, message, ...args) {
     if (level > LOG_LEVEL) {

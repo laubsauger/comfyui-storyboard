@@ -89,14 +89,24 @@ class OpenAIAdvancedConfiguration:
         return {
             "required": {
                 "response_format": (["text", "json_object"],),
+                "seed": (
+                    "INT",
+                    {
+                        "default": 42,
+                        "min": 0,
+                        "max": 4294967295,
+                        "step": 1,
+                        "display": "number",
+                    },
+                ),
             },
         }
 
     RETURN_TYPES = ("ADV_CONFIG",)
     FUNCTION = "configure"
 
-    def configure(self, response_format):
-        config = {"response_format": {"type": response_format}}
+    def configure(self, response_format, seed):
+        config = {"response_format": {"type": response_format}, "seed": seed}
         return (config,)
 
 
@@ -104,6 +114,10 @@ class OpenAIChatGPT:
     NAME = "OpenAI Chat GPT"
     DISPLAY_NAME = "OpenAI Chat GPT"
     CATEGORY = "storyboard/LLM/OpenAI"
+
+    def __init__(self):
+        self.cached_output = None
+        self.previous_inputs = None
 
     _models = [
         "gpt-4o-mini",
@@ -127,16 +141,17 @@ class OpenAIChatGPT:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"multiline": True, "default": "Hello, world!"}),
+                "prompt": ("STRING", {"multiline": True, "default": "User Message"}),
                 "system_prompt": (
                     "STRING",
-                    {"multiline": True, "default": "You are a helpful assistant."},
+                    {"multiline": True, "default": "System Instructions"},
                 ),
                 "model": (cls._models,),
                 "temperature": (
                     "FLOAT",
                     {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.01},
                 ),
+                "use_caching": ("BOOLEAN", {"default": True}),
             },
             "optional": {
                 "adv_config": ("ADV_CONFIG",),
@@ -146,12 +161,36 @@ class OpenAIChatGPT:
     RETURN_TYPES = ("STRING",)
     FUNCTION = "chat"
 
-    def chat(self, prompt, system_prompt, model, temperature, adv_config=None):
+    def chat(
+        self, prompt, system_prompt, model, temperature, use_caching, adv_config=None
+    ):
+        status = "🔄 New"
+
+        if use_caching:
+            current_inputs = {
+                "prompt": prompt,
+                "system_prompt": system_prompt,
+                "model": model,
+                "temperature": temperature,
+                "adv_config": adv_config,
+            }
+
+            if (
+                self.previous_inputs == current_inputs
+                and self.cached_output is not None
+            ):
+                status = "✅ Cached"
+                return {
+                    "ui": {"cache_status": [status]},
+                    "result": (self.cached_output,),
+                }
+
         try:
             api_key = get_api_key()
         except ValueError as e:
+            status = "❌ Error"
             # Return the error message to be displayed on the node
-            return (str(e),)
+            return {"ui": {"cache_status": [status]}, "result": (str(e),)}
 
         client = openai.OpenAI(api_key=api_key)
 
@@ -171,7 +210,12 @@ class OpenAIChatGPT:
 
         try:
             response = client.chat.completions.create(**kwargs)
-            return (response.choices[0].message.content,)
+            output = response.choices[0].message.content
+            if use_caching:
+                self.cached_output = output
+                self.previous_inputs = current_inputs
+            return {"ui": {"cache_status": [status]}, "result": (output,)}
         except Exception as e:
             print(f"Error calling OpenAI API: {e}")
-            return (f"Error: {e}",)
+            status = "❌ Error"
+            return {"ui": {"cache_status": [status]}, "result": (f"Error: {e}",)}

@@ -1,9 +1,29 @@
 import markdown2
 import logging
+import re
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("MarkdownRenderer")
+
+
+def pretty_print_json_in_markdown(md_text):
+    def replacer(match):
+        lang = match.group(1).strip().lower()
+        code = match.group(2)
+        if lang == "json":
+            try:
+                parsed_json = json.loads(code)
+                pretty_json = json.dumps(parsed_json, indent=2)
+                return f"```{lang}\\n{pretty_json}\\n```"
+            except (json.JSONDecodeError, TypeError):
+                return match.group(0)
+        return match.group(0)
+
+    pattern = re.compile(r"^```(\w*)\\n([\s\S]+?)\\n^```$", re.MULTILINE)
+    return pattern.sub(replacer, md_text)
+
 
 class MarkdownRenderer:
     NAME = "MarkdownRenderer"
@@ -14,7 +34,14 @@ class MarkdownRenderer:
         return {
             "required": {},
             "optional": {
-                "text": ("STRING", {"forceInput": True, "hidden": True}),
+                "text": (
+                    "STRING",
+                    {
+                        "forceInput": True,
+                        "hidden": True,
+                        "tooltip": "The Markdown text to be rendered. This can be connected to other nodes that output text.",
+                    },
+                ),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -29,7 +56,7 @@ class MarkdownRenderer:
     OUTPUT_NODE = True
     OUTPUT_IS_LIST = (True,)
     MARKDOWN_EXTRAS = [
-        "fenced-code-blocks",
+        "code-color",
         "tables",
         "code-friendly",
         "task_list",
@@ -67,13 +94,14 @@ class MarkdownRenderer:
                 if isinstance(t, list):
                     for item in t:
                         text_str = str(item)
-                        text_content.append(text_str)
                         logger.info(
                             f"[MarkdownRenderer] Processing list item: {text_str[:100]}..."
                         )
+                        processed_text = pretty_print_json_in_markdown(text_str)
+                        text_content.append(processed_text)
                         # Convert markdown to HTML using markdown2 with extras
                         html = markdown2.markdown(
-                            text_str,
+                            processed_text,
                             extras=MarkdownRenderer.MARKDOWN_EXTRAS,
                         )
                         html_content.append(html)
@@ -82,12 +110,13 @@ class MarkdownRenderer:
                         )
                 else:
                     text_str = str(t)
-                    text_content.append(text_str)
                     logger.info(
                         f"[MarkdownRenderer] Processing single item: {text_str[:100]}..."
                     )
+                    processed_text = pretty_print_json_in_markdown(text_str)
+                    text_content.append(processed_text)
                     html = markdown2.markdown(
-                        text_str,
+                        processed_text,
                         extras=MarkdownRenderer.MARKDOWN_EXTRAS,
                     )
                     html_content.append(html)

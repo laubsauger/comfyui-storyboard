@@ -1,5 +1,5 @@
 // Logging
-export const LOG_VERBOSE = true;
+export const LOG_VERBOSE = false;
 export const log = (prefix: string, ...args: any[]) => {
   if (LOG_VERBOSE) {
     console.log(`[${prefix}]`, ...args);

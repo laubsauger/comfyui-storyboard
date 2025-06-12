@@ -1,15 +1,12 @@
 import { app } from "scripts/app.js";
 import { ComfyWidgets } from "scripts/widgets.js";
 import { renderMarkdownToHtml } from "./markdown_utils.js";
+import { log } from "./common.js";
 
-const LOG_VERBOSE = false;
-const log = (...args: any[]) => {
-  if (LOG_VERBOSE) {
-    console.log(`[MarkdownWidget]`, ...args);
-  }
-};
+console.log("=== MARKDOWN_WIDGET_MODULE_LOADED ===");
 
 export function createMarkdownWidget(node: any, config: any) {
+  console.log("=== CREATE_MARKDOWN_WIDGET_CALLED ===", config);
   const {
     widgetName = "markdown_widget",
     isEditable = false,
@@ -270,7 +267,7 @@ export function createMarkdownWidget(node: any, config: any) {
 }
 
 export function populateMarkdownWidget(node: any, html: string | string[]) {
-  log("populateMarkdownWidget called");
+  log(node.type, "populateMarkdownWidget called");
   if (!node.widgets) return;
 
   // Update node state
@@ -321,7 +318,7 @@ export function populateMarkdownWidget(node: any, html: string | string[]) {
 }
 
 export function showEditor(node: any) {
-  log("showEditor called, this:", node);
+  log(node.type, "showEditor called, this:", node);
 
   // Don't clean up here - let the main cleanupAllWidgets handle it
   // This prevents double cleanup and DOM manipulation race conditions
