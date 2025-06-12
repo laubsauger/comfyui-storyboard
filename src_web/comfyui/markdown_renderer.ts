@@ -5,8 +5,6 @@ import { log } from "./common.js";
 import { LiteGraph } from "@comfyorg/litegraph";
 import { renderMarkdownToHtml } from "./markdown_utils.js";
 
-console.log("=== MARKDOWN_RENDERER_MODULE_LOADED ===");
-
 export function setupMarkdownRenderer(nodeType: any, nodeData: any) {
   // Setup any node-specific configuration here
 }

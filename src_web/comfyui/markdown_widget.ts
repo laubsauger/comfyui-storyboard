@@ -3,10 +3,7 @@ import { ComfyWidgets } from "scripts/widgets.js";
 import { renderMarkdownToHtml } from "./markdown_utils.js";
 import { log } from "./common.js";
 
-console.log("=== MARKDOWN_WIDGET_MODULE_LOADED ===");
-
 export function createMarkdownWidget(node: any, config: any) {
-  console.log("=== CREATE_MARKDOWN_WIDGET_CALLED ===", config);
   const {
     widgetName = "markdown_widget",
     isEditable = false,

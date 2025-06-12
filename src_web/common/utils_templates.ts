@@ -266,7 +266,6 @@ function replaceTplElementWithChildren(
  *   my.value`some string ${value} is cool.`
  */
 function getValueForBinding(bindingPropName: string, context: BindingContext) {
-  console.log("getValueForBinding", bindingPropName, context);
   const data = context.data;
   let stringTemplate = null;
   let stringTemplates = /^(.*?)\`([^\`]*)\`$/.exec(bindingPropName.trim());
@@ -328,13 +327,10 @@ function getValueForBindingPropName(bindingPropName: string, context: BindingCon
     value = getPrimitiveOrObjValue(bindingPropName, data);
     value = matches![2]!.replace(/^['"]/, "").replace(/['"]$/, "").replace(/\$1/g, value);
   } else if (RGX_BIND_FN_CALL.test(bindingPropName)) {
-    console.log("-----");
-    console.log(bindingPropName);
     let matches = RGX_BIND_FN_CALL.exec(bindingPropName);
     const functionName = matches![1]!;
     const maybeDataName = matches![2] ?? null;
     value = getPrimitiveOrObjValue(maybeDataName, data);
-    console.log(functionName, maybeDataName, value);
     // First, see if the instance has this call
     if (typeof value?.[functionName] === "function") {
       value = value[functionName](value, data, context.currentElement, context.contextElement);
