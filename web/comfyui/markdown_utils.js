@@ -5248,7 +5248,6 @@ var ALLOWED_ATTRS = [
 var MEDIA_SRC_REGEX = /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
 
 // src_web/comfyui/markdown_utils.ts
-console.log("=== MARKDOWN_UTILS_MODULE_LOADED ===");
 core_default.registerLanguage("json", json);
 core_default.registerLanguage("python", python);
 function createMarkdownRenderer(baseUrl) {
@@ -5265,14 +5264,10 @@ function createMarkdownRenderer(baseUrl) {
   return renderer;
 }
 function renderMarkdownToHtml(markdown, baseUrl) {
-  console.log("=== RENDER_MARKDOWN_CALLED ===");
-  console.log("RENDER_MARKDOWN_INPUT:", markdown);
   if (!markdown) {
-    console.log("No markdown input, returning empty string");
     return "";
   }
   const markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
-  console.log("RENDER_MARKDOWN_STR:", markdownStr);
   const renderer = new _Renderer();
   const originalImage = renderer.image;
   renderer.image = ({ href, title, text: text2 }) => {
@@ -5283,38 +5278,30 @@ function renderMarkdownToHtml(markdown, baseUrl) {
     const titleAttr = title ? ` title="${title}"` : "";
     return `<img src="${src}" alt="${text2}"${titleAttr} />`;
   };
-  console.log("CUSTOM_IMAGE_RENDERER_REGISTERED");
   const markedInstance2 = new Marked({ renderer });
   if (typeof window !== "undefined") {
     window.markedInstance = markedInstance2;
   }
-  console.log("MARKED_INSTANCE_CREATED", markedInstance2);
   markedInstance2.use(
     markedHighlight({
       langPrefix: "hljs language-",
       highlight(code, lang) {
-        console.log("=== HIGHLIGHT_FN_CALLED ===", { code, lang });
         let codeToHighlight = code;
         if (lang === "json") {
           try {
             const jsonObj = JSON.parse(code);
             codeToHighlight = JSON.stringify(jsonObj, null, 2);
-            console.log("[highlight] pretty-printed JSON:", codeToHighlight);
           } catch (e) {
-            console.log("[highlight] Failed to parse JSON, using as-is.");
+            console.error("[highlight] Failed to parse JSON, using as-is.");
           }
         }
         const language = core_default.getLanguage(lang) ? lang : "plaintext";
         const highlighted = core_default.highlight(codeToHighlight, { language }).value;
-        console.log("[highlight] highlighted output:", highlighted);
         return highlighted;
       }
     })
   );
-  console.log("MARKED_HIGHLIGHT_PLUGIN_REGISTERED");
-  console.log("About to parse markdown:", markdownStr);
   let html3 = markedInstance2.parse(markdownStr);
-  console.log("MARKED_OUTPUT:", html3);
   if (baseUrl) {
     html3 = html3.replace(MEDIA_SRC_REGEX, `$1${baseUrl}$2$3`);
   }
@@ -5322,7 +5309,6 @@ function renderMarkdownToHtml(markdown, baseUrl) {
     ADD_TAGS: ALLOWED_TAGS,
     ADD_ATTR: ALLOWED_ATTRS
   });
-  console.log("SANITIZED_OUTPUT:", sanitized);
   return sanitized;
 }
 export {
