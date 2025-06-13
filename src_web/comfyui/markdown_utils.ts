@@ -4,10 +4,17 @@ import { markedHighlight } from "marked-highlight";
 import hljs from 'highlight.js/lib/core';
 import json from 'highlight.js/lib/languages/json';
 import python from 'highlight.js/lib/languages/python';
+import plaintext from 'highlight.js/lib/languages/plaintext';
+import markdown from 'highlight.js/lib/languages/markdown';
 import { ALLOWED_TAGS, ALLOWED_ATTRS, MEDIA_SRC_REGEX, log } from "./common.js";
 
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('python', python);
+hljs.registerLanguage('plaintext', plaintext);
+hljs.registerLanguage('markdown', markdown);
+hljs.configure({
+  languages: ['python', 'json', 'plaintext', 'markdown'],
+});
 
 export function createMarkdownRenderer(baseUrl?: string): Renderer {
   const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
@@ -55,19 +62,47 @@ export function renderMarkdownToHtml(
   markedInstance.use(
     markedHighlight({
       langPrefix: "hljs language-",
-      highlight(code: string, lang: string) {
-        let codeToHighlight = code;
-        if (lang === "json") {
+      highlight(code: string | string[], lang: string) {
+        log("highlight", "Input type:", typeof code, "Is array:", Array.isArray(code), "Length:", Array.isArray(code) ? code.length : code.length);
+
+        // Handle array input by joining it
+        const codeStr = Array.isArray(code) ? code.join('') : code;
+        log("highlight", "Joined string length:", codeStr.length, "First 50 chars:", codeStr.slice(0, 50));
+
+        // Get first 100 chars for quick checks (more than enough for our patterns)
+        const preview = codeStr.trim().slice(0, 100);
+        log("highlight", "Preview:", preview);
+
+        // Quick check for JSON-like content (starts with { or [)
+        if (preview[0] === '{' || preview[0] === '[') {
+          log("highlight", "Detected potential JSON content");
           try {
-            const jsonObj = JSON.parse(code);
-            codeToHighlight = JSON.stringify(jsonObj, null, 2);
-          } catch (e) {
-            console.error("[highlight] Failed to parse JSON, using as-is.");
+            const jsonObj = JSON.parse(codeStr);
+            log("highlight", "Successfully parsed JSON");
+            const formatted = JSON.stringify(jsonObj, null, 2);
+            log("highlight", "Formatted JSON length:", formatted.length);
+            return hljs.highlight(formatted, { language: 'json' }).value;
+          } catch (e: any) {
+            log("highlight", "JSON parse failed:", e.message);
+            // Not valid JSON, continue with other checks
           }
         }
-        const language = hljs.getLanguage(lang) ? lang : "plaintext";
-        const highlighted = hljs.highlight(codeToHighlight, { language }).value;
-        return highlighted;
+
+        // Quick check for Python-like content (indentation, def, class, etc)
+        if (preview.match(/^(def|class|import|from|if|for|while)\s/)) {
+          log("highlight", "Detected Python content");
+          return hljs.highlight(codeStr, { language: 'python' }).value;
+        }
+
+        // Quick check for markdown-like content (headers, lists, etc)
+        if (preview.match(/^(#|\*|\-|\d\.)\s/)) {
+          log("highlight", "Detected Markdown content");
+          return hljs.highlight(codeStr, { language: 'markdown' }).value;
+        }
+
+        // Default to plaintext for everything else
+        log("highlight", "No specific format detected, using plaintext");
+        return hljs.highlight(codeStr, { language: 'plaintext' }).value;
       },
     })
   );

@@ -1,5 +1,5 @@
 // src_web/comfyui/common.ts
-var LOG_VERBOSE = false;
+var LOG_VERBOSE = true;
 var log = (prefix, ...args) => {
   if (LOG_VERBOSE) {
     console.log(`[${prefix}]`, ...args);

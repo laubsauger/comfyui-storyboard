@@ -2,7 +2,7 @@
 import { app } from "/scripts/app.js";
 
 // src_web/comfyui/common.ts
-var LOG_VERBOSE = false;
+var LOG_VERBOSE = true;
 var log = (prefix, ...args) => {
   if (LOG_VERBOSE) {
     console.log(`[${prefix}]`, ...args);
@@ -13,7 +13,6 @@ var log = (prefix, ...args) => {
 app.registerExtension({
   name: "comfy.llm.OpenAIChatGPT",
   async beforeRegisterNodeDef(nodeType, nodeData) {
-    log("beforeRegisterNodeDef", nodeType, nodeData);
     if (nodeData.name === "OpenAI Chat GPT") {
       const onExecuted = nodeType.prototype.onExecuted;
       nodeType.prototype.onExecuted = function(message) {

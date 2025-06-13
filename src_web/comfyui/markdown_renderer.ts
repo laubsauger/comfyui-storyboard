@@ -321,7 +321,7 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
 
   override computeSize(out?: any): any {
     // Respect current node size but enforce minimum dimensions
-    const minW = 250;
+    const minW = 280;
     const minH = 240; // Increased default height for better editor area
     // If this.size is defined, ensure we don't shrink the node when the user has resized it manually
     const curW = Array.isArray(this.size) ? this.size[0] : minW;

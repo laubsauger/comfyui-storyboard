@@ -4,7 +4,6 @@ import { log } from "./common.js";
 app.registerExtension({
   name: "comfy.llm.OpenAIChatGPT",
   async beforeRegisterNodeDef(nodeType: any, nodeData: any) {
-    log("beforeRegisterNodeDef", nodeType, nodeData);
     if (nodeData.name === "OpenAI Chat GPT") {
       const onExecuted = nodeType.prototype.onExecuted;
       nodeType.prototype.onExecuted = function (message: any) {

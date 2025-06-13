@@ -1329,11 +1329,11 @@ var require_core = __commonJS({
       }
       function highlightAuto(code, languageSubset) {
         languageSubset = languageSubset || options2.languages || Object.keys(languages);
-        const plaintext = justTextHighlightResult(code);
+        const plaintext2 = justTextHighlightResult(code);
         const results = languageSubset.filter(getLanguage).filter(autoDetection).map(
           (name) => _highlight(name, code, false)
         );
-        results.unshift(plaintext);
+        results.unshift(plaintext2);
         const sorted = results.sort((a, b) => {
           if (a.relevance !== b.relevance) return b.relevance - a.relevance;
           if (a.language && b.language) {
@@ -4342,8 +4342,8 @@ var _Hooks = (_a = class {
   /**
    * Process markdown before marked
    */
-  preprocess(markdown) {
-    return markdown;
+  preprocess(markdown2) {
+    return markdown2;
   }
   /**
    * Process HTML after marked is finished
@@ -5235,7 +5235,257 @@ function python(hljs) {
   };
 }
 
+// node_modules/highlight.js/es/languages/plaintext.js
+function plaintext(hljs) {
+  return {
+    name: "Plain text",
+    aliases: [
+      "text",
+      "txt"
+    ],
+    disableAutodetect: true
+  };
+}
+
+// node_modules/highlight.js/es/languages/markdown.js
+function markdown(hljs) {
+  const regex = hljs.regex;
+  const INLINE_HTML = {
+    begin: /<\/?[A-Za-z_]/,
+    end: ">",
+    subLanguage: "xml",
+    relevance: 0
+  };
+  const HORIZONTAL_RULE = {
+    begin: "^[-\\*]{3,}",
+    end: "$"
+  };
+  const CODE = {
+    className: "code",
+    variants: [
+      // TODO: fix to allow these to work with sublanguage also
+      { begin: "(`{3,})[^`](.|\\n)*?\\1`*[ ]*" },
+      { begin: "(~{3,})[^~](.|\\n)*?\\1~*[ ]*" },
+      // needed to allow markdown as a sublanguage to work
+      {
+        begin: "```",
+        end: "```+[ ]*$"
+      },
+      {
+        begin: "~~~",
+        end: "~~~+[ ]*$"
+      },
+      { begin: "`.+?`" },
+      {
+        begin: "(?=^( {4}|\\t))",
+        // use contains to gobble up multiple lines to allow the block to be whatever size
+        // but only have a single open/close tag vs one per line
+        contains: [
+          {
+            begin: "^( {4}|\\t)",
+            end: "(\\n)$"
+          }
+        ],
+        relevance: 0
+      }
+    ]
+  };
+  const LIST = {
+    className: "bullet",
+    begin: "^[ 	]*([*+-]|(\\d+\\.))(?=\\s+)",
+    end: "\\s+",
+    excludeEnd: true
+  };
+  const LINK_REFERENCE = {
+    begin: /^\[[^\n]+\]:/,
+    returnBegin: true,
+    contains: [
+      {
+        className: "symbol",
+        begin: /\[/,
+        end: /\]/,
+        excludeBegin: true,
+        excludeEnd: true
+      },
+      {
+        className: "link",
+        begin: /:\s*/,
+        end: /$/,
+        excludeBegin: true
+      }
+    ]
+  };
+  const URL_SCHEME = /[A-Za-z][A-Za-z0-9+.-]*/;
+  const LINK = {
+    variants: [
+      // too much like nested array access in so many languages
+      // to have any real relevance
+      {
+        begin: /\[.+?\]\[.*?\]/,
+        relevance: 0
+      },
+      // popular internet URLs
+      {
+        begin: /\[.+?\]\(((data|javascript|mailto):|(?:http|ftp)s?:\/\/).*?\)/,
+        relevance: 2
+      },
+      {
+        begin: regex.concat(/\[.+?\]\(/, URL_SCHEME, /:\/\/.*?\)/),
+        relevance: 2
+      },
+      // relative urls
+      {
+        begin: /\[.+?\]\([./?&#].*?\)/,
+        relevance: 1
+      },
+      // whatever else, lower relevance (might not be a link at all)
+      {
+        begin: /\[.*?\]\(.*?\)/,
+        relevance: 0
+      }
+    ],
+    returnBegin: true,
+    contains: [
+      {
+        // empty strings for alt or link text
+        match: /\[(?=\])/
+      },
+      {
+        className: "string",
+        relevance: 0,
+        begin: "\\[",
+        end: "\\]",
+        excludeBegin: true,
+        returnEnd: true
+      },
+      {
+        className: "link",
+        relevance: 0,
+        begin: "\\]\\(",
+        end: "\\)",
+        excludeBegin: true,
+        excludeEnd: true
+      },
+      {
+        className: "symbol",
+        relevance: 0,
+        begin: "\\]\\[",
+        end: "\\]",
+        excludeBegin: true,
+        excludeEnd: true
+      }
+    ]
+  };
+  const BOLD = {
+    className: "strong",
+    contains: [],
+    // defined later
+    variants: [
+      {
+        begin: /_{2}(?!\s)/,
+        end: /_{2}/
+      },
+      {
+        begin: /\*{2}(?!\s)/,
+        end: /\*{2}/
+      }
+    ]
+  };
+  const ITALIC = {
+    className: "emphasis",
+    contains: [],
+    // defined later
+    variants: [
+      {
+        begin: /\*(?![*\s])/,
+        end: /\*/
+      },
+      {
+        begin: /_(?![_\s])/,
+        end: /_/,
+        relevance: 0
+      }
+    ]
+  };
+  const BOLD_WITHOUT_ITALIC = hljs.inherit(BOLD, { contains: [] });
+  const ITALIC_WITHOUT_BOLD = hljs.inherit(ITALIC, { contains: [] });
+  BOLD.contains.push(ITALIC_WITHOUT_BOLD);
+  ITALIC.contains.push(BOLD_WITHOUT_ITALIC);
+  let CONTAINABLE = [
+    INLINE_HTML,
+    LINK
+  ];
+  [
+    BOLD,
+    ITALIC,
+    BOLD_WITHOUT_ITALIC,
+    ITALIC_WITHOUT_BOLD
+  ].forEach((m) => {
+    m.contains = m.contains.concat(CONTAINABLE);
+  });
+  CONTAINABLE = CONTAINABLE.concat(BOLD, ITALIC);
+  const HEADER = {
+    className: "section",
+    variants: [
+      {
+        begin: "^#{1,6}",
+        end: "$",
+        contains: CONTAINABLE
+      },
+      {
+        begin: "(?=^.+?\\n[=-]{2,}$)",
+        contains: [
+          { begin: "^[=-]*$" },
+          {
+            begin: "^",
+            end: "\\n",
+            contains: CONTAINABLE
+          }
+        ]
+      }
+    ]
+  };
+  const BLOCKQUOTE = {
+    className: "quote",
+    begin: "^>\\s+",
+    contains: CONTAINABLE,
+    end: "$"
+  };
+  const ENTITY = {
+    //https://spec.commonmark.org/0.31.2/#entity-references
+    scope: "literal",
+    match: /&([a-zA-Z0-9]+|#[0-9]{1,7}|#[Xx][0-9a-fA-F]{1,6});/
+  };
+  return {
+    name: "Markdown",
+    aliases: [
+      "md",
+      "mkdown",
+      "mkd"
+    ],
+    contains: [
+      HEADER,
+      INLINE_HTML,
+      LIST,
+      BOLD,
+      ITALIC,
+      BLOCKQUOTE,
+      CODE,
+      HORIZONTAL_RULE,
+      LINK,
+      LINK_REFERENCE,
+      ENTITY
+    ]
+  };
+}
+
 // src_web/comfyui/common.ts
+var LOG_VERBOSE = true;
+var log = (prefix, ...args) => {
+  if (LOG_VERBOSE) {
+    console.log(`[${prefix}]`, ...args);
+  }
+};
 var ALLOWED_TAGS = ["video", "source"];
 var ALLOWED_ATTRS = [
   "controls",
@@ -5250,6 +5500,11 @@ var MEDIA_SRC_REGEX = /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\
 // src_web/comfyui/markdown_utils.ts
 core_default.registerLanguage("json", json);
 core_default.registerLanguage("python", python);
+core_default.registerLanguage("plaintext", plaintext);
+core_default.registerLanguage("markdown", markdown);
+core_default.configure({
+  languages: ["python", "json", "plaintext", "markdown"]
+});
 function createMarkdownRenderer(baseUrl) {
   const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
   const renderer = new _Renderer();
@@ -5263,11 +5518,11 @@ function createMarkdownRenderer(baseUrl) {
   };
   return renderer;
 }
-function renderMarkdownToHtml(markdown, baseUrl) {
-  if (!markdown) {
+function renderMarkdownToHtml(markdown2, baseUrl) {
+  if (!markdown2) {
     return "";
   }
-  const markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
+  const markdownStr = Array.isArray(markdown2) ? markdown2.join("") : markdown2;
   const renderer = new _Renderer();
   const originalImage = renderer.image;
   renderer.image = ({ href, title, text: text2 }) => {
@@ -5286,18 +5541,33 @@ function renderMarkdownToHtml(markdown, baseUrl) {
     markedHighlight({
       langPrefix: "hljs language-",
       highlight(code, lang) {
-        let codeToHighlight = code;
-        if (lang === "json") {
+        log("highlight", "Input type:", typeof code, "Is array:", Array.isArray(code), "Length:", Array.isArray(code) ? code.length : code.length);
+        const codeStr = Array.isArray(code) ? code.join("") : code;
+        log("highlight", "Joined string length:", codeStr.length, "First 50 chars:", codeStr.slice(0, 50));
+        const preview = codeStr.trim().slice(0, 100);
+        log("highlight", "Preview:", preview);
+        if (preview[0] === "{" || preview[0] === "[") {
+          log("highlight", "Detected potential JSON content");
           try {
-            const jsonObj = JSON.parse(code);
-            codeToHighlight = JSON.stringify(jsonObj, null, 2);
+            const jsonObj = JSON.parse(codeStr);
+            log("highlight", "Successfully parsed JSON");
+            const formatted = JSON.stringify(jsonObj, null, 2);
+            log("highlight", "Formatted JSON length:", formatted.length);
+            return core_default.highlight(formatted, { language: "json" }).value;
           } catch (e) {
-            console.error("[highlight] Failed to parse JSON, using as-is.");
+            log("highlight", "JSON parse failed:", e.message);
           }
         }
-        const language = core_default.getLanguage(lang) ? lang : "plaintext";
-        const highlighted = core_default.highlight(codeToHighlight, { language }).value;
-        return highlighted;
+        if (preview.match(/^(def|class|import|from|if|for|while)\s/)) {
+          log("highlight", "Detected Python content");
+          return core_default.highlight(codeStr, { language: "python" }).value;
+        }
+        if (preview.match(/^(#|\*|\-|\d\.)\s/)) {
+          log("highlight", "Detected Markdown content");
+          return core_default.highlight(codeStr, { language: "markdown" }).value;
+        }
+        log("highlight", "No specific format detected, using plaintext");
+        return core_default.highlight(codeStr, { language: "plaintext" }).value;
       }
     })
   );

@@ -92,6 +92,13 @@
   height: 33px;
   box-sizing: border-box;
 }
+.toolbar-group,
+.toolbar-right,
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .markdown-char-count {
   color: #666;
   font-size: 10px;
@@ -130,7 +137,8 @@
   border: 1px solid #222;
   background: #111;
 }
-.markdown-editor-button {
+.markdown-editor-button,
+.markdown-copy-button {
   background: transparent;
   color: #888;
   border: none;
@@ -149,17 +157,32 @@
   align-items: center;
   justify-content: center;
 }
-.markdown-editor-button:last-child {
-  border-right: none;
+.markdown-editor-button:hover:not(.active),
+.markdown-copy-button:hover:not(.active) {
+  background: #1e1e1e;
+  color: #ddd;
 }
-.markdown-editor-button:hover:not(.active) {
-  background: #1a1a1a;
-  color: #ccc;
-}
-.markdown-editor-button.active {
+.markdown-editor-button.active,
+.active.markdown-copy-button {
   background: #007acc;
   color: #ffffff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.markdown-copy-button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #222;
+  border-radius: 4px;
+  background: #111;
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+  border-right: 1px solid #222;
+}
+.markdown-copy-button:hover:not(.active) {
+  background: #1e1e1e;
+  color: #ddd;
 }
 .markdown-warning-indicator {
   color: #888;

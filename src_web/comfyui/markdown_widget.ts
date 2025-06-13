@@ -64,19 +64,81 @@ export function createMarkdownWidget(node: any, config: any) {
 
   const toolbar = document.createElement("div");
   toolbar.className = "markdown-editor-toolbar";
-  toolbar.style.flex = "0 0 auto";
-  toolbar.style.background = "#141414";
-  toolbar.style.borderBottom = "1px solid #444";
-  const charCount = document.createElement("div");
-  charCount.className = "markdown-char-count";
+
+  const leftGroup = document.createElement("div");
+  leftGroup.className = "toolbar-left";
+
+  const rightGroup = document.createElement("div");
+  rightGroup.className = "toolbar-right";
+
   const toggleGroup = document.createElement("div");
   toggleGroup.className = "markdown-toggle-group";
+
   const markdownButton = document.createElement("button");
   markdownButton.className = "markdown-editor-button active";
   markdownButton.textContent = "MD";
+  markdownButton.title = "Show rendered markdown";
+  markdownButton.onclick = (e) => {
+    e.stopPropagation();
+    if (isSourceMode) {
+      isSourceMode = false;
+      markdownButton.classList.add("active");
+      textButton.classList.remove("active");
+      container.style.display = "block";
+      textarea.style.display = "none";
+      updateCharCount();
+    }
+  };
+
   const textButton = document.createElement("button");
   textButton.className = "markdown-editor-button";
-  textButton.textContent = "Text";
+  textButton.textContent = "TXT";
+  textButton.title = "Show source text";
+  textButton.onclick = (e) => {
+    e.stopPropagation();
+    if (!isSourceMode) {
+      isSourceMode = true;
+      textButton.classList.add("active");
+      markdownButton.classList.remove("active");
+      container.style.display = "none";
+      textarea.style.display = "block";
+      updateCharCount();
+    }
+  };
+
+  const warningIndicator = document.createElement("div");
+  warningIndicator.className = "markdown-warning-indicator";
+  warningIndicator.style.display = isEditable ? "none" : "block";
+  warningIndicator.textContent = "🔒";
+  warningIndicator.title =
+    "Editing is disabled while input is connected. Disconnect the input to enable manual editing.";
+
+  const charCount = document.createElement("div");
+  charCount.className = "markdown-char-count";
+
+  const copyButton = document.createElement("button");
+  copyButton.className = "markdown-copy-button";
+  copyButton.innerHTML = "📋";
+  copyButton.title = "Copy to clipboard";
+  copyButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const textToCopy = isSourceMode ? textarea.value : currentContent;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      const originalText = copyButton.innerHTML;
+      copyButton.innerHTML = "✓";
+      copyButton.style.color = "#4CAF50";
+      setTimeout(() => {
+        copyButton.innerHTML = originalText;
+        copyButton.style.color = "#666";
+      }, 1000);
+    }).catch(err => {
+      console.error("Failed to copy text:", err);
+      copyButton.innerHTML = "❌";
+      setTimeout(() => {
+        copyButton.innerHTML = "📋";
+      }, 1000);
+    });
+  });
 
   const container = document.createElement("div");
   container.className = "markdown-content";
@@ -147,13 +209,6 @@ export function createMarkdownWidget(node: any, config: any) {
     }
   });
 
-  const warningIndicator = document.createElement("div");
-  warningIndicator.className = "markdown-warning-indicator";
-  warningIndicator.style.display = isEditable ? "none" : "block";
-  warningIndicator.textContent = "🔒 Read-only";
-  warningIndicator.title =
-    "Editing is disabled while input is connected. Disconnect the input to enable manual editing.";
-
   if (isEditable) {
     container.addEventListener("click", (e) => {
       if (toolbar.contains(e.target as Node)) {
@@ -212,11 +267,13 @@ export function createMarkdownWidget(node: any, config: any) {
   }
 
   toggleGroup.append(markdownButton, textButton);
-  if (isEditable) {
-    toolbar.append(toggleGroup, charCount);
-  } else {
-    toolbar.append(toggleGroup, warningIndicator, charCount);
+  rightGroup.append(charCount);
+  if (!isEditable) {
+    rightGroup.append(warningIndicator);
   }
+  rightGroup.append(copyButton);
+  leftGroup.append(toggleGroup);
+  toolbar.append(leftGroup, rightGroup);
   mainContainer.append(toolbar, container, textarea);
 
   // --- Track the DOM element on the node instance ---
