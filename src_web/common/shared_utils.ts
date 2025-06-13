@@ -3,6 +3,8 @@
  * A bunch of shared utils that can be used in ComfyUI, as well as in any single-HTML pages.
  */
 
+import { LOG_VERBOSE } from "./constants";
+
 export type Resolver<T> = {
   id: string;
   completed: boolean;
@@ -531,3 +533,9 @@ export function broadcastOnChannel<T extends {}>(
   });
   return queue[id]!.promise;
 }
+
+export const log = (prefix: string, ...args: any[]) => {
+  if (LOG_VERBOSE) {
+    console.log(`[${prefix}]`, ...args);
+  }
+};

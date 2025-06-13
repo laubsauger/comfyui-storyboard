@@ -1564,6 +1564,10 @@ var require_core = __commonJS({
   }
 });
 
+// src_web/comfyui/nodes/markdown-renderer/markdown_widget.ts
+import { app } from "/scripts/app.js";
+import { ComfyWidgets } from "/scripts/widgets.js";
+
 // node_modules/dompurify/dist/purify.es.mjs
 var {
   entries,
@@ -5479,13 +5483,8 @@ function markdown(hljs) {
   };
 }
 
-// src_web/comfyui/common.ts
+// src_web/common/constants.ts
 var LOG_VERBOSE = true;
-var log = (prefix, ...args) => {
-  if (LOG_VERBOSE) {
-    console.log(`[${prefix}]`, ...args);
-  }
-};
 var ALLOWED_TAGS = [
   "video",
   "source",
@@ -5539,7 +5538,14 @@ var ALLOWED_ATTRS = [
 ];
 var MEDIA_SRC_REGEX = /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
 
-// src_web/comfyui/markdown_utils.ts
+// src_web/common/shared_utils.ts
+var log = (prefix, ...args) => {
+  if (LOG_VERBOSE) {
+    console.log(`[${prefix}]`, ...args);
+  }
+};
+
+// src_web/comfyui/nodes/markdown-renderer/markdown_utils.ts
 core_default.registerLanguage("json", json);
 core_default.registerLanguage("python", python);
 core_default.registerLanguage("plaintext", plaintext);
@@ -5547,19 +5553,6 @@ core_default.registerLanguage("markdown", markdown);
 core_default.configure({
   languages: ["python", "json", "plaintext", "markdown"]
 });
-function createMarkdownRenderer(baseUrl) {
-  const normalizedBase = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
-  const renderer = new _Renderer();
-  renderer.image = ({ href, title, text: text2 }) => {
-    let src = href;
-    if (normalizedBase && !/^(?:\/|https?:\/\/)/.test(href)) {
-      src = `${normalizedBase}/${href}`;
-    }
-    const titleAttr = title ? ` title="${title}"` : "";
-    return `<img src="${src}" alt="${text2}"${titleAttr} />`;
-  };
-  return renderer;
-}
 function renderMarkdownToHtml(markdown2, baseUrl) {
   if (!markdown2) {
     return "";
@@ -5632,9 +5625,409 @@ function renderMarkdownToHtml(markdown2, baseUrl) {
   });
   return sanitized;
 }
+
+// src_web/comfyui/nodes/markdown-renderer/markdown_widget.ts
+function createMarkdownWidget(node, config) {
+  const {
+    widgetName = "markdown_widget",
+    isEditable = false,
+    initialContent = "",
+    htmlContent = "",
+    sourceText = "",
+    onContentChange = null
+  } = config;
+  let textWidget = ComfyWidgets.STRING(
+    node,
+    "text",
+    ["STRING", { hidden: true }],
+    app
+  ).widget;
+  textWidget.value = initialContent;
+  textWidget.draw = () => {
+  };
+  textWidget.computeLayoutSize = () => {
+    return {
+      minHeight: 0,
+      maxHeight: 0,
+      minWidth: 0,
+      maxWidth: 0
+    };
+  };
+  const originalCallback = textWidget.callback;
+  textWidget.callback = function(v) {
+    if (originalCallback) originalCallback.call(this, v);
+    if (onContentChange) onContentChange(v);
+    node._editableContent = v;
+    if (!node.properties) node.properties = {};
+    node.properties.text = v;
+    node.properties.markdown_editor = v;
+  };
+  const mainContainer = document.createElement("div");
+  mainContainer.classList.add("storyboard-main-container");
+  mainContainer.style.position = "relative";
+  mainContainer.style.width = "100%";
+  mainContainer.style.height = "100%";
+  mainContainer.style.minWidth = "150px";
+  mainContainer.style.minHeight = "60px";
+  mainContainer.style.display = "flex";
+  mainContainer.style.flexDirection = "column";
+  mainContainer.style.boxSizing = "border-box";
+  mainContainer.style.overflow = "hidden";
+  mainContainer.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+  const toolbar = document.createElement("div");
+  toolbar.className = "markdown-editor-toolbar";
+  const leftGroup = document.createElement("div");
+  leftGroup.className = "toolbar-left";
+  const rightGroup = document.createElement("div");
+  rightGroup.className = "toolbar-right";
+  const toggleGroup = document.createElement("div");
+  toggleGroup.className = "markdown-toggle-group";
+  const markdownButton = document.createElement("button");
+  markdownButton.className = "markdown-editor-button active";
+  markdownButton.textContent = "MD";
+  markdownButton.title = "Show rendered markdown";
+  markdownButton.onclick = (e) => {
+    e.stopPropagation();
+    if (isSourceMode) {
+      isSourceMode = false;
+      markdownButton.classList.add("active");
+      textButton.classList.remove("active");
+      container.style.display = "block";
+      textarea.style.display = "none";
+      updateCharCount();
+    }
+  };
+  const textButton = document.createElement("button");
+  textButton.className = "markdown-editor-button";
+  textButton.textContent = "TXT";
+  textButton.title = "Show source text";
+  textButton.onclick = (e) => {
+    e.stopPropagation();
+    if (!isSourceMode) {
+      isSourceMode = true;
+      textButton.classList.add("active");
+      markdownButton.classList.remove("active");
+      container.style.display = "none";
+      textarea.style.display = "block";
+      updateCharCount();
+    }
+  };
+  const warningIndicator = document.createElement("div");
+  warningIndicator.className = "markdown-warning-indicator";
+  warningIndicator.style.display = isEditable ? "none" : "block";
+  warningIndicator.textContent = "\u{1F512}";
+  warningIndicator.title = "Editing is disabled while input is connected. Disconnect the input to enable manual editing.";
+  const charCount = document.createElement("div");
+  charCount.className = "markdown-char-count";
+  const copyButton = document.createElement("button");
+  copyButton.className = "markdown-copy-button";
+  copyButton.innerHTML = "\u{1F4CB}";
+  copyButton.title = "Copy to clipboard";
+  copyButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const textToCopy = isSourceMode ? textarea.value : currentContent;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      const originalText = copyButton.innerHTML;
+      copyButton.innerHTML = "\u2713";
+      copyButton.style.color = "#4CAF50";
+      setTimeout(() => {
+        copyButton.innerHTML = originalText;
+        copyButton.style.color = "#666";
+      }, 1e3);
+    }).catch((err) => {
+      console.error("Failed to copy text:", err);
+      copyButton.innerHTML = "\u274C";
+      setTimeout(() => {
+        copyButton.innerHTML = "\u{1F4CB}";
+      }, 1e3);
+    });
+  });
+  const container = document.createElement("div");
+  container.className = "markdown-content";
+  container.style.flex = "1 1 0";
+  container.style.height = "100%";
+  container.style.minHeight = "60px";
+  container.style.overflow = "auto";
+  container.innerHTML = htmlContent || renderMarkdownToHtml(initialContent);
+  const textarea = document.createElement("textarea");
+  textarea.className = "markdown-editor-textarea";
+  textarea.style.display = "none";
+  textarea.style.flex = "1 1 0";
+  textarea.style.height = "100%";
+  textarea.style.minHeight = "60px";
+  textarea.style.width = "100%";
+  textarea.readOnly = !isEditable;
+  textarea.placeholder = isEditable ? "Enter your markdown content here..." : "Source markdown from connected input...";
+  textarea.value = sourceText || initialContent;
+  let isSourceMode = false;
+  let currentContent = initialContent;
+  const updateCharCount = () => {
+    const text2 = currentContent || "";
+    charCount.textContent = `${text2.length} chars`;
+  };
+  updateCharCount();
+  function showMarkdown() {
+    container.style.display = "block";
+    textarea.style.display = "none";
+    markdownButton.classList.add("active");
+    textButton.classList.remove("active");
+    isSourceMode = false;
+    if (isEditable) {
+      container.innerHTML = renderMarkdownToHtml(currentContent);
+    }
+    updateCharCount();
+  }
+  function showText() {
+    textarea.style.display = "block";
+    container.style.display = "none";
+    textButton.classList.add("active");
+    markdownButton.classList.remove("active");
+    isSourceMode = true;
+    updateCharCount();
+    setTimeout(() => textarea.focus(), 0);
+  }
+  markdownButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showMarkdown();
+  });
+  textButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showText();
+  });
+  if (isEditable) {
+    container.addEventListener("click", (e) => {
+      if (toolbar.contains(e.target)) {
+        return;
+      }
+      e.stopPropagation();
+      if (!isSourceMode) {
+        showText();
+      }
+    });
+    container.style.cursor = "text";
+    textarea.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+  } else {
+    const tooltipText = "Editing is disabled while input is connected. Disconnect the input to enable manual editing.";
+    container.title = tooltipText;
+    textarea.title = tooltipText;
+  }
+  if (isEditable) {
+    textarea.addEventListener("input", () => {
+      currentContent = textarea.value;
+      updateCharCount();
+      textWidget.value = currentContent;
+      if (onContentChange) onContentChange(currentContent);
+    });
+    const autoSaveAndPreview = () => {
+      if (isSourceMode) {
+        if (textarea.value !== currentContent) {
+          currentContent = textarea.value;
+          textWidget.value = currentContent;
+          if (onContentChange) onContentChange(currentContent);
+        }
+        showMarkdown();
+      }
+    };
+    const originalOnDeselected = node.onDeselected;
+    node.onDeselected = function() {
+      autoSaveAndPreview();
+      if (originalOnDeselected) originalOnDeselected.call(this);
+    };
+    const handleDocumentClick = (e) => {
+      if (!mainContainer.contains(e.target)) {
+        autoSaveAndPreview();
+      }
+    };
+    document.addEventListener("click", handleDocumentClick);
+  }
+  toggleGroup.append(markdownButton, textButton);
+  rightGroup.append(charCount);
+  if (!isEditable) {
+    rightGroup.append(warningIndicator);
+  }
+  rightGroup.append(copyButton);
+  leftGroup.append(toggleGroup);
+  toolbar.append(leftGroup, rightGroup);
+  mainContainer.append(toolbar, container, textarea);
+  node._markdownWidgetElement = mainContainer;
+  const widget = node.addDOMWidget(
+    "markdown_widget",
+    "div",
+    mainContainer,
+    {}
+  );
+  function updateDOMSize() {
+    mainContainer.style.width = "100%";
+    mainContainer.style.height = "100%";
+  }
+  node.updateDOMSize = updateDOMSize;
+  updateDOMSize();
+  widget.draw = () => {
+  };
+  widget.computeSize = function(width) {
+    var _a2;
+    if (!node || node.is_collapsed) {
+      return [width, 0];
+    }
+    const nodeHeight = node.size[1];
+    const titleHeight = 26;
+    const inputsHeight = (((_a2 = node.inputs) == null ? void 0 : _a2.length) || 0) * 21;
+    const widgetPadding = 4;
+    const availableHeight = nodeHeight - titleHeight - inputsHeight - widgetPadding;
+    return [width, Math.max(60, availableHeight)];
+  };
+  widget.onRemove = () => {
+    if (node._markdownWidgetElement === mainContainer && mainContainer.parentNode) {
+      mainContainer.parentNode.removeChild(mainContainer);
+      node._markdownWidgetElement = null;
+    }
+  };
+  return widget;
+}
+function populateMarkdownWidget(node, html3) {
+  var _a2;
+  log(node.type, "populateMarkdownWidget called");
+  if (!node.widgets) return;
+  node._hasReceivedData = true;
+  node._storedHtml = html3;
+  node._sourceText = ((_a2 = node.properties) == null ? void 0 : _a2.sourceText) || "";
+  node._editableContent = node._sourceText;
+  if (!node.properties) node.properties = {};
+  node.properties.storedHtml = node._storedHtml;
+  node.properties.sourceText = node._sourceText;
+  node.properties.text = node._sourceText;
+  node.properties.markdown_widget = html3;
+  let mdWidget = node.widgets.find((w) => w.name === "markdown_widget");
+  if (mdWidget) {
+    const mainContainer = mdWidget.element;
+    const overlay = mainContainer.querySelector(".markdown-waiting-overlay");
+    if (overlay) {
+      overlay.remove();
+    }
+    const contentDiv = mainContainer.querySelector(".markdown-content");
+    if (contentDiv) {
+      contentDiv.innerHTML = renderMarkdownToHtml(node._sourceText);
+    }
+    const textarea = mainContainer.querySelector(".markdown-editor-textarea");
+    if (textarea) {
+      textarea.value = node._sourceText;
+    }
+  } else {
+    createMarkdownWidget(node, {
+      widgetName: "markdown_widget",
+      isEditable: false,
+      htmlContent: renderMarkdownToHtml(node._sourceText),
+      // Always use frontend renderer
+      sourceText: node._sourceText,
+      initialContent: node._sourceText
+    });
+  }
+}
+function showEditor(node) {
+  var _a2, _b, _c, _d, _e;
+  log(node.type, "showEditor called, this:", node);
+  if (!node._editableContent) {
+    let existingContent = "";
+    if (node.properties && node.properties.text && node.properties.text.trim()) {
+      existingContent = node.properties.text;
+      log(
+        "Restored content from node properties:",
+        existingContent.substring(0, 50) + "..."
+      );
+    }
+    node._editableContent = existingContent || `Write your **markdown** content here!
+- Bullet points
+- *Italic text*
+- \`Code snippets\``;
+  }
+  if (node._hasInputConnection) {
+    log("showEditor", "Showing content as read-only due to input connection");
+    createMarkdownWidget(node, {
+      widgetName: "markdown_widget",
+      isEditable: false,
+      htmlContent: node._storedHtml,
+      sourceText: node._sourceText || "",
+      initialContent: node._sourceText || ""
+    });
+  } else {
+    log("showEditor", "Showing editable editor");
+    createMarkdownWidget(node, {
+      widgetName: "markdown_widget",
+      isEditable: true,
+      initialContent: node._editableContent,
+      onContentChange: (content) => {
+        node._editableContent = content;
+        if (!node.properties) node.properties = {};
+        node.properties.text = content;
+        node.properties.markdown_editor = content;
+      }
+    });
+  }
+  try {
+    const overlayElements = (_e = (_d = node._markdownWidgetElement || ((_c = (_b = (_a2 = node == null ? void 0 : node.widgets) == null ? void 0 : _a2.find) == null ? void 0 : _b.call(_a2, (w) => w.name === "markdown_widget")) == null ? void 0 : _c.element)) == null ? void 0 : _d.querySelectorAll) == null ? void 0 : _e.call(
+      _d,
+      ".markdown-waiting-overlay"
+    );
+    if (overlayElements && overlayElements.length) {
+      overlayElements.forEach((el) => el.remove());
+      log("showEditor", "Removed lingering waiting overlay");
+    }
+  } catch (err) {
+    log("showEditor", "Error while removing waiting overlay", err);
+  }
+}
+function showWaitingForInput(node) {
+  log("showWaitingForInput called");
+  if (!node._editableContent) {
+    node._editableContent = `Write your **markdown** content here!
+- Bullet points
+- *Italic text*
+- \`Code snippets\``;
+  }
+  const initialContent = Array.isArray(node._editableContent) ? node._editableContent.join("") : node._editableContent;
+  const widget = createMarkdownWidget(node, {
+    widgetName: "markdown_widget",
+    isEditable: false,
+    initialContent,
+    htmlContent: renderMarkdownToHtml(initialContent),
+    sourceText: initialContent
+  });
+  const mainContainer = widget.element;
+  const overlay = document.createElement("div");
+  overlay.className = "markdown-waiting-overlay";
+  overlay.innerHTML = `
+    <div class="markdown-waiting-icon">\u23F3</div>
+    <div class="markdown-waiting-title">Waiting for Input</div>
+    <div class="markdown-waiting-note">Manual content will be overridden</div>
+  `;
+  mainContainer.appendChild(overlay);
+}
+function restoreRenderedContent(node) {
+  log("restoreRenderedContent called");
+  if (node.properties && node.properties.storedHtml) {
+    node._storedHtml = node.properties.storedHtml;
+    node._sourceText = node.properties.sourceText || [];
+    node._hasReceivedData = true;
+    log("Restored HTML and source from properties");
+  }
+  if (node._storedHtml) {
+    log("Populating widget with stored HTML");
+    populateMarkdownWidget(node, node._storedHtml);
+  } else {
+    log("No stored HTML found, showing waiting UI");
+    showWaitingForInput(node);
+  }
+}
 export {
-  createMarkdownRenderer,
-  renderMarkdownToHtml
+  createMarkdownWidget,
+  populateMarkdownWidget,
+  restoreRenderedContent,
+  showEditor,
+  showWaitingForInput
 };
 /*! Bundled license information:
 

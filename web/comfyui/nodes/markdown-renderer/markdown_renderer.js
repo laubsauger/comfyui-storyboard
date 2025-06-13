@@ -1580,7 +1580,7 @@ var require_core = __commonJS({
   }
 });
 
-// src_web/comfyui/markdown_renderer.ts
+// src_web/comfyui/nodes/markdown-renderer/markdown_renderer.ts
 import { app as app2 } from "/scripts/app.js";
 
 // node_modules/@comfyorg/litegraph/dist/litegraph.es.js
@@ -15616,7 +15616,7 @@ function clamp(v2, a, b) {
 }
 loadPolyfills();
 
-// src_web/comfyui/base_node.ts
+// src_web/comfyui/nodes/base_node.ts
 var _StoryboardBaseNode = class _StoryboardBaseNode extends LGraphNode {
   constructor(title = _StoryboardBaseNode.title, type) {
     super(title, type);
@@ -15693,7 +15693,7 @@ _StoryboardBaseNode.category = "storyboard";
 _StoryboardBaseNode._category = "storyboard";
 var StoryboardBaseNode = _StoryboardBaseNode;
 
-// src_web/comfyui/markdown_widget.ts
+// src_web/comfyui/nodes/markdown-renderer/markdown_widget.ts
 import { app } from "/scripts/app.js";
 import { ComfyWidgets } from "/scripts/widgets.js";
 
@@ -19612,13 +19612,8 @@ function markdown(hljs) {
   };
 }
 
-// src_web/comfyui/common.ts
+// src_web/common/constants.ts
 var LOG_VERBOSE = true;
-var log = (prefix, ...args) => {
-  if (LOG_VERBOSE) {
-    console.log(`[${prefix}]`, ...args);
-  }
-};
 var ALLOWED_TAGS = [
   "video",
   "source",
@@ -19672,7 +19667,14 @@ var ALLOWED_ATTRS = [
 ];
 var MEDIA_SRC_REGEX = /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
 
-// src_web/comfyui/markdown_utils.ts
+// src_web/common/shared_utils.ts
+var log = (prefix, ...args) => {
+  if (LOG_VERBOSE) {
+    console.log(`[${prefix}]`, ...args);
+  }
+};
+
+// src_web/comfyui/nodes/markdown-renderer/markdown_utils.ts
 core_default.registerLanguage("json", json);
 core_default.registerLanguage("python", python);
 core_default.registerLanguage("plaintext", plaintext);
@@ -19753,7 +19755,7 @@ function renderMarkdownToHtml(markdown2, baseUrl) {
   return sanitized;
 }
 
-// src_web/comfyui/markdown_widget.ts
+// src_web/comfyui/nodes/markdown-renderer/markdown_widget.ts
 function createMarkdownWidget(node2, config) {
   const {
     widgetName = "markdown_widget",
@@ -20095,7 +20097,7 @@ function showWaitingForInput(node2) {
   mainContainer.appendChild(overlay);
 }
 
-// src_web/comfyui/markdown_renderer.ts
+// src_web/comfyui/nodes/markdown-renderer/markdown_renderer.ts
 function setupMarkdownRenderer(nodeType, nodeData) {
 }
 function handleMarkdownRendererCreated(node2) {

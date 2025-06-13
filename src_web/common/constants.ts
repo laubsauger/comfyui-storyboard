@@ -1,10 +1,5 @@
 // Logging
 export const LOG_VERBOSE = true;
-export const log = (prefix: string, ...args: any[]) => {
-  if (LOG_VERBOSE) {
-    console.log(`[${prefix}]`, ...args);
-  }
-};
 
 // Markdown rendering constants - expanded to include common HTML tags used in markdown
 export const ALLOWED_TAGS = [
@@ -20,7 +15,7 @@ export const ALLOWED_TAGS = [
 export const ALLOWED_ATTRS = [
   "controls",
   "autoplay",
-  "loop", 
+  "loop",
   "muted",
   "preload",
   "poster",

@@ -1,15 +1,17 @@
-// src_web/comfyui/llm_api.ts
+// src_web/comfyui/nodes/llm-api/llm_api.ts
 import { app } from "/scripts/app.js";
 
-// src_web/comfyui/common.ts
+// src_web/common/constants.ts
 var LOG_VERBOSE = true;
+
+// src_web/common/shared_utils.ts
 var log = (prefix, ...args) => {
   if (LOG_VERBOSE) {
     console.log(`[${prefix}]`, ...args);
   }
 };
 
-// src_web/comfyui/llm_api.ts
+// src_web/comfyui/nodes/llm-api/llm_api.ts
 app.registerExtension({
   name: "comfy.llm.OpenAIChatGPT",
   async beforeRegisterNodeDef(nodeType, nodeData) {

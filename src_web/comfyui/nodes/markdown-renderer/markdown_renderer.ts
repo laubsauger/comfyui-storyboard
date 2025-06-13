@@ -1,9 +1,9 @@
 import { app } from "scripts/app.js";
-import { StoryboardBaseNode } from "./base_node.js";
+import { StoryboardBaseNode } from "../base_node.js";
 import { showEditor, showWaitingForInput } from "./markdown_widget.js";
-import { log } from "./common.js";
-import { LiteGraph } from "@comfyorg/litegraph";
 import { renderMarkdownToHtml } from "./markdown_utils.js";
+import { log } from "../../../common/shared_utils.js";
+import { LiteGraph } from "@comfyorg/litegraph";
 
 export function setupMarkdownRenderer(nodeType: any, nodeData: any) {
   // Setup any node-specific configuration here

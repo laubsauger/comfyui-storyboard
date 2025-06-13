@@ -1,5 +1,5 @@
 import { app } from "scripts/app.js";
-import { log } from "./common.js";
+import { log } from "../../../common/shared_utils.js";
 
 app.registerExtension({
   name: "comfy.llm.OpenAIChatGPT",

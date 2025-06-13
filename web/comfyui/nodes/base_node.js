@@ -14051,7 +14051,7 @@ function clamp(v2, a, b) {
 }
 loadPolyfills();
 
-// src_web/comfyui/base_node.ts
+// src_web/comfyui/nodes/base_node.ts
 var _StoryboardBaseNode = class _StoryboardBaseNode extends LGraphNode {
   constructor(title = _StoryboardBaseNode.title, type) {
     super(title, type);

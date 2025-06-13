@@ -6,7 +6,8 @@ import json from 'highlight.js/lib/languages/json';
 import python from 'highlight.js/lib/languages/python';
 import plaintext from 'highlight.js/lib/languages/plaintext';
 import markdown from 'highlight.js/lib/languages/markdown';
-import { ALLOWED_TAGS, ALLOWED_ATTRS, MEDIA_SRC_REGEX, log } from "./common.js";
+import { ALLOWED_TAGS, ALLOWED_ATTRS, MEDIA_SRC_REGEX } from "../../../common/constants.js";
+import { log } from "../../../common/shared_utils.js";
 
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('python', python);

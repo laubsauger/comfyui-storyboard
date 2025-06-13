@@ -1,7 +1,7 @@
 import { app } from "scripts/app.js";
 import { ComfyWidgets } from "scripts/widgets.js";
 import { renderMarkdownToHtml } from "./markdown_utils.js";
-import { log } from "./common.js";
+import { log } from "../../../common/shared_utils.js";
 
 export function createMarkdownWidget(node: any, config: any) {
   const {

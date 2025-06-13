@@ -1,5 +1,5 @@
 """
-@author: comfyui-storyboard
+@author: laub
 @title: ComfyUI Storyboard
 @nickname: Storyboard
 @description: A ComfyUI node to display markdown text, and other storyboard features.
@@ -8,8 +8,12 @@
 import os
 import shutil
 from .py.log import log
-from .py.markdown_renderer import MarkdownRenderer
-from .py.llm_api import OpenAIChatGPT, OpenAIAdvancedConfiguration, OpenAIAPIKeyManager
+from .py.nodes.markdown_renderer import MarkdownRenderer
+from .py.nodes.llm_api import (
+    OpenAIChatGPT,
+    OpenAIAdvancedConfiguration,
+    OpenAIAPIKeyManager,
+)
 from glob import glob
 import random
 
