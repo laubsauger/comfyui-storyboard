@@ -1,5 +1,5 @@
 // Logging
-export const LOG_VERBOSE = true;
+export const LOG_VERBOSE = false;
 
 // Markdown rendering constants - expanded to include common HTML tags used in markdown
 export const ALLOWED_TAGS = [

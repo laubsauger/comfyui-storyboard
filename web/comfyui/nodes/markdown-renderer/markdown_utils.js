@@ -5480,7 +5480,7 @@ function markdown(hljs) {
 }
 
 // src_web/common/constants.ts
-var LOG_VERBOSE = true;
+var LOG_VERBOSE = false;
 var ALLOWED_TAGS = [
   "video",
   "source",

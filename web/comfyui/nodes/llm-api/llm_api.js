@@ -2,7 +2,7 @@
 import { app } from "/scripts/app.js";
 
 // src_web/common/constants.ts
-var LOG_VERBOSE = true;
+var LOG_VERBOSE = false;
 
 // src_web/common/shared_utils.ts
 var log = (prefix, ...args) => {

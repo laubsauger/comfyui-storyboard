@@ -14132,7 +14132,7 @@ _StoryboardBaseNode._category = "storyboard";
 var StoryboardBaseNode = _StoryboardBaseNode;
 
 // src_web/common/constants.ts
-var LOG_VERBOSE = true;
+var LOG_VERBOSE = false;
 
 // src_web/common/shared_utils.ts
 var log = (prefix, ...args) => {
@@ -14148,7 +14148,7 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
     this._connectedNode = null;
     this._availableFields = [];
     this._fieldEntries = [];
-    this._selectedFieldName = "";
+    this._selectedFieldNames = [];
     this._updateInterval = null;
     log(this.type, "Constructor called");
   }
@@ -14173,6 +14173,44 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
     }
     return "#888888";
   }
+  // Get socket type color for any given type
+  getSocketTypeColor(type) {
+    var _a;
+    const safeType = type || "*";
+    const canvas2 = app.canvas;
+    if (canvas2 == null ? void 0 : canvas2.default_connection_color_byType) {
+      const color = canvas2.default_connection_color_byType[safeType.toUpperCase()];
+      if (color) {
+        return color;
+      }
+    }
+    if ((_a = window.LiteGraph) == null ? void 0 : _a.getConnectionColor) {
+      const color = window.LiteGraph.getConnectionColor(safeType);
+      if (color) {
+        return color;
+      }
+    }
+    const typeColorMap = {
+      "STRING": "#a1c181",
+      "TEXT": "#a1c181",
+      "INT": "#6495ed",
+      "INTEGER": "#6495ed",
+      "FLOAT": "#87ceeb",
+      "NUMBER": "#87ceeb",
+      "BOOLEAN": "#daa520",
+      "BOOL": "#daa520",
+      "IMAGE": "#64b5f6",
+      "LATENT": "#ff6b6b",
+      "CONDITIONING": "#ffd700",
+      "CLIP": "#ad7be9",
+      "MODEL": "#ff8c00",
+      "VAE": "#20b2aa",
+      "CONTROL_NET": "#ff69b4",
+      "COMBO": "#4169e1",
+      "*": "#999999"
+    };
+    return typeColorMap[safeType.toUpperCase()] || typeColorMap["*"] || "#999999";
+  }
   onConstructed() {
     var _a, _b;
     if (this.__constructed__) return false;
@@ -14180,12 +14218,12 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
     this._connectedNode = null;
     this._availableFields = [];
     this._fieldEntries = [];
-    this._selectedFieldName = "";
+    this._selectedFieldNames = [];
     this._updateInterval = null;
     if (!this.properties) this.properties = {};
-    this.properties["selected_fieldname"] = "";
-    this.properties["field_name_input"] = "";
-    this.properties["selected_value"] = "";
+    this.properties["selected_fieldnames"] = "";
+    this.properties["field_names_input"] = "";
+    this.properties["selected_values"] = "";
     this.type = (_a = this.type) != null ? _a : void 0;
     this.__constructed__ = true;
     (_b = app.graph) == null ? void 0 : _b.trigger("nodeCreated", this);
@@ -14205,13 +14243,13 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
       cloned._connectedNode = null;
       cloned._availableFields = [...this._availableFields];
       cloned._fieldEntries = [...this._fieldEntries];
-      cloned._selectedFieldName = this._selectedFieldName;
+      cloned._selectedFieldNames = [...this._selectedFieldNames];
       cloned._updateInterval = null;
       log(this.type, "State properties copied");
       if (!cloned.properties) cloned.properties = {};
-      cloned.properties["selected_fieldname"] = ((_a = this.properties) == null ? void 0 : _a["selected_fieldname"]) || "";
-      cloned.properties["field_name"] = ((_b = this.properties) == null ? void 0 : _b["field_name"]) || "";
-      cloned.properties["selected_value"] = ((_c = this.properties) == null ? void 0 : _c["selected_value"]) || "";
+      cloned.properties["selected_fieldnames"] = ((_a = this.properties) == null ? void 0 : _a["selected_fieldnames"]) || "";
+      cloned.properties["field_names_input"] = ((_b = this.properties) == null ? void 0 : _b["field_names_input"]) || "";
+      cloned.properties["selected_values"] = ((_c = this.properties) == null ? void 0 : _c["selected_values"]) || "";
       log(this.type, "Properties copied to cloned node");
       cloned.onConstructed();
       log(this.type, "Cloned node constructed");
@@ -14241,21 +14279,111 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
     return String(widget.value);
   }
   getAllFieldEntries(node2) {
-    if (!node2 || !node2.widgets) return [];
-    return node2.widgets.filter((widget) => widget.name && widget.name !== "preview").map((widget) => {
-      const value = widget.value;
-      return {
-        name: widget.name,
-        value: this.formatWidgetValue({ name: widget.name, value, type: widget.type }),
-        rawValue: value,
-        type: widget.type
-      };
-    });
+    if (!node2) return [];
+    const fieldEntries = [];
+    if (node2.widgets) {
+      const widgetEntries = node2.widgets.filter((widget) => widget.name && widget.name !== "preview").map((widget) => {
+        const value = widget.value;
+        return {
+          name: widget.name,
+          value: this.formatWidgetValue({ name: widget.name, value, type: widget.type }),
+          rawValue: value,
+          type: widget.type,
+          sourceType: "widget",
+          isConnected: false
+        };
+      });
+      fieldEntries.push(...widgetEntries);
+    }
+    if (node2.inputs) {
+      const inputEntries = node2.inputs.map((input, index) => {
+        const isConnected = Boolean(input.link);
+        let value = "";
+        let rawValue = null;
+        let connectedNodeTitle = "";
+        if (isConnected && input.link) {
+          const link = app.graph.links[input.link];
+          if (link) {
+            const connectedNode = app.graph.getNodeById(link.origin_id);
+            if (connectedNode) {
+              connectedNodeTitle = connectedNode.title || "Unknown Node";
+              const connectedValue = this.getConnectedNodeOutputValue(connectedNode, link.origin_slot);
+              if (connectedValue !== null) {
+                rawValue = connectedValue;
+                value = this.formatValue(connectedValue);
+              } else {
+                value = `Connected to ${connectedNodeTitle}`;
+              }
+            }
+          }
+        } else {
+          value = "Not connected";
+        }
+        return {
+          name: input.name || `Input ${index}`,
+          value,
+          rawValue,
+          type: Array.isArray(input.type) ? input.type.join("|") : String(input.type || "*"),
+          sourceType: "input",
+          isConnected,
+          connectedNodeTitle
+        };
+      });
+      fieldEntries.push(...inputEntries);
+    }
+    return fieldEntries;
+  }
+  getConnectedNodeOutputValue(node2, outputIndex) {
+    var _a;
+    if (!node2) return null;
+    if (node2.widgets) {
+      const output = (_a = node2.outputs) == null ? void 0 : _a[outputIndex];
+      if (output) {
+        const widget = node2.widgets.find((w) => w.name === output.name);
+        if (widget) {
+          return widget.value;
+        }
+      }
+      const primaryWidget = node2.widgets.find((w) => w.name !== "preview");
+      if (primaryWidget) {
+        return primaryWidget.value;
+      }
+    }
+    if (node2.inputs) {
+      for (const input of node2.inputs) {
+        if (input.link) {
+          const link = app.graph.links[input.link];
+          if (link) {
+            const sourceNode = app.graph.getNodeById(link.origin_id);
+            if (sourceNode) {
+              const sourceValue = this.getConnectedNodeOutputValue(sourceNode, link.origin_slot);
+              if (sourceValue !== null) {
+                return sourceValue;
+              }
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+  formatValue(value) {
+    if (value === null || value === void 0) {
+      return "";
+    }
+    if (typeof value === "object") {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        return String(value);
+      }
+    }
+    return String(value);
   }
   createFieldsDisplayWidget() {
     if (this.widgets) {
       const widgetsToRemove = this.widgets.filter(
-        (w) => w.name === "fields_display" || w.name === "truncated_info" || w.name.startsWith("field_")
+        (w) => w.name === "fields_display" || w.name === "truncated_info" || w.name === "fields_scrollable" || w.name === "inputs_display" || w.name === "widgets_display" || w.name.startsWith("field_")
       );
       for (const widget of widgetsToRemove) {
         if (widget && widget.onRemove) {
@@ -14268,12 +14396,11 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
       }
     }
     if (!this._fieldEntries.length) {
-      const message = this._connectedNode ? "No fields found" : "Connect a node to inspect its fields";
+      const message = this._connectedNode ? "No fields found" : "Connect a node to inspect its fields!";
       if (!this.widgets) this.widgets = [];
       const textWidget = {
         name: "fields_display",
         type: "button",
-        // Use button type to avoid text editing
         value: message,
         options: { readonly: true },
         y: 0,
@@ -14287,7 +14414,7 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
           return widgetHeight;
         },
         computeSize: function(width2) {
-          return [width2, 25];
+          return [width2, 26];
         },
         mouse: function() {
           return false;
@@ -14296,101 +14423,226 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
       this.widgets.push(textWidget);
       return;
     }
+    const inputEntries = this._fieldEntries.filter((entry) => entry.sourceType === "input");
+    const widgetEntries = this._fieldEntries.filter((entry) => entry.sourceType === "widget");
     if (!this.widgets) this.widgets = [];
     const self = this;
-    const fieldsToShow = this._fieldEntries.slice(0, 10);
-    fieldsToShow.forEach((entry, index) => {
-      const fieldName = entry.name;
-      const displayValue = entry.value.length > 25 ? entry.value.substring(0, 25) + "..." : entry.value;
-      const typeDisplay = entry.type ? ` (${entry.type})` : "";
-      const fieldDisplayText = `${entry.name}${typeDisplay}: ${displayValue}`;
-      const fieldWidget = {
-        name: `field_${index}`,
+    const lineHeight = 20;
+    const itemPadding = 10;
+    const headerHeight = 25;
+    let totalHeight = 0;
+    if (widgetEntries.length > 0) {
+      const maxFieldsBeforeScroll = 8;
+      const shouldScroll = widgetEntries.length > maxFieldsBeforeScroll;
+      const visibleFields = shouldScroll ? maxFieldsBeforeScroll : widgetEntries.length;
+      const scrollableHeight = visibleFields * lineHeight;
+      const widgetSectionHeight = headerHeight + scrollableHeight;
+      const widgetWidget = {
+        name: "widgets_display",
         type: "button",
-        // Use button type to avoid text editing
-        value: fieldDisplayText,
+        value: `Widgets (${widgetEntries.length})`,
         options: { readonly: true },
         y: 0,
         serialize: false,
+        scrollOffset: 0,
+        _desiredHeight: widgetSectionHeight,
+        last_y: 0,
+        size: [0, widgetSectionHeight],
+        _lastClickTime: 0,
+        _lastClickedField: "",
         draw: function(ctx, node2, widgetWidth, y, widgetHeight) {
-          const isSelected = fieldName === self._selectedFieldName;
-          if (isSelected) {
-            ctx.fillStyle = "#4a7dc4";
-          } else {
-            ctx.fillStyle = "#444";
-          }
-          ctx.fillRect(0, y, widgetWidth, widgetHeight);
-          const typeColor = self.getInputSocketTypeColor();
-          ctx.fillStyle = typeColor;
+          this.last_y = y;
+          ctx.fillStyle = "#444";
+          ctx.fillRect(itemPadding, y, widgetWidth - itemPadding * 2, headerHeight);
+          ctx.fillStyle = "#aaa";
+          ctx.font = "bold 12px Arial";
+          ctx.fillText("Widgets (Selectable)", itemPadding + 10, y + 16);
+          const scrollAreaY = y + headerHeight;
+          const totalContentHeight = widgetEntries.length * lineHeight;
+          const maxScrollOffset = Math.max(0, totalContentHeight - scrollableHeight);
+          this.scrollOffset = Math.max(0, Math.min(this.scrollOffset, maxScrollOffset));
+          ctx.save();
           ctx.beginPath();
-          ctx.arc(15, y + 10, 4, 0, 2 * Math.PI);
-          ctx.fill();
-          if (isSelected) {
-            ctx.fillStyle = "#ffa500";
+          ctx.rect(itemPadding, scrollAreaY, widgetWidth - itemPadding * 2, scrollableHeight);
+          ctx.clip();
+          ctx.fillStyle = "#333";
+          ctx.fillRect(itemPadding, scrollAreaY, widgetWidth - itemPadding * 2, scrollableHeight);
+          const startIndex = Math.floor(this.scrollOffset / lineHeight);
+          const endIndex = Math.min(widgetEntries.length, startIndex + Math.ceil(scrollableHeight / lineHeight) + 1);
+          for (let i = startIndex; i < endIndex; i++) {
+            const entry = widgetEntries[i];
+            if (!entry) continue;
+            const fieldY = scrollAreaY + i * lineHeight - this.scrollOffset;
+            if (fieldY + lineHeight < scrollAreaY || fieldY > scrollAreaY + scrollableHeight) continue;
+            const isSelected = self._selectedFieldNames.includes(entry.name);
+            ctx.fillStyle = isSelected ? "#2d4a6b" : "#3a3a3a";
+            ctx.fillRect(itemPadding, fieldY, widgetWidth - itemPadding * 2, lineHeight);
+            if (isSelected) {
+              ctx.strokeStyle = "#5a7fa0";
+              ctx.lineWidth = 1;
+              ctx.strokeRect(itemPadding, fieldY, widgetWidth - itemPadding * 2, lineHeight);
+            }
+            const checkboxSize = 12;
+            const checkboxX = itemPadding + 8;
+            const checkboxY = fieldY + (lineHeight - checkboxSize) / 2;
+            ctx.fillStyle = isSelected ? "#4a7dc4" : "#555";
+            ctx.fillRect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+            ctx.strokeStyle = isSelected ? "#6a9de4" : "#aaa";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+            if (isSelected) {
+              ctx.strokeStyle = "#fff";
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(checkboxX + 3, checkboxY + 6);
+              ctx.lineTo(checkboxX + 5, checkboxY + 8);
+              ctx.lineTo(checkboxX + 9, checkboxY + 4);
+              ctx.stroke();
+            }
+            ctx.fillStyle = "#4a9eff";
+            ctx.font = "bold 10px Arial";
+            ctx.fillText("W", itemPadding + 24, fieldY + 13);
+            const typeColor = entry.type ? self.getSocketTypeColor(entry.type) : "#888";
+            ctx.fillStyle = typeColor;
             ctx.beginPath();
-            ctx.arc(15, y + 10, 6, 0, 2 * Math.PI);
-            ctx.lineWidth = 2;
-            ctx.stroke();
+            ctx.arc(itemPadding + 40, fieldY + 10, 4, 0, 2 * Math.PI);
+            ctx.fill();
+            const displayValue = entry.value.length > 25 ? entry.value.substring(0, 25) + "..." : entry.value;
+            const typeDisplay = entry.type ? ` (${entry.type})` : "";
+            ctx.font = "12px Arial";
+            ctx.fillStyle = "#fff";
+            ctx.fillText(`${entry.name}${typeDisplay}:`, itemPadding + 50, fieldY + 15);
+            const nameWidth = ctx.measureText(`${entry.name}${typeDisplay}:`).width;
+            ctx.fillStyle = "#ccc";
+            ctx.fillText(` ${displayValue}`, itemPadding + 50 + nameWidth, fieldY + 15);
           }
-          const nameTypeText = `${entry.name}${typeDisplay}:`;
-          const valueText = ` ${displayValue}`;
-          ctx.font = "12px Arial";
-          ctx.fillStyle = isSelected ? "#fff" : "#fff";
-          ctx.fillText(nameTypeText, 25, y + 15);
-          const nameTypeWidth = ctx.measureText(nameTypeText).width;
-          ctx.fillStyle = isSelected ? "#e0e0e0" : "#aaa";
-          ctx.fillText(valueText, 25 + nameTypeWidth, y + 15);
-          return widgetHeight;
+          if (totalContentHeight > scrollableHeight) {
+            const scrollbarWidth = 8;
+            const scrollbarHeight = scrollableHeight / totalContentHeight * scrollableHeight;
+            const scrollbarY = scrollAreaY + this.scrollOffset / totalContentHeight * scrollableHeight;
+            ctx.fillStyle = "#2a2a2a";
+            ctx.fillRect(widgetWidth - scrollbarWidth - itemPadding, scrollAreaY, scrollbarWidth, scrollableHeight);
+            ctx.fillStyle = "#888";
+            ctx.fillRect(widgetWidth - scrollbarWidth - itemPadding, scrollbarY, scrollbarWidth, scrollbarHeight);
+            ctx.strokeStyle = "#aaa";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(widgetWidth - scrollbarWidth - itemPadding, scrollbarY, scrollbarWidth, scrollbarHeight);
+          }
+          ctx.restore();
+          return widgetSectionHeight;
         },
         computeSize: function(width2) {
-          return [width2, 20];
+          return [width2, widgetSectionHeight];
         },
         mouse: function(event, pos, node2) {
-          console.log("Widget mouse event:", event.type, "for field:", fieldName);
-          if (event.type === "pointerdown" || event.type === "pointerup" || event.type === "click" || event.type === "mousedown" || event.type === "mouseup") {
-            console.log("Processing click for field:", fieldName);
-            log(self.type, `Field widget clicked: ${fieldName} (${entry.type || "unknown"})`);
-            try {
-              self.selectField(fieldName);
-              console.log("selectField called successfully");
-            } catch (e2) {
-              console.error("Error calling selectField:", e2);
-            }
+          const [localX, localY] = pos;
+          const widgetRelativeY = localY - (this.last_y || 0) - headerHeight;
+          if (event.type === "wheel" || event.type === "mousewheel") {
+            const delta2 = event.deltaY || event.wheelDelta || 0;
+            this.scrollOffset += delta2 > 0 ? 20 : -20;
+            const totalContentHeight = widgetEntries.length * lineHeight;
+            const maxScrollOffset = Math.max(0, totalContentHeight - scrollableHeight);
+            this.scrollOffset = Math.max(0, Math.min(this.scrollOffset, maxScrollOffset));
             if (app.graph) {
               app.graph.setDirtyCanvas(true, false);
             }
             return true;
           }
+          if (event.type === "pointerup" || event.type === "click") {
+            const clickedIndex = Math.floor((widgetRelativeY + this.scrollOffset) / lineHeight);
+            if (clickedIndex >= 0 && clickedIndex < widgetEntries.length) {
+              const entry = widgetEntries[clickedIndex];
+              if (!entry) return false;
+              const fieldName = entry.name;
+              const now = Date.now();
+              if (this._lastClickTime && this._lastClickedField === fieldName && now - this._lastClickTime < 300) {
+                return true;
+              }
+              this._lastClickTime = now;
+              this._lastClickedField = fieldName;
+              try {
+                self.selectField(fieldName);
+              } catch (e2) {
+                console.error("Error calling selectField:", e2);
+              }
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+              return true;
+            }
+          }
           return false;
         }
       };
-      self.widgets.push(fieldWidget);
-    });
-    if (this._fieldEntries.length > 10) {
-      const truncatedWidget = {
-        name: "truncated_info",
+      this.widgets.push(widgetWidget);
+    }
+    if (inputEntries.length > 0) {
+      const inputSectionHeight = headerHeight + inputEntries.length * lineHeight;
+      totalHeight += inputSectionHeight;
+      const inputWidget = {
+        name: "inputs_display",
         type: "button",
-        value: `... and ${this._fieldEntries.length - 10} more fields`,
+        value: `Inputs (${inputEntries.length})`,
         options: { readonly: true },
         y: 0,
         serialize: false,
+        _desiredHeight: inputSectionHeight,
         draw: function(ctx, node2, widgetWidth, y, widgetHeight) {
-          ctx.fillStyle = "#333";
-          ctx.fillRect(0, y, widgetWidth, widgetHeight);
-          ctx.fillStyle = "#888";
-          ctx.font = "italic 11px Arial";
-          ctx.fillText(this.value, 10, y + 15);
-          return widgetHeight;
+          ctx.fillStyle = "#444";
+          ctx.fillRect(itemPadding, y, widgetWidth - itemPadding * 2, headerHeight);
+          ctx.fillStyle = "#aaa";
+          ctx.font = "bold 12px Arial";
+          ctx.fillText("Inputs", itemPadding + 10, y + 16);
+          for (let i = 0; i < inputEntries.length; i++) {
+            const entry = inputEntries[i];
+            if (!entry) continue;
+            const fieldY = y + headerHeight + i * lineHeight;
+            ctx.fillStyle = "#3a3a3a";
+            ctx.fillRect(itemPadding, fieldY, widgetWidth - itemPadding * 2, lineHeight);
+            const sourceIcon = entry.isConnected ? "\u25CF" : "\u25CB";
+            const sourceColor = entry.isConnected ? "#46d946" : "#999";
+            ctx.fillStyle = sourceColor;
+            ctx.font = "12px Arial";
+            ctx.fillText(sourceIcon, itemPadding + 10, fieldY + 15);
+            const typeColor = entry.type ? self.getSocketTypeColor(entry.type) : "#888";
+            ctx.fillStyle = typeColor;
+            ctx.beginPath();
+            ctx.arc(itemPadding + 30, fieldY + 10, 4, 0, 2 * Math.PI);
+            ctx.fill();
+            const displayValue = entry.value.length > 30 ? entry.value.substring(0, 30) + "..." : entry.value;
+            const typeDisplay = entry.type ? ` (${entry.type})` : "";
+            ctx.fillStyle = "#fff";
+            ctx.font = "12px Arial";
+            ctx.fillText(`${entry.name}${typeDisplay}:`, itemPadding + 40, fieldY + 15);
+            const nameWidth = ctx.measureText(`${entry.name}${typeDisplay}:`).width;
+            ctx.fillStyle = entry.isConnected ? "#b8e6b8" : "#ccc";
+            ctx.fillText(` ${displayValue}`, itemPadding + 40 + nameWidth, fieldY + 15);
+          }
+          return inputSectionHeight;
         },
         computeSize: function(width2) {
-          return [width2, 18];
+          return [width2, inputSectionHeight];
         },
         mouse: function() {
           return false;
         }
       };
-      this.widgets.push(truncatedWidget);
+      this.widgets.push(inputWidget);
     }
+    setTimeout(() => {
+      for (const widget of this.widgets) {
+        if (widget.name === "inputs_display" || widget.name === "widgets_display") {
+          widget.size = [0, widget._desiredHeight];
+        }
+      }
+      if (this.computeSize) {
+        this.computeSize();
+      }
+    }, 0);
+  }
+  createInformationalSection(title, entries, itemPadding, lineHeight, headerHeight) {
+  }
+  createSelectableSection(title, entries, itemPadding, lineHeight, headerHeight) {
   }
   addCustomWidget(custom_widget) {
     if (!this.widgets) this.widgets = [];
@@ -14398,25 +14650,43 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
     return custom_widget;
   }
   selectField(fieldName) {
-    var _a, _b;
-    this._selectedFieldName = fieldName;
-    const fieldEntry = this._fieldEntries.find((f) => f.name === fieldName);
-    if (!fieldEntry) return;
-    const selectedFieldnameWidget = (_a = this.widgets) == null ? void 0 : _a.find((w) => w.name === "selected_fieldname");
-    const selectedValueWidget = (_b = this.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_value");
-    if (selectedFieldnameWidget) {
-      selectedFieldnameWidget.value = fieldName;
+    if (this._selectedFieldNames.includes(fieldName)) {
+      this._selectedFieldNames = this._selectedFieldNames.filter((name) => name !== fieldName);
+    } else {
+      this._selectedFieldNames = [...this._selectedFieldNames, fieldName];
     }
-    if (selectedValueWidget) {
-      selectedValueWidget.value = fieldEntry.value;
-    }
-    if (!this.properties) this.properties = {};
-    this.properties["selected_fieldname"] = fieldName;
-    this.properties["field_name_input"] = fieldName;
-    this.properties["selected_value"] = fieldEntry.value;
+    this.updateBackendProperties();
     if (app.graph) {
       app.graph.setDirtyCanvas(true, false);
     }
+  }
+  updateBackendProperties() {
+    var _a, _b;
+    const selectedFieldnamesWidget = (_a = this.widgets) == null ? void 0 : _a.find((w) => w.name === "selected_fieldnames");
+    const selectedValuesWidget = (_b = this.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_values");
+    const fieldNamesString = this._selectedFieldNames.join(", ");
+    const fieldValuesObj = {};
+    for (const fieldName of this._selectedFieldNames) {
+      const fieldEntry = this._fieldEntries.find((f) => f.name === fieldName);
+      if (fieldEntry) {
+        fieldValuesObj[fieldName] = fieldEntry.rawValue;
+      }
+    }
+    const fieldValuesString = JSON.stringify(fieldValuesObj);
+    if (selectedFieldnamesWidget) {
+      selectedFieldnamesWidget.value = fieldNamesString;
+    }
+    if (selectedValuesWidget) {
+      selectedValuesWidget.value = fieldValuesString;
+    }
+    if (!this.properties) this.properties = {};
+    this.properties["selected_fieldnames"] = fieldNamesString;
+    this.properties["field_names_input"] = fieldNamesString;
+    this.properties["selected_values"] = fieldValuesString;
+    log(this.type, "Updated backend properties:", {
+      fieldNames: fieldNamesString,
+      selectedCount: this._selectedFieldNames.length
+    });
   }
   updateFieldsDisplay() {
     if (!this._connectedNode) {
@@ -14432,8 +14702,8 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
       this._fieldEntries = newFieldEntries;
       log(this.type, `Fields updated for '${this._connectedNode.title}' (${this._fieldEntries.length} fields)`);
       this.createFieldsDisplayWidget();
-      if (!this._selectedFieldName && this._fieldEntries.length > 0 && this._fieldEntries[0]) {
-        this.selectField(this._fieldEntries[0].name);
+      if (this._selectedFieldNames.length > 0) {
+        this.updateBackendProperties();
       }
     }
   }
@@ -14447,11 +14717,8 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
         if (currentEntries !== previousEntries) {
           this._fieldEntries = newEntries;
           this.createFieldsDisplayWidget();
-          if (this._selectedFieldName) {
-            const currentField = this._fieldEntries.find((f) => f.name === this._selectedFieldName);
-            if (currentField) {
-              this.selectField(this._selectedFieldName);
-            }
+          if (this._selectedFieldNames.length > 0) {
+            this.updateBackendProperties();
           }
           if (app.graph) {
             app.graph.setDirtyCanvas(true, false);
@@ -14471,7 +14738,7 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
     if (!connectedNode) {
       this._availableFields = [];
       this._fieldEntries = [];
-      this._selectedFieldName = "";
+      this._selectedFieldNames = [];
       this.stopPeriodicUpdates();
       this.updateFieldsDisplay();
       return;
@@ -14492,10 +14759,10 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
         }
       } else {
         this.inspectConnectedNode(null);
-        const selectedFieldnameWidget = (_a = this.widgets) == null ? void 0 : _a.find((w) => w.name === "selected_fieldname");
-        const selectedValueWidget = (_b = this.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_value");
-        if (selectedFieldnameWidget) selectedFieldnameWidget.value = "";
-        if (selectedValueWidget) selectedValueWidget.value = "";
+        const selectedFieldnamesWidget = (_a = this.widgets) == null ? void 0 : _a.find((w) => w.name === "selected_fieldnames");
+        const selectedValuesWidget = (_b = this.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_values");
+        if (selectedFieldnamesWidget) selectedFieldnamesWidget.value = "";
+        if (selectedValuesWidget) selectedValuesWidget.value = "";
       }
     }
   }
@@ -14504,21 +14771,21 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
     this._connectedNode = null;
     this._availableFields = [];
     this._fieldEntries = [];
-    this._selectedFieldName = "";
+    this._selectedFieldNames = [];
     if (!this.properties) this.properties = {};
-    this.properties["selected_fieldname"] = "";
-    this.properties["field_name"] = "";
-    this.properties["selected_value"] = "";
+    this.properties["selected_fieldnames"] = "";
+    this.properties["field_names_input"] = "";
+    this.properties["selected_values"] = "";
     setTimeout(() => {
       var _a, _b, _c;
       log(this.type, "Available widgets:", ((_a = this.widgets) == null ? void 0 : _a.map((w) => w.name)) || []);
-      const selectedFieldnameWidget = (_b = this.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_fieldname");
-      const selectedValueWidget = (_c = this.widgets) == null ? void 0 : _c.find((w) => w.name === "selected_value");
-      if (selectedFieldnameWidget) selectedFieldnameWidget.value = "";
-      if (selectedValueWidget) selectedValueWidget.value = "";
+      const selectedFieldnamesWidget = (_b = this.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_fieldnames");
+      const selectedValuesWidget = (_c = this.widgets) == null ? void 0 : _c.find((w) => w.name === "selected_values");
+      if (selectedFieldnamesWidget) selectedFieldnamesWidget.value = "";
+      if (selectedValuesWidget) selectedValuesWidget.value = "";
       log(this.type, "Backend widgets initialized:", {
-        selectedFieldnameWidget: !!selectedFieldnameWidget,
-        selectedValueWidget: !!selectedValueWidget
+        selectedFieldnamesWidget: !!selectedFieldnamesWidget,
+        selectedValuesWidget: !!selectedValuesWidget
       });
     }, 10);
     this.updateFieldsDisplay();
@@ -14528,25 +14795,32 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
     log(this.type, "Configuring node with info:", info);
     const hasConnection = Boolean((_b = (_a = this.inputs) == null ? void 0 : _a[0]) == null ? void 0 : _b.link);
     log(this.type, "Has input connection:", hasConnection);
+    if ((_c = this.properties) == null ? void 0 : _c["selected_fieldnames"]) {
+      const fieldNamesString = this.properties["selected_fieldnames"];
+      this._selectedFieldNames = fieldNamesString ? fieldNamesString.split(",").map((s) => s.trim()).filter((s) => s) : [];
+      log(this.type, "Restored selected field names:", this._selectedFieldNames);
+    } else if ((_d = this.properties) == null ? void 0 : _d["field_names_input"]) {
+      const fieldNamesString = this.properties["field_names_input"];
+      this._selectedFieldNames = fieldNamesString ? fieldNamesString.split(",").map((s) => s.trim()).filter((s) => s) : [];
+      log(this.type, "Restored field names from input:", this._selectedFieldNames);
+    } else {
+      this._selectedFieldNames = [];
+    }
     if (!hasConnection) {
       this._connectedNode = null;
       this._availableFields = [];
       this._fieldEntries = [];
-      this._selectedFieldName = "";
       this.stopPeriodicUpdates();
-    } else {
-      if ((_c = this.properties) == null ? void 0 : _c["selected_fieldname"]) {
-        this._selectedFieldName = this.properties["selected_fieldname"];
-      } else if ((_d = this.properties) == null ? void 0 : _d["field_name_input"]) {
-        this._selectedFieldName = this.properties["field_name_input"];
-      }
     }
     this.updateFieldsDisplay();
+    setTimeout(() => {
+      this.updateBackendProperties();
+    }, 100);
   }
   onExecute() {
     if (!this.properties) this.properties = {};
-    if (!this.properties["field_name_input"]) {
-      this.properties["field_name_input"] = this._selectedFieldName || "";
+    if (!this.properties["field_names_input"]) {
+      this.properties["field_names_input"] = this._selectedFieldNames.join(", ");
     }
   }
   onRemoved() {
@@ -14554,17 +14828,59 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
     this.stopPeriodicUpdates();
     (_a = super.onRemoved) == null ? void 0 : _a.call(this);
   }
-  computeSize(out) {
+  onMouseDown(event, pos, canvas2) {
     var _a, _b;
-    const baseWidth = 320;
+    console.log(`[FieldInspector] Node onMouseDown: pos=${pos}, event=${event.type}`);
+    const scrollableWidget = (_a = this.widgets) == null ? void 0 : _a.find((w) => w.name === "fields_scrollable");
+    if (scrollableWidget && this._fieldEntries.length > 0) {
+      const widgetY = 80;
+      const widgetHeight = scrollableWidget._desiredHeight || 40;
+      console.log(`[FieldInspector] Node click debug: pos[1]=${pos[1]}, widgetY=${widgetY}, widgetHeight=${widgetHeight}, range=${widgetY}-${widgetY + widgetHeight}`);
+      if (pos[1] >= widgetY && pos[1] <= widgetY + widgetHeight) {
+        const relativeY = pos[1] - widgetY;
+        const lineHeight = 20;
+        const scrollOffset = scrollableWidget.scrollOffset || 0;
+        const clickedIndex = Math.floor((relativeY + scrollOffset) / lineHeight);
+        console.log(`[FieldInspector] Click in widget area: relativeY=${relativeY}, clickedIndex=${clickedIndex}, fieldsLength=${this._fieldEntries.length}`);
+        if (clickedIndex >= 0 && clickedIndex < this._fieldEntries.length) {
+          const entry = this._fieldEntries[clickedIndex];
+          if (entry) {
+            const fieldName = entry.name;
+            console.log(`[FieldInspector] Field clicked via node handler: ${fieldName}`);
+            this.selectField(fieldName);
+            return true;
+          }
+        }
+      }
+    }
+    return ((_b = super.onMouseDown) == null ? void 0 : _b.call(this, event, pos, canvas2)) || false;
+  }
+  computeSize(out) {
+    var _a;
+    const baseWidth = 380;
     const baseHeight = 90;
-    const lineHeight = 20;
-    const truncatedInfoHeight = (((_a = this._fieldEntries) == null ? void 0 : _a.length) || 0) > 10 ? 18 : 0;
     const topPadding = 5;
     const bottomPadding = 5;
-    const fieldCount = Math.min(((_b = this._fieldEntries) == null ? void 0 : _b.length) || 0, 10);
-    const additionalHeight = Math.max(0, fieldCount * lineHeight + truncatedInfoHeight + topPadding + bottomPadding);
-    return [baseWidth, baseHeight + additionalHeight];
+    const fieldCount = ((_a = this._fieldEntries) == null ? void 0 : _a.length) || 0;
+    if (fieldCount === 0) {
+      return [baseWidth, baseHeight + 25];
+    }
+    const lineHeight = 20;
+    const headerHeight = 25;
+    const inputEntries = this._fieldEntries.filter((entry) => entry.sourceType === "input");
+    const widgetEntries = this._fieldEntries.filter((entry) => entry.sourceType === "widget");
+    let totalContentHeight = 0;
+    if (inputEntries.length > 0) {
+      totalContentHeight += headerHeight + inputEntries.length * lineHeight;
+    }
+    if (widgetEntries.length > 0) {
+      const maxFieldsBeforeScroll = 8;
+      const shouldScroll = widgetEntries.length > maxFieldsBeforeScroll;
+      const visibleFields = shouldScroll ? maxFieldsBeforeScroll : widgetEntries.length;
+      totalContentHeight += headerHeight + visibleFields * lineHeight;
+    }
+    const totalHeight = baseHeight + totalContentHeight + topPadding + bottomPadding;
+    return [baseWidth, totalHeight];
   }
 };
 _FieldInspectorNode.title = "\u{1F50D} Field Inspector";
@@ -14586,6 +14902,7 @@ if (!window.__fieldInspectorRegistered) {
           "onConfigure",
           "onNodeCreated",
           "onRemoved",
+          "onMouseDown",
           "clone",
           "onConstructed",
           "checkAndRunOnConstructed",
@@ -14595,11 +14912,15 @@ if (!window.__fieldInspectorRegistered) {
           "findWidgetByName",
           "formatWidgetValue",
           "getAllFieldEntries",
+          "getConnectedNodeOutputValue",
+          "formatValue",
           "createFieldsDisplayWidget",
           "startPeriodicUpdates",
           "stopPeriodicUpdates",
           "computeSize",
-          "getInputSocketTypeColor"
+          "getInputSocketTypeColor",
+          "getSocketTypeColor",
+          "updateBackendProperties"
         ];
         for (const method of methods) {
           const prototype = FieldInspectorNode.prototype;
@@ -14628,20 +14949,20 @@ if (!window.__fieldInspectorRegistered) {
         node2._connectedNode = null;
         node2._availableFields = [];
         node2._fieldEntries = [];
-        node2._selectedFieldName = "";
+        node2._selectedFieldNames = [];
         node2._updateInterval = null;
         if (!node2.properties) node2.properties = {};
-        node2.properties["selected_fieldname"] = "";
-        node2.properties["field_name_input"] = "";
-        node2.properties["selected_value"] = "";
+        node2.properties["selected_fieldnames"] = "";
+        node2.properties["field_names_input"] = "";
+        node2.properties["selected_values"] = "";
         log("FieldInspector", "Node state initialized");
         setTimeout(() => {
           var _a2, _b, _c;
           log("FieldInspector", "Available widgets:", ((_a2 = node2.widgets) == null ? void 0 : _a2.map((w) => w.name)) || []);
-          const selectedFieldnameWidget = (_b = node2.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_fieldname");
-          const selectedValueWidget = (_c = node2.widgets) == null ? void 0 : _c.find((w) => w.name === "selected_value");
-          if (selectedFieldnameWidget) selectedFieldnameWidget.value = "";
-          if (selectedValueWidget) selectedValueWidget.value = "";
+          const selectedFieldnamesWidget = (_b = node2.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_fieldnames");
+          const selectedValuesWidget = (_c = node2.widgets) == null ? void 0 : _c.find((w) => w.name === "selected_values");
+          if (selectedFieldnamesWidget) selectedFieldnamesWidget.value = "";
+          if (selectedValuesWidget) selectedValuesWidget.value = "";
           log("FieldInspector", "Backend widgets initialized in nodeCreated");
         }, 10);
         (_a = node2.onConstructed) == null ? void 0 : _a.call(node2);
