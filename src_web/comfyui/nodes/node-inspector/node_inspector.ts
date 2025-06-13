@@ -32,9 +32,9 @@ interface FieldEntry {
   connectedNodeTitle?: string;
 }
 
-export class FieldInspectorNode extends StoryboardBaseNode {
-  static override title = "🔍 Field Inspector";
-  static override type = "FieldInspector";
+export class NodeInspectorNode extends StoryboardBaseNode {
+  static override title = "🔍 Node Inspector";
+  static override type = "NodeInspector";
   static override category = "storyboard/Debug";
   static override _category = "storyboard/Debug";
 
@@ -117,7 +117,7 @@ export class FieldInspectorNode extends StoryboardBaseNode {
     return typeColorMap[safeType.toUpperCase()] || typeColorMap['*'] || '#999999';
   }
 
-  constructor(title = FieldInspectorNode.title) {
+  constructor(title = NodeInspectorNode.title) {
     super(title);
     log(this.type, "Constructor called");
   }
@@ -374,7 +374,7 @@ export class FieldInspectorNode extends StoryboardBaseNode {
         options: { readonly: true },
         y: 0,
         serialize: false,
-        draw: function (ctx: CanvasRenderingContext2D, node: FieldInspectorNode, widgetWidth: number, y: number, widgetHeight: number) {
+        draw: function (ctx: CanvasRenderingContext2D, node: NodeInspectorNode, widgetWidth: number, y: number, widgetHeight: number) {
           ctx.fillStyle = "#555";
           ctx.fillRect(0, y, widgetWidth, widgetHeight);
           ctx.fillStyle = "#888";
@@ -520,6 +520,32 @@ export class FieldInspectorNode extends StoryboardBaseNode {
             const nameWidth = ctx.measureText(`${entry.name}${typeDisplay}:`).width;
             ctx.fillStyle = "#ccc";
             ctx.fillText(` ${displayValue}`, itemPadding + 50 + nameWidth, fieldY + 15);
+
+            // Connection inheritance info for widgets (if they get value from an input)
+            if (entry.isConnected && entry.connectedNodeTitle) {
+              const valueWidth = ctx.measureText(` ${displayValue}`).width;
+              const connectionStartX = itemPadding + 50 + nameWidth + valueWidth + 10;
+
+              // Check if there's enough space
+              if (connectionStartX < widgetWidth - 80) {
+                const availableWidth = widgetWidth - connectionStartX - itemPadding - 10;
+                let connectionText = ` → ${entry.connectedNodeTitle}`;
+
+                // Truncate if necessary
+                ctx.font = "10px Arial";
+                let connectionWidth = ctx.measureText(connectionText).width;
+                if (connectionWidth > availableWidth) {
+                  const maxTitleLength = Math.floor((availableWidth - 20) / 6);
+                  const truncatedTitle = entry.connectedNodeTitle.length > maxTitleLength
+                    ? entry.connectedNodeTitle.substring(0, maxTitleLength) + "..."
+                    : entry.connectedNodeTitle;
+                  connectionText = ` → ${truncatedTitle}`;
+                }
+
+                ctx.fillStyle = isSelected ? "#a0c4e0" : "#888";
+                ctx.fillText(connectionText, connectionStartX, fieldY + 15);
+              }
+            }
           }
 
           // Scrollbar
@@ -661,6 +687,32 @@ export class FieldInspectorNode extends StoryboardBaseNode {
             const nameWidth = ctx.measureText(`${entry.name}${typeDisplay}:`).width;
             ctx.fillStyle = entry.isConnected ? "#b8e6b8" : "#ccc";
             ctx.fillText(` ${displayValue}`, itemPadding + 40 + nameWidth, fieldY + 15);
+
+            // Connection info for inputs (what they're connected to)
+            if (entry.isConnected && entry.connectedNodeTitle) {
+              const valueWidth = ctx.measureText(` ${displayValue}`).width;
+              const connectionStartX = itemPadding + 40 + nameWidth + valueWidth + 10;
+
+              // Check if there's enough space
+              if (connectionStartX < widgetWidth - 80) {
+                const availableWidth = widgetWidth - connectionStartX - itemPadding - 10;
+                let connectionText = ` → ${entry.connectedNodeTitle}`;
+
+                // Truncate if necessary
+                ctx.font = "10px Arial";
+                let connectionWidth = ctx.measureText(connectionText).width;
+                if (connectionWidth > availableWidth) {
+                  const maxTitleLength = Math.floor((availableWidth - 20) / 6);
+                  const truncatedTitle = entry.connectedNodeTitle.length > maxTitleLength
+                    ? entry.connectedNodeTitle.substring(0, maxTitleLength) + "..."
+                    : entry.connectedNodeTitle;
+                  connectionText = ` → ${truncatedTitle}`;
+                }
+
+                ctx.fillStyle = "#888";
+                ctx.fillText(connectionText, connectionStartX, fieldY + 15);
+              }
+            }
           }
 
           return inputSectionHeight;
@@ -694,7 +746,7 @@ export class FieldInspectorNode extends StoryboardBaseNode {
   }
 
   private createSelectableSection(title: string, entries: FieldEntry[], itemPadding: number, lineHeight: number, headerHeight: number) {
-  // This method is no longer used - keeping for compatibility
+    // This method is no longer used - keeping for compatibility
   }
 
   override addCustomWidget<T extends IWidget>(custom_widget: T): T {
@@ -955,7 +1007,7 @@ export class FieldInspectorNode extends StoryboardBaseNode {
   }
 
   override onMouseDown(event: any, pos: any, canvas: any): boolean {
-    console.log(`[FieldInspector] Node onMouseDown: pos=${pos}, event=${event.type}`);
+    console.log(`[NodeInspector] Node onMouseDown: pos=${pos}, event=${event.type}`);
 
     // Check if click is within our scrollable widget area
     const scrollableWidget = this.widgets?.find(w => w.name === "fields_scrollable");
@@ -964,7 +1016,7 @@ export class FieldInspectorNode extends StoryboardBaseNode {
       const widgetY = 80; // Approximate Y position of widget within node (after title + other widgets)
       const widgetHeight = (scrollableWidget as any)._desiredHeight || 40;
 
-      console.log(`[FieldInspector] Node click debug: pos[1]=${pos[1]}, widgetY=${widgetY}, widgetHeight=${widgetHeight}, range=${widgetY}-${widgetY + widgetHeight}`);
+      console.log(`[NodeInspector] Node click debug: pos[1]=${pos[1]}, widgetY=${widgetY}, widgetHeight=${widgetHeight}, range=${widgetY}-${widgetY + widgetHeight}`);
 
       if (pos[1] >= widgetY && pos[1] <= widgetY + widgetHeight) {
         const relativeY = pos[1] - widgetY;
@@ -972,14 +1024,14 @@ export class FieldInspectorNode extends StoryboardBaseNode {
         const scrollOffset = (scrollableWidget as any).scrollOffset || 0;
         const clickedIndex = Math.floor((relativeY + scrollOffset) / lineHeight);
 
-        console.log(`[FieldInspector] Click in widget area: relativeY=${relativeY}, clickedIndex=${clickedIndex}, fieldsLength=${this._fieldEntries.length}`);
+        console.log(`[NodeInspector] Click in widget area: relativeY=${relativeY}, clickedIndex=${clickedIndex}, fieldsLength=${this._fieldEntries.length}`);
 
         if (clickedIndex >= 0 && clickedIndex < this._fieldEntries.length) {
           const entry = this._fieldEntries[clickedIndex];
           if (entry) {
             const fieldName = entry.name;
 
-            console.log(`[FieldInspector] Field clicked via node handler: ${fieldName}`);
+            console.log(`[NodeInspector] Field clicked via node handler: ${fieldName}`);
             this.selectField(fieldName);
             return true; // Consume the event
           }
@@ -1032,15 +1084,15 @@ export class FieldInspectorNode extends StoryboardBaseNode {
 }
 
 // Register the node type
-if (!(window as any).__fieldInspectorRegistered) {
-  (window as any).__fieldInspectorRegistered = true;
+if (!(window as any).__nodeInspectorRegistered) {
+  (window as any).__nodeInspectorRegistered = true;
 
   app.registerExtension({
-    name: "comfyui-storyboard.field-inspector",
+    name: "comfyui-storyboard.node-inspector",
     async beforeRegisterNodeDef(nodeType: any, nodeData: any) {
-      if (nodeData.name === "FieldInspector") {
-        log("FieldInspector", "Registering node type");
-        log("FieldInspector", "Node data:", nodeData);
+      if (nodeData.name === "NodeInspector") {
+        log("NodeInspector", "Registering node type");
+        log("NodeInspector", "Node data:", nodeData);
 
         // Copy methods individually to avoid prototype issues
         const methods = [
@@ -1071,35 +1123,35 @@ if (!(window as any).__fieldInspectorRegistered) {
         ];
 
         for (const method of methods) {
-          const prototype = FieldInspectorNode.prototype as any;
+          const prototype = NodeInspectorNode.prototype as any;
           if (prototype[method]) {
             nodeType.prototype[method] = prototype[method];
-            log("FieldInspector", `Copied method: ${method}`);
+            log("NodeInspector", `Copied method: ${method}`);
           }
         }
 
         // Copy static properties
-        nodeType.title = FieldInspectorNode.title;
-        nodeType.type = FieldInspectorNode.type;
-        nodeType.category = FieldInspectorNode.category;
-        nodeType._category = FieldInspectorNode._category;
-        log("FieldInspector", "Static properties copied");
+        nodeType.title = NodeInspectorNode.title;
+        nodeType.type = NodeInspectorNode.type;
+        nodeType.category = NodeInspectorNode.category;
+        nodeType._category = NodeInspectorNode._category;
+        log("NodeInspector", "Static properties copied");
 
         // Register the node type with LiteGraph
-        if (FieldInspectorNode.type) {
-          log("FieldInspector", "Registering node type with LiteGraph");
-          LiteGraph.registerNodeType(FieldInspectorNode.type, nodeType);
+        if (NodeInspectorNode.type) {
+          log("NodeInspector", "Registering node type with LiteGraph");
+          LiteGraph.registerNodeType(NodeInspectorNode.type, nodeType);
         }
 
         // Set up the node type
-        FieldInspectorNode.setUp();
+        NodeInspectorNode.setUp();
       }
     },
 
     nodeCreated(node: any) {
-      if (node.comfyClass === "FieldInspector") {
-        log("FieldInspector", "Node instance created");
-        log("FieldInspector", "Node properties:", node.properties);
+      if (node.comfyClass === "NodeInspector") {
+        log("NodeInspector", "Node instance created");
+        log("NodeInspector", "Node properties:", node.properties);
 
         // Initialize node state
         node._connectedNode = null;
@@ -1114,12 +1166,12 @@ if (!(window as any).__fieldInspectorRegistered) {
         node.properties["field_names_input"] = "";
         node.properties["selected_values"] = "";
 
-        log("FieldInspector", "Node state initialized");
+        log("NodeInspector", "Node state initialized");
 
         // Ensure backend widgets have default values
         setTimeout(() => {
           // Debug: log all available widgets
-          log("FieldInspector", "Available widgets:", node.widgets?.map((w: any) => w.name) || []);
+          log("NodeInspector", "Available widgets:", node.widgets?.map((w: any) => w.name) || []);
 
           const selectedFieldnamesWidget = node.widgets?.find((w: any) => w.name === "selected_fieldnames");
           const selectedValuesWidget = node.widgets?.find((w: any) => w.name === "selected_values");
@@ -1127,12 +1179,12 @@ if (!(window as any).__fieldInspectorRegistered) {
           if (selectedFieldnamesWidget) selectedFieldnamesWidget.value = "";
           if (selectedValuesWidget) selectedValuesWidget.value = "";
 
-          log("FieldInspector", "Backend widgets initialized in nodeCreated");
+          log("NodeInspector", "Backend widgets initialized in nodeCreated");
         }, 10);
 
         // Call onConstructed to ensure proper initialization
         node.onConstructed?.();
-        log("FieldInspector", "Node constructed");
+        log("NodeInspector", "Node constructed");
       }
     }
   });

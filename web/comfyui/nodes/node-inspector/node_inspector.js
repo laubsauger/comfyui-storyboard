@@ -18,7 +18,7 @@ var __privateWrapper = (obj, member, setter, getter) => ({
   }
 });
 
-// src_web/comfyui/nodes/field-inspector/field_inspector.ts
+// src_web/comfyui/nodes/node-inspector/node_inspector.ts
 import { app } from "/scripts/app.js";
 
 // node_modules/@comfyorg/litegraph/dist/litegraph.es.js
@@ -14141,9 +14141,9 @@ var log = (prefix, ...args) => {
   }
 };
 
-// src_web/comfyui/nodes/field-inspector/field_inspector.ts
-var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
-  constructor(title = _FieldInspectorNode.title) {
+// src_web/comfyui/nodes/node-inspector/node_inspector.ts
+var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
+  constructor(title = _NodeInspectorNode.title) {
     super(title);
     this._connectedNode = null;
     this._availableFields = [];
@@ -14515,6 +14515,23 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
             const nameWidth = ctx.measureText(`${entry.name}${typeDisplay}:`).width;
             ctx.fillStyle = "#ccc";
             ctx.fillText(` ${displayValue}`, itemPadding + 50 + nameWidth, fieldY + 15);
+            if (entry.isConnected && entry.connectedNodeTitle) {
+              const valueWidth = ctx.measureText(` ${displayValue}`).width;
+              const connectionStartX = itemPadding + 50 + nameWidth + valueWidth + 10;
+              if (connectionStartX < widgetWidth - 80) {
+                const availableWidth = widgetWidth - connectionStartX - itemPadding - 10;
+                let connectionText = ` \u2192 ${entry.connectedNodeTitle}`;
+                ctx.font = "10px Arial";
+                let connectionWidth = ctx.measureText(connectionText).width;
+                if (connectionWidth > availableWidth) {
+                  const maxTitleLength = Math.floor((availableWidth - 20) / 6);
+                  const truncatedTitle = entry.connectedNodeTitle.length > maxTitleLength ? entry.connectedNodeTitle.substring(0, maxTitleLength) + "..." : entry.connectedNodeTitle;
+                  connectionText = ` \u2192 ${truncatedTitle}`;
+                }
+                ctx.fillStyle = isSelected ? "#a0c4e0" : "#888";
+                ctx.fillText(connectionText, connectionStartX, fieldY + 15);
+              }
+            }
           }
           if (totalContentHeight > scrollableHeight) {
             const scrollbarWidth = 8;
@@ -14617,6 +14634,23 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
             const nameWidth = ctx.measureText(`${entry.name}${typeDisplay}:`).width;
             ctx.fillStyle = entry.isConnected ? "#b8e6b8" : "#ccc";
             ctx.fillText(` ${displayValue}`, itemPadding + 40 + nameWidth, fieldY + 15);
+            if (entry.isConnected && entry.connectedNodeTitle) {
+              const valueWidth = ctx.measureText(` ${displayValue}`).width;
+              const connectionStartX = itemPadding + 40 + nameWidth + valueWidth + 10;
+              if (connectionStartX < widgetWidth - 80) {
+                const availableWidth = widgetWidth - connectionStartX - itemPadding - 10;
+                let connectionText = ` \u2192 ${entry.connectedNodeTitle}`;
+                ctx.font = "10px Arial";
+                let connectionWidth = ctx.measureText(connectionText).width;
+                if (connectionWidth > availableWidth) {
+                  const maxTitleLength = Math.floor((availableWidth - 20) / 6);
+                  const truncatedTitle = entry.connectedNodeTitle.length > maxTitleLength ? entry.connectedNodeTitle.substring(0, maxTitleLength) + "..." : entry.connectedNodeTitle;
+                  connectionText = ` \u2192 ${truncatedTitle}`;
+                }
+                ctx.fillStyle = "#888";
+                ctx.fillText(connectionText, connectionStartX, fieldY + 15);
+              }
+            }
           }
           return inputSectionHeight;
         },
@@ -14830,23 +14864,23 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
   }
   onMouseDown(event, pos, canvas2) {
     var _a, _b;
-    console.log(`[FieldInspector] Node onMouseDown: pos=${pos}, event=${event.type}`);
+    console.log(`[NodeInspector] Node onMouseDown: pos=${pos}, event=${event.type}`);
     const scrollableWidget = (_a = this.widgets) == null ? void 0 : _a.find((w) => w.name === "fields_scrollable");
     if (scrollableWidget && this._fieldEntries.length > 0) {
       const widgetY = 80;
       const widgetHeight = scrollableWidget._desiredHeight || 40;
-      console.log(`[FieldInspector] Node click debug: pos[1]=${pos[1]}, widgetY=${widgetY}, widgetHeight=${widgetHeight}, range=${widgetY}-${widgetY + widgetHeight}`);
+      console.log(`[NodeInspector] Node click debug: pos[1]=${pos[1]}, widgetY=${widgetY}, widgetHeight=${widgetHeight}, range=${widgetY}-${widgetY + widgetHeight}`);
       if (pos[1] >= widgetY && pos[1] <= widgetY + widgetHeight) {
         const relativeY = pos[1] - widgetY;
         const lineHeight = 20;
         const scrollOffset = scrollableWidget.scrollOffset || 0;
         const clickedIndex = Math.floor((relativeY + scrollOffset) / lineHeight);
-        console.log(`[FieldInspector] Click in widget area: relativeY=${relativeY}, clickedIndex=${clickedIndex}, fieldsLength=${this._fieldEntries.length}`);
+        console.log(`[NodeInspector] Click in widget area: relativeY=${relativeY}, clickedIndex=${clickedIndex}, fieldsLength=${this._fieldEntries.length}`);
         if (clickedIndex >= 0 && clickedIndex < this._fieldEntries.length) {
           const entry = this._fieldEntries[clickedIndex];
           if (entry) {
             const fieldName = entry.name;
-            console.log(`[FieldInspector] Field clicked via node handler: ${fieldName}`);
+            console.log(`[NodeInspector] Field clicked via node handler: ${fieldName}`);
             this.selectField(fieldName);
             return true;
           }
@@ -14883,19 +14917,19 @@ var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
     return [baseWidth, totalHeight];
   }
 };
-_FieldInspectorNode.title = "\u{1F50D} Field Inspector";
-_FieldInspectorNode.type = "FieldInspector";
-_FieldInspectorNode.category = "storyboard/Debug";
-_FieldInspectorNode._category = "storyboard/Debug";
-var FieldInspectorNode = _FieldInspectorNode;
-if (!window.__fieldInspectorRegistered) {
-  window.__fieldInspectorRegistered = true;
+_NodeInspectorNode.title = "\u{1F50D} Node Inspector";
+_NodeInspectorNode.type = "NodeInspector";
+_NodeInspectorNode.category = "storyboard/Debug";
+_NodeInspectorNode._category = "storyboard/Debug";
+var NodeInspectorNode = _NodeInspectorNode;
+if (!window.__nodeInspectorRegistered) {
+  window.__nodeInspectorRegistered = true;
   app.registerExtension({
-    name: "comfyui-storyboard.field-inspector",
+    name: "comfyui-storyboard.node-inspector",
     async beforeRegisterNodeDef(nodeType, nodeData) {
-      if (nodeData.name === "FieldInspector") {
-        log("FieldInspector", "Registering node type");
-        log("FieldInspector", "Node data:", nodeData);
+      if (nodeData.name === "NodeInspector") {
+        log("NodeInspector", "Registering node type");
+        log("NodeInspector", "Node data:", nodeData);
         const methods = [
           "onConnectionsChange",
           "onExecute",
@@ -14923,29 +14957,29 @@ if (!window.__fieldInspectorRegistered) {
           "updateBackendProperties"
         ];
         for (const method of methods) {
-          const prototype = FieldInspectorNode.prototype;
+          const prototype = NodeInspectorNode.prototype;
           if (prototype[method]) {
             nodeType.prototype[method] = prototype[method];
-            log("FieldInspector", `Copied method: ${method}`);
+            log("NodeInspector", `Copied method: ${method}`);
           }
         }
-        nodeType.title = FieldInspectorNode.title;
-        nodeType.type = FieldInspectorNode.type;
-        nodeType.category = FieldInspectorNode.category;
-        nodeType._category = FieldInspectorNode._category;
-        log("FieldInspector", "Static properties copied");
-        if (FieldInspectorNode.type) {
-          log("FieldInspector", "Registering node type with LiteGraph");
-          LiteGraph.registerNodeType(FieldInspectorNode.type, nodeType);
+        nodeType.title = NodeInspectorNode.title;
+        nodeType.type = NodeInspectorNode.type;
+        nodeType.category = NodeInspectorNode.category;
+        nodeType._category = NodeInspectorNode._category;
+        log("NodeInspector", "Static properties copied");
+        if (NodeInspectorNode.type) {
+          log("NodeInspector", "Registering node type with LiteGraph");
+          LiteGraph.registerNodeType(NodeInspectorNode.type, nodeType);
         }
-        FieldInspectorNode.setUp();
+        NodeInspectorNode.setUp();
       }
     },
     nodeCreated(node2) {
       var _a;
-      if (node2.comfyClass === "FieldInspector") {
-        log("FieldInspector", "Node instance created");
-        log("FieldInspector", "Node properties:", node2.properties);
+      if (node2.comfyClass === "NodeInspector") {
+        log("NodeInspector", "Node instance created");
+        log("NodeInspector", "Node properties:", node2.properties);
         node2._connectedNode = null;
         node2._availableFields = [];
         node2._fieldEntries = [];
@@ -14955,22 +14989,22 @@ if (!window.__fieldInspectorRegistered) {
         node2.properties["selected_fieldnames"] = "";
         node2.properties["field_names_input"] = "";
         node2.properties["selected_values"] = "";
-        log("FieldInspector", "Node state initialized");
+        log("NodeInspector", "Node state initialized");
         setTimeout(() => {
           var _a2, _b, _c;
-          log("FieldInspector", "Available widgets:", ((_a2 = node2.widgets) == null ? void 0 : _a2.map((w) => w.name)) || []);
+          log("NodeInspector", "Available widgets:", ((_a2 = node2.widgets) == null ? void 0 : _a2.map((w) => w.name)) || []);
           const selectedFieldnamesWidget = (_b = node2.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_fieldnames");
           const selectedValuesWidget = (_c = node2.widgets) == null ? void 0 : _c.find((w) => w.name === "selected_values");
           if (selectedFieldnamesWidget) selectedFieldnamesWidget.value = "";
           if (selectedValuesWidget) selectedValuesWidget.value = "";
-          log("FieldInspector", "Backend widgets initialized in nodeCreated");
+          log("NodeInspector", "Backend widgets initialized in nodeCreated");
         }, 10);
         (_a = node2.onConstructed) == null ? void 0 : _a.call(node2);
-        log("FieldInspector", "Node constructed");
+        log("NodeInspector", "Node constructed");
       }
     }
   });
 }
 export {
-  FieldInspectorNode
+  NodeInspectorNode
 };

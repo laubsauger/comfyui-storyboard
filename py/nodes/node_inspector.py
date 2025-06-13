@@ -1,9 +1,9 @@
 from comfy.comfy_types.node_typing import IO
 
 
-class FieldInspector:
-    NAME = "FieldInspector"
-    DISPLAY_NAME = "🔍 Field Inspector"
+class NodeInspector:
+    NAME = "NodeInspector"
+    DISPLAY_NAME = "🔍 Node Inspector"
 
     @classmethod
     def INPUT_TYPES(s):
@@ -42,7 +42,7 @@ class FieldInspector:
 
     RETURN_TYPES = ("LIST", "LIST", "DICT", IO.ANY)
     RETURN_NAMES = ("field_names", "field_values", "field_dict", "passthrough")
-    FUNCTION = "inspect_field"
+    FUNCTION = "inspect_node"
     CATEGORY = "storyboard/Debug"
     OUTPUT_NODE = False
 
@@ -50,7 +50,7 @@ class FieldInspector:
     def IS_CHANGED(s, **kwargs):
         return float("NaN")
 
-    def inspect_field(
+    def inspect_node(
         self,
         source_node,
         selected_fieldnames,
@@ -115,7 +115,7 @@ class FieldInspector:
                                 "selected_values": selected_values,
                             }
             except Exception as e:
-                print(f"[FieldInspector] Error updating workflow metadata: {e}")
+                print(f"[NodeInspector] Error updating workflow metadata: {e}")
 
         # Create dictionary of field names to values
         field_dict = {}

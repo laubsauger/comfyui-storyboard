@@ -2,6 +2,14 @@ import json
 import pprint
 from comfy.comfy_types.node_typing import IO
 
+# Try to import black for better Python code formatting
+try:
+    import black
+
+    HAS_BLACK = True
+except ImportError:
+    HAS_BLACK = False
+
 class MarkdownRenderer:
     NAME = "MarkdownRenderer"
     DISPLAY_NAME = "Markdown Renderer"
@@ -37,6 +45,25 @@ class MarkdownRenderer:
     def IS_CHANGED(s, **kwargs):
         return float("NaN")
 
+    def format_python_code(self, code_str):
+        """Format Python code using black if available, otherwise return as-is."""
+        if not HAS_BLACK:
+            return code_str
+
+        try:
+            # Use black to format the code with a reasonable line length
+            formatted = black.format_str(
+                code_str,
+                mode=black.FileMode(
+                    line_length=80, string_normalization=True, is_pyi=False
+                ),
+            )
+            return formatted.strip()
+        except Exception as e:
+            # If black fails, return the original code
+            print(f"[MarkdownRenderer] Black formatting failed: {e}")
+            return code_str
+
     def format_item_as_markdown(self, item, item_index=None):
         """Format a single item as markdown based on its type."""
         if item is None:
@@ -49,22 +76,35 @@ class MarkdownRenderer:
                 return ""
             return item_str
 
-        # Handle dictionaries - format as Python code block
+        # Handle dictionaries - format as Python code block with enhanced formatting
         elif isinstance(item, dict):
             if not item:  # Empty dict
                 return "```python\n{}\n```"
 
             try:
-                # Use pprint for nice formatting
+                # Use pprint with enhanced configuration for better readability
                 formatted_dict = pprint.pformat(
-                    item, indent=2, width=80, sort_dicts=True
+                    item,
+                    indent=4,  # More indentation for better nesting visibility
+                    width=80,  # Reasonable line width
+                    depth=None,  # No depth limit
+                    compact=False,  # Don't compact sequences
+                    sort_dicts=True,  # Sort dictionary keys
                 )
+
+                # Apply black formatting if available
+                formatted_dict = self.format_python_code(formatted_dict)
+
                 return f"```python\n{formatted_dict}\n```"
             except Exception as e:
                 # Fallback to json if pprint fails
                 try:
                     formatted_dict = json.dumps(
-                        item, indent=2, ensure_ascii=False, default=str
+                        item,
+                        indent=4,  # Consistent indentation with pprint
+                        ensure_ascii=False,
+                        default=str,
+                        sort_keys=True,  # Sort keys for consistency
                     )
                     return f"```json\n{formatted_dict}\n```"
                 except Exception:
@@ -73,7 +113,8 @@ class MarkdownRenderer:
         # Handle lists - format as markdown list or code block depending on content
         elif isinstance(item, (list, tuple)):
             if not item:  # Empty list
-                return f"```python\n{repr(item)}\n```"
+                formatted_empty = "[]" if isinstance(item, list) else "()"
+                return f"```python\n{formatted_empty}\n```"
 
             # Check if all items are simple strings that could be a markdown list
             if all(
@@ -86,7 +127,18 @@ class MarkdownRenderer:
             else:
                 # Format as Python code block for complex lists
                 try:
-                    formatted_list = pprint.pformat(item, indent=2, width=80)
+                    formatted_list = pprint.pformat(
+                        item,
+                        indent=4,  # Enhanced indentation
+                        width=80,
+                        depth=None,
+                        compact=False,
+                        sort_dicts=True,
+                    )
+
+                    # Apply black formatting if available
+                    formatted_list = self.format_python_code(formatted_list)
+
                     return f"```python\n{formatted_list}\n```"
                 except Exception:
                     return f"```python\n{repr(item)}\n```"
@@ -99,7 +151,18 @@ class MarkdownRenderer:
         else:
             try:
                 # Try pprint first for nice formatting
-                formatted_item = pprint.pformat(item, indent=2, width=80)
+                formatted_item = pprint.pformat(
+                    item,
+                    indent=4,  # Enhanced indentation
+                    width=80,
+                    depth=None,
+                    compact=False,
+                    sort_dicts=True,
+                )
+
+                # Apply black formatting if available
+                formatted_item = self.format_python_code(formatted_item)
+
                 return f"```python\n{formatted_item}\n```"
             except Exception:
                 # Fallback to string representation
@@ -107,6 +170,7 @@ class MarkdownRenderer:
 
     def render_markdown(self, unique_id=None, extra_pnginfo=None, text=None):
         print(f"[MarkdownRenderer] Processing input. Input type: {type(text)}")
+        print(f"[MarkdownRenderer] Black formatter available: {HAS_BLACK}")
         print(f"[MarkdownRenderer] Raw input value: {repr(text)}")
 
         # When INPUT_IS_LIST = True, inputs come as lists even for single values
