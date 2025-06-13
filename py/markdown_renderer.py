@@ -22,7 +22,6 @@ class MarkdownRenderer:
             },
         }
 
-    INPUT_IS_LIST = True
     RETURN_TYPES = ("STRING",)
     FUNCTION = "render_markdown"
     CATEGORY = "storyboard/Markdown"
@@ -34,22 +33,24 @@ class MarkdownRenderer:
         return float("NaN")
 
     def render_markdown(self, unique_id=None, extra_pnginfo=None, text=None):
-        print(f"[MarkdownRenderer] Processing text. Input: {text}")
+        # print(f"[MarkdownRenderer] Processing text. Input type: {type(text)}")
+        # print(f"[MarkdownRenderer] Raw input value: {repr(text)}")
 
-        # Process input from connected nodes
+        # Process input from connected nodes - ensure single string output
         if text is not None:
-            # Handle both single strings and lists of strings
+            # If it's a list, join it into a single string
             if isinstance(text, list):
-                # Concatenate all items with newlines
-                text_content = "\n".join(str(item) for item in text)
+                # print(
+                #     f"[MarkdownRenderer] Input is list with {len(text)} items: {text}"
+                # )
+                text_content = "".join(str(item) for item in text)
             else:
-                # Single string input
                 text_content = str(text)
         else:
-            # No input connected - will be handled by frontend editing
             text_content = ""
 
-        print(f"[MarkdownRenderer] Processed text content")
+        # print(f"[MarkdownRenderer] Processed text content length: {len(text_content)}")
+        # print(f"[MarkdownRenderer] Processed text content: {repr(text_content)}")
 
         # Store in workflow metadata if available
         if unique_id is not None and extra_pnginfo is not None:
@@ -75,7 +76,9 @@ class MarkdownRenderer:
                 print(f"[MarkdownRenderer] Error updating workflow metadata: {e}")
 
         # Return both UI data for frontend and result for output
-        return {
-            "ui": {"text": text_content, "html": text_content},
+        result = {
+            "ui": {"text": [text_content], "html": [text_content]},
             "result": (text_content,),
         }
+
+        return result

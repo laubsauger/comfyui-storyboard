@@ -125,11 +125,19 @@ export class MarkdownRendererNode extends StoryboardBaseNode {
     log(this.type, "Node executed with result:", result);
 
     // The Python backend returns the content of the "ui" key.
-    // result should be: { text: string, html: string }
+    // result should be: { text: [string], html: [string] }
     if (result && result.text) {
-      // Get the text content directly as a string
-      // Ensure we're treating it as a single string, not an array
-      const textContent = Array.isArray(result.text) ? result.text.join('') : result.text;
+      // Handle array format (expected) - take the first item
+      let textContent = result.text;
+      log(this.type, "DEBUG: result.text:", result.text, "isArray:", Array.isArray(textContent));
+      if (Array.isArray(textContent)) {
+        log(this.type, "DEBUG: array length:", textContent.length, "first item:", textContent[0]);
+        textContent = textContent[0] || "";
+      } else if (typeof textContent !== 'string') {
+        log(this.type, "WARNING: result.text is not string or array, coercing", textContent);
+        textContent = String(textContent);
+      }
+      log(this.type, "DEBUG: final textContent:", textContent);
       this._sourceText = textContent;
       this._editableContent = this._sourceText;
 

@@ -20145,7 +20145,16 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
   onExecuted(result) {
     log(this.type, "Node executed with result:", result);
     if (result && result.text) {
-      const textContent = Array.isArray(result.text) ? result.text.join("") : result.text;
+      let textContent = result.text;
+      log(this.type, "DEBUG: result.text:", result.text, "isArray:", Array.isArray(textContent));
+      if (Array.isArray(textContent)) {
+        log(this.type, "DEBUG: array length:", textContent.length, "first item:", textContent[0]);
+        textContent = textContent[0] || "";
+      } else if (typeof textContent !== "string") {
+        log(this.type, "WARNING: result.text is not string or array, coercing", textContent);
+        textContent = String(textContent);
+      }
+      log(this.type, "DEBUG: final textContent:", textContent);
       this._sourceText = textContent;
       this._editableContent = this._sourceText;
       this._storedHtml = renderMarkdownToHtml(this._sourceText);
