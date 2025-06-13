@@ -1,32 +1,8 @@
-var __create = Object.create;
 var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __typeError = (msg) => {
   throw TypeError(msg);
 };
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
 var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
@@ -42,1546 +18,8 @@ var __privateWrapper = (obj, member, setter, getter) => ({
   }
 });
 
-// node_modules/highlight.js/lib/core.js
-var require_core = __commonJS({
-  "node_modules/highlight.js/lib/core.js"(exports, module) {
-    function deepFreeze(obj) {
-      if (obj instanceof Map) {
-        obj.clear = obj.delete = obj.set = function() {
-          throw new Error("map is read-only");
-        };
-      } else if (obj instanceof Set) {
-        obj.add = obj.clear = obj.delete = function() {
-          throw new Error("set is read-only");
-        };
-      }
-      Object.freeze(obj);
-      Object.getOwnPropertyNames(obj).forEach((name) => {
-        const prop = obj[name];
-        const type = typeof prop;
-        if ((type === "object" || type === "function") && !Object.isFrozen(prop)) {
-          deepFreeze(prop);
-        }
-      });
-      return obj;
-    }
-    var Response = class {
-      /**
-       * @param {CompiledMode} mode
-       */
-      constructor(mode) {
-        if (mode.data === void 0) mode.data = {};
-        this.data = mode.data;
-        this.isMatchIgnored = false;
-      }
-      ignoreMatch() {
-        this.isMatchIgnored = true;
-      }
-    };
-    function escapeHTML(value) {
-      return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
-    }
-    function inherit$1(original, ...objects) {
-      const result = /* @__PURE__ */ Object.create(null);
-      for (const key in original) {
-        result[key] = original[key];
-      }
-      objects.forEach(function(obj) {
-        for (const key in obj) {
-          result[key] = obj[key];
-        }
-      });
-      return (
-        /** @type {T} */
-        result
-      );
-    }
-    var SPAN_CLOSE = "</span>";
-    var emitsWrappingTags = (node2) => {
-      return !!node2.scope;
-    };
-    var scopeToCSSClass = (name, { prefix }) => {
-      if (name.startsWith("language:")) {
-        return name.replace("language:", "language-");
-      }
-      if (name.includes(".")) {
-        const pieces = name.split(".");
-        return [
-          `${prefix}${pieces.shift()}`,
-          ...pieces.map((x2, i) => `${x2}${"_".repeat(i + 1)}`)
-        ].join(" ");
-      }
-      return `${prefix}${name}`;
-    };
-    var HTMLRenderer = class {
-      /**
-       * Creates a new HTMLRenderer
-       *
-       * @param {Tree} parseTree - the parse tree (must support `walk` API)
-       * @param {{classPrefix: string}} options
-       */
-      constructor(parseTree, options3) {
-        this.buffer = "";
-        this.classPrefix = options3.classPrefix;
-        parseTree.walk(this);
-      }
-      /**
-       * Adds texts to the output stream
-       *
-       * @param {string} text */
-      addText(text2) {
-        this.buffer += escapeHTML(text2);
-      }
-      /**
-       * Adds a node open to the output stream (if needed)
-       *
-       * @param {Node} node */
-      openNode(node2) {
-        if (!emitsWrappingTags(node2)) return;
-        const className = scopeToCSSClass(
-          node2.scope,
-          { prefix: this.classPrefix }
-        );
-        this.span(className);
-      }
-      /**
-       * Adds a node close to the output stream (if needed)
-       *
-       * @param {Node} node */
-      closeNode(node2) {
-        if (!emitsWrappingTags(node2)) return;
-        this.buffer += SPAN_CLOSE;
-      }
-      /**
-       * returns the accumulated buffer
-      */
-      value() {
-        return this.buffer;
-      }
-      // helpers
-      /**
-       * Builds a span element
-       *
-       * @param {string} className */
-      span(className) {
-        this.buffer += `<span class="${className}">`;
-      }
-    };
-    var newNode = (opts = {}) => {
-      const result = { children: [] };
-      Object.assign(result, opts);
-      return result;
-    };
-    var TokenTree = class _TokenTree {
-      constructor() {
-        this.rootNode = newNode();
-        this.stack = [this.rootNode];
-      }
-      get top() {
-        return this.stack[this.stack.length - 1];
-      }
-      get root() {
-        return this.rootNode;
-      }
-      /** @param {Node} node */
-      add(node2) {
-        this.top.children.push(node2);
-      }
-      /** @param {string} scope */
-      openNode(scope) {
-        const node2 = newNode({ scope });
-        this.add(node2);
-        this.stack.push(node2);
-      }
-      closeNode() {
-        if (this.stack.length > 1) {
-          return this.stack.pop();
-        }
-        return void 0;
-      }
-      closeAllNodes() {
-        while (this.closeNode()) ;
-      }
-      toJSON() {
-        return JSON.stringify(this.rootNode, null, 4);
-      }
-      /**
-       * @typedef { import("./html_renderer").Renderer } Renderer
-       * @param {Renderer} builder
-       */
-      walk(builder) {
-        return this.constructor._walk(builder, this.rootNode);
-      }
-      /**
-       * @param {Renderer} builder
-       * @param {Node} node
-       */
-      static _walk(builder, node2) {
-        if (typeof node2 === "string") {
-          builder.addText(node2);
-        } else if (node2.children) {
-          builder.openNode(node2);
-          node2.children.forEach((child) => this._walk(builder, child));
-          builder.closeNode(node2);
-        }
-        return builder;
-      }
-      /**
-       * @param {Node} node
-       */
-      static _collapse(node2) {
-        if (typeof node2 === "string") return;
-        if (!node2.children) return;
-        if (node2.children.every((el) => typeof el === "string")) {
-          node2.children = [node2.children.join("")];
-        } else {
-          node2.children.forEach((child) => {
-            _TokenTree._collapse(child);
-          });
-        }
-      }
-    };
-    var TokenTreeEmitter = class extends TokenTree {
-      /**
-       * @param {*} options
-       */
-      constructor(options3) {
-        super();
-        this.options = options3;
-      }
-      /**
-       * @param {string} text
-       */
-      addText(text2) {
-        if (text2 === "") {
-          return;
-        }
-        this.add(text2);
-      }
-      /** @param {string} scope */
-      startScope(scope) {
-        this.openNode(scope);
-      }
-      endScope() {
-        this.closeNode();
-      }
-      /**
-       * @param {Emitter & {root: DataNode}} emitter
-       * @param {string} name
-       */
-      __addSublanguage(emitter, name) {
-        const node2 = emitter.root;
-        if (name) node2.scope = `language:${name}`;
-        this.add(node2);
-      }
-      toHTML() {
-        const renderer = new HTMLRenderer(this, this.options);
-        return renderer.value();
-      }
-      finalize() {
-        this.closeAllNodes();
-        return true;
-      }
-    };
-    function source(re) {
-      if (!re) return null;
-      if (typeof re === "string") return re;
-      return re.source;
-    }
-    function lookahead(re) {
-      return concat("(?=", re, ")");
-    }
-    function anyNumberOfTimes(re) {
-      return concat("(?:", re, ")*");
-    }
-    function optional(re) {
-      return concat("(?:", re, ")?");
-    }
-    function concat(...args) {
-      const joined = args.map((x2) => source(x2)).join("");
-      return joined;
-    }
-    function stripOptionsFromArgs(args) {
-      const opts = args[args.length - 1];
-      if (typeof opts === "object" && opts.constructor === Object) {
-        args.splice(args.length - 1, 1);
-        return opts;
-      } else {
-        return {};
-      }
-    }
-    function either(...args) {
-      const opts = stripOptionsFromArgs(args);
-      const joined = "(" + (opts.capture ? "" : "?:") + args.map((x2) => source(x2)).join("|") + ")";
-      return joined;
-    }
-    function countMatchGroups(re) {
-      return new RegExp(re.toString() + "|").exec("").length - 1;
-    }
-    function startsWith(re, lexeme) {
-      const match = re && re.exec(lexeme);
-      return match && match.index === 0;
-    }
-    var BACKREF_RE = /\[(?:[^\\\]]|\\.)*\]|\(\??|\\([1-9][0-9]*)|\\./;
-    function _rewriteBackreferences(regexps, { joinWith }) {
-      let numCaptures = 0;
-      return regexps.map((regex) => {
-        numCaptures += 1;
-        const offset = numCaptures;
-        let re = source(regex);
-        let out = "";
-        while (re.length > 0) {
-          const match = BACKREF_RE.exec(re);
-          if (!match) {
-            out += re;
-            break;
-          }
-          out += re.substring(0, match.index);
-          re = re.substring(match.index + match[0].length);
-          if (match[0][0] === "\\" && match[1]) {
-            out += "\\" + String(Number(match[1]) + offset);
-          } else {
-            out += match[0];
-            if (match[0] === "(") {
-              numCaptures++;
-            }
-          }
-        }
-        return out;
-      }).map((re) => `(${re})`).join(joinWith);
-    }
-    var MATCH_NOTHING_RE = /\b\B/;
-    var IDENT_RE = "[a-zA-Z]\\w*";
-    var UNDERSCORE_IDENT_RE = "[a-zA-Z_]\\w*";
-    var NUMBER_RE = "\\b\\d+(\\.\\d+)?";
-    var C_NUMBER_RE = "(-?)(\\b0[xX][a-fA-F0-9]+|(\\b\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";
-    var BINARY_NUMBER_RE = "\\b(0b[01]+)";
-    var RE_STARTERS_RE = "!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|-|-=|/=|/|:|;|<<|<<=|<=|<|===|==|=|>>>=|>>=|>=|>>>|>>|>|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";
-    var SHEBANG = (opts = {}) => {
-      const beginShebang = /^#![ ]*\//;
-      if (opts.binary) {
-        opts.begin = concat(
-          beginShebang,
-          /.*\b/,
-          opts.binary,
-          /\b.*/
-        );
-      }
-      return inherit$1({
-        scope: "meta",
-        begin: beginShebang,
-        end: /$/,
-        relevance: 0,
-        /** @type {ModeCallback} */
-        "on:begin": (m, resp) => {
-          if (m.index !== 0) resp.ignoreMatch();
-        }
-      }, opts);
-    };
-    var BACKSLASH_ESCAPE = {
-      begin: "\\\\[\\s\\S]",
-      relevance: 0
-    };
-    var APOS_STRING_MODE = {
-      scope: "string",
-      begin: "'",
-      end: "'",
-      illegal: "\\n",
-      contains: [BACKSLASH_ESCAPE]
-    };
-    var QUOTE_STRING_MODE = {
-      scope: "string",
-      begin: '"',
-      end: '"',
-      illegal: "\\n",
-      contains: [BACKSLASH_ESCAPE]
-    };
-    var PHRASAL_WORDS_MODE = {
-      begin: /\b(a|an|the|are|I'm|isn't|don't|doesn't|won't|but|just|should|pretty|simply|enough|gonna|going|wtf|so|such|will|you|your|they|like|more)\b/
-    };
-    var COMMENT = function(begin, end, modeOptions = {}) {
-      const mode = inherit$1(
-        {
-          scope: "comment",
-          begin,
-          end,
-          contains: []
-        },
-        modeOptions
-      );
-      mode.contains.push({
-        scope: "doctag",
-        // hack to avoid the space from being included. the space is necessary to
-        // match here to prevent the plain text rule below from gobbling up doctags
-        begin: "[ ]*(?=(TODO|FIXME|NOTE|BUG|OPTIMIZE|HACK|XXX):)",
-        end: /(TODO|FIXME|NOTE|BUG|OPTIMIZE|HACK|XXX):/,
-        excludeBegin: true,
-        relevance: 0
-      });
-      const ENGLISH_WORD = either(
-        // list of common 1 and 2 letter words in English
-        "I",
-        "a",
-        "is",
-        "so",
-        "us",
-        "to",
-        "at",
-        "if",
-        "in",
-        "it",
-        "on",
-        // note: this is not an exhaustive list of contractions, just popular ones
-        /[A-Za-z]+['](d|ve|re|ll|t|s|n)/,
-        // contractions - can't we'd they're let's, etc
-        /[A-Za-z]+[-][a-z]+/,
-        // `no-way`, etc.
-        /[A-Za-z][a-z]{2,}/
-        // allow capitalized words at beginning of sentences
-      );
-      mode.contains.push(
-        {
-          // TODO: how to include ", (, ) without breaking grammars that use these for
-          // comment delimiters?
-          // begin: /[ ]+([()"]?([A-Za-z'-]{3,}|is|a|I|so|us|[tT][oO]|at|if|in|it|on)[.]?[()":]?([.][ ]|[ ]|\))){3}/
-          // ---
-          // this tries to find sequences of 3 english words in a row (without any
-          // "programming" type syntax) this gives us a strong signal that we've
-          // TRULY found a comment - vs perhaps scanning with the wrong language.
-          // It's possible to find something that LOOKS like the start of the
-          // comment - but then if there is no readable text - good chance it is a
-          // false match and not a comment.
-          //
-          // for a visual example please see:
-          // https://github.com/highlightjs/highlight.js/issues/2827
-          begin: concat(
-            /[ ]+/,
-            // necessary to prevent us gobbling up doctags like /* @author Bob Mcgill */
-            "(",
-            ENGLISH_WORD,
-            /[.]?[:]?([.][ ]|[ ])/,
-            "){3}"
-          )
-          // look for 3 words in a row
-        }
-      );
-      return mode;
-    };
-    var C_LINE_COMMENT_MODE = COMMENT("//", "$");
-    var C_BLOCK_COMMENT_MODE = COMMENT("/\\*", "\\*/");
-    var HASH_COMMENT_MODE = COMMENT("#", "$");
-    var NUMBER_MODE = {
-      scope: "number",
-      begin: NUMBER_RE,
-      relevance: 0
-    };
-    var C_NUMBER_MODE = {
-      scope: "number",
-      begin: C_NUMBER_RE,
-      relevance: 0
-    };
-    var BINARY_NUMBER_MODE = {
-      scope: "number",
-      begin: BINARY_NUMBER_RE,
-      relevance: 0
-    };
-    var REGEXP_MODE = {
-      scope: "regexp",
-      begin: /\/(?=[^/\n]*\/)/,
-      end: /\/[gimuy]*/,
-      contains: [
-        BACKSLASH_ESCAPE,
-        {
-          begin: /\[/,
-          end: /\]/,
-          relevance: 0,
-          contains: [BACKSLASH_ESCAPE]
-        }
-      ]
-    };
-    var TITLE_MODE = {
-      scope: "title",
-      begin: IDENT_RE,
-      relevance: 0
-    };
-    var UNDERSCORE_TITLE_MODE = {
-      scope: "title",
-      begin: UNDERSCORE_IDENT_RE,
-      relevance: 0
-    };
-    var METHOD_GUARD = {
-      // excludes method names from keyword processing
-      begin: "\\.\\s*" + UNDERSCORE_IDENT_RE,
-      relevance: 0
-    };
-    var END_SAME_AS_BEGIN = function(mode) {
-      return Object.assign(
-        mode,
-        {
-          /** @type {ModeCallback} */
-          "on:begin": (m, resp) => {
-            resp.data._beginMatch = m[1];
-          },
-          /** @type {ModeCallback} */
-          "on:end": (m, resp) => {
-            if (resp.data._beginMatch !== m[1]) resp.ignoreMatch();
-          }
-        }
-      );
-    };
-    var MODES = /* @__PURE__ */ Object.freeze({
-      __proto__: null,
-      APOS_STRING_MODE,
-      BACKSLASH_ESCAPE,
-      BINARY_NUMBER_MODE,
-      BINARY_NUMBER_RE,
-      COMMENT,
-      C_BLOCK_COMMENT_MODE,
-      C_LINE_COMMENT_MODE,
-      C_NUMBER_MODE,
-      C_NUMBER_RE,
-      END_SAME_AS_BEGIN,
-      HASH_COMMENT_MODE,
-      IDENT_RE,
-      MATCH_NOTHING_RE,
-      METHOD_GUARD,
-      NUMBER_MODE,
-      NUMBER_RE,
-      PHRASAL_WORDS_MODE,
-      QUOTE_STRING_MODE,
-      REGEXP_MODE,
-      RE_STARTERS_RE,
-      SHEBANG,
-      TITLE_MODE,
-      UNDERSCORE_IDENT_RE,
-      UNDERSCORE_TITLE_MODE
-    });
-    function skipIfHasPrecedingDot(match, response) {
-      const before = match.input[match.index - 1];
-      if (before === ".") {
-        response.ignoreMatch();
-      }
-    }
-    function scopeClassName(mode, _parent) {
-      if (mode.className !== void 0) {
-        mode.scope = mode.className;
-        delete mode.className;
-      }
-    }
-    function beginKeywords(mode, parent) {
-      if (!parent) return;
-      if (!mode.beginKeywords) return;
-      mode.begin = "\\b(" + mode.beginKeywords.split(" ").join("|") + ")(?!\\.)(?=\\b|\\s)";
-      mode.__beforeBegin = skipIfHasPrecedingDot;
-      mode.keywords = mode.keywords || mode.beginKeywords;
-      delete mode.beginKeywords;
-      if (mode.relevance === void 0) mode.relevance = 0;
-    }
-    function compileIllegal(mode, _parent) {
-      if (!Array.isArray(mode.illegal)) return;
-      mode.illegal = either(...mode.illegal);
-    }
-    function compileMatch(mode, _parent) {
-      if (!mode.match) return;
-      if (mode.begin || mode.end) throw new Error("begin & end are not supported with match");
-      mode.begin = mode.match;
-      delete mode.match;
-    }
-    function compileRelevance(mode, _parent) {
-      if (mode.relevance === void 0) mode.relevance = 1;
-    }
-    var beforeMatchExt = (mode, parent) => {
-      if (!mode.beforeMatch) return;
-      if (mode.starts) throw new Error("beforeMatch cannot be used with starts");
-      const originalMode = Object.assign({}, mode);
-      Object.keys(mode).forEach((key) => {
-        delete mode[key];
-      });
-      mode.keywords = originalMode.keywords;
-      mode.begin = concat(originalMode.beforeMatch, lookahead(originalMode.begin));
-      mode.starts = {
-        relevance: 0,
-        contains: [
-          Object.assign(originalMode, { endsParent: true })
-        ]
-      };
-      mode.relevance = 0;
-      delete originalMode.beforeMatch;
-    };
-    var COMMON_KEYWORDS = [
-      "of",
-      "and",
-      "for",
-      "in",
-      "not",
-      "or",
-      "if",
-      "then",
-      "parent",
-      // common variable name
-      "list",
-      // common variable name
-      "value"
-      // common variable name
-    ];
-    var DEFAULT_KEYWORD_SCOPE = "keyword";
-    function compileKeywords(rawKeywords, caseInsensitive, scopeName = DEFAULT_KEYWORD_SCOPE) {
-      const compiledKeywords = /* @__PURE__ */ Object.create(null);
-      if (typeof rawKeywords === "string") {
-        compileList(scopeName, rawKeywords.split(" "));
-      } else if (Array.isArray(rawKeywords)) {
-        compileList(scopeName, rawKeywords);
-      } else {
-        Object.keys(rawKeywords).forEach(function(scopeName2) {
-          Object.assign(
-            compiledKeywords,
-            compileKeywords(rawKeywords[scopeName2], caseInsensitive, scopeName2)
-          );
-        });
-      }
-      return compiledKeywords;
-      function compileList(scopeName2, keywordList) {
-        if (caseInsensitive) {
-          keywordList = keywordList.map((x2) => x2.toLowerCase());
-        }
-        keywordList.forEach(function(keyword) {
-          const pair = keyword.split("|");
-          compiledKeywords[pair[0]] = [scopeName2, scoreForKeyword(pair[0], pair[1])];
-        });
-      }
-    }
-    function scoreForKeyword(keyword, providedScore) {
-      if (providedScore) {
-        return Number(providedScore);
-      }
-      return commonKeyword(keyword) ? 0 : 1;
-    }
-    function commonKeyword(keyword) {
-      return COMMON_KEYWORDS.includes(keyword.toLowerCase());
-    }
-    var seenDeprecations = {};
-    var error = (message) => {
-      console.error(message);
-    };
-    var warn = (message, ...args) => {
-      console.log(`WARN: ${message}`, ...args);
-    };
-    var deprecated = (version2, message) => {
-      if (seenDeprecations[`${version2}/${message}`]) return;
-      console.log(`Deprecated as of ${version2}. ${message}`);
-      seenDeprecations[`${version2}/${message}`] = true;
-    };
-    var MultiClassError = new Error();
-    function remapScopeNames(mode, regexes, { key }) {
-      let offset = 0;
-      const scopeNames = mode[key];
-      const emit = {};
-      const positions = {};
-      for (let i = 1; i <= regexes.length; i++) {
-        positions[i + offset] = scopeNames[i];
-        emit[i + offset] = true;
-        offset += countMatchGroups(regexes[i - 1]);
-      }
-      mode[key] = positions;
-      mode[key]._emit = emit;
-      mode[key]._multi = true;
-    }
-    function beginMultiClass(mode) {
-      if (!Array.isArray(mode.begin)) return;
-      if (mode.skip || mode.excludeBegin || mode.returnBegin) {
-        error("skip, excludeBegin, returnBegin not compatible with beginScope: {}");
-        throw MultiClassError;
-      }
-      if (typeof mode.beginScope !== "object" || mode.beginScope === null) {
-        error("beginScope must be object");
-        throw MultiClassError;
-      }
-      remapScopeNames(mode, mode.begin, { key: "beginScope" });
-      mode.begin = _rewriteBackreferences(mode.begin, { joinWith: "" });
-    }
-    function endMultiClass(mode) {
-      if (!Array.isArray(mode.end)) return;
-      if (mode.skip || mode.excludeEnd || mode.returnEnd) {
-        error("skip, excludeEnd, returnEnd not compatible with endScope: {}");
-        throw MultiClassError;
-      }
-      if (typeof mode.endScope !== "object" || mode.endScope === null) {
-        error("endScope must be object");
-        throw MultiClassError;
-      }
-      remapScopeNames(mode, mode.end, { key: "endScope" });
-      mode.end = _rewriteBackreferences(mode.end, { joinWith: "" });
-    }
-    function scopeSugar(mode) {
-      if (mode.scope && typeof mode.scope === "object" && mode.scope !== null) {
-        mode.beginScope = mode.scope;
-        delete mode.scope;
-      }
-    }
-    function MultiClass(mode) {
-      scopeSugar(mode);
-      if (typeof mode.beginScope === "string") {
-        mode.beginScope = { _wrap: mode.beginScope };
-      }
-      if (typeof mode.endScope === "string") {
-        mode.endScope = { _wrap: mode.endScope };
-      }
-      beginMultiClass(mode);
-      endMultiClass(mode);
-    }
-    function compileLanguage(language) {
-      function langRe(value, global) {
-        return new RegExp(
-          source(value),
-          "m" + (language.case_insensitive ? "i" : "") + (language.unicodeRegex ? "u" : "") + (global ? "g" : "")
-        );
-      }
-      class MultiRegex {
-        constructor() {
-          this.matchIndexes = {};
-          this.regexes = [];
-          this.matchAt = 1;
-          this.position = 0;
-        }
-        // @ts-ignore
-        addRule(re, opts) {
-          opts.position = this.position++;
-          this.matchIndexes[this.matchAt] = opts;
-          this.regexes.push([opts, re]);
-          this.matchAt += countMatchGroups(re) + 1;
-        }
-        compile() {
-          if (this.regexes.length === 0) {
-            this.exec = () => null;
-          }
-          const terminators = this.regexes.map((el) => el[1]);
-          this.matcherRe = langRe(_rewriteBackreferences(terminators, { joinWith: "|" }), true);
-          this.lastIndex = 0;
-        }
-        /** @param {string} s */
-        exec(s) {
-          this.matcherRe.lastIndex = this.lastIndex;
-          const match = this.matcherRe.exec(s);
-          if (!match) {
-            return null;
-          }
-          const i = match.findIndex((el, i2) => i2 > 0 && el !== void 0);
-          const matchData = this.matchIndexes[i];
-          match.splice(0, i);
-          return Object.assign(match, matchData);
-        }
-      }
-      class ResumableMultiRegex {
-        constructor() {
-          this.rules = [];
-          this.multiRegexes = [];
-          this.count = 0;
-          this.lastIndex = 0;
-          this.regexIndex = 0;
-        }
-        // @ts-ignore
-        getMatcher(index) {
-          if (this.multiRegexes[index]) return this.multiRegexes[index];
-          const matcher = new MultiRegex();
-          this.rules.slice(index).forEach(([re, opts]) => matcher.addRule(re, opts));
-          matcher.compile();
-          this.multiRegexes[index] = matcher;
-          return matcher;
-        }
-        resumingScanAtSamePosition() {
-          return this.regexIndex !== 0;
-        }
-        considerAll() {
-          this.regexIndex = 0;
-        }
-        // @ts-ignore
-        addRule(re, opts) {
-          this.rules.push([re, opts]);
-          if (opts.type === "begin") this.count++;
-        }
-        /** @param {string} s */
-        exec(s) {
-          const m = this.getMatcher(this.regexIndex);
-          m.lastIndex = this.lastIndex;
-          let result = m.exec(s);
-          if (this.resumingScanAtSamePosition()) {
-            if (result && result.index === this.lastIndex) ;
-            else {
-              const m2 = this.getMatcher(0);
-              m2.lastIndex = this.lastIndex + 1;
-              result = m2.exec(s);
-            }
-          }
-          if (result) {
-            this.regexIndex += result.position + 1;
-            if (this.regexIndex === this.count) {
-              this.considerAll();
-            }
-          }
-          return result;
-        }
-      }
-      function buildModeRegex(mode) {
-        const mm = new ResumableMultiRegex();
-        mode.contains.forEach((term) => mm.addRule(term.begin, { rule: term, type: "begin" }));
-        if (mode.terminatorEnd) {
-          mm.addRule(mode.terminatorEnd, { type: "end" });
-        }
-        if (mode.illegal) {
-          mm.addRule(mode.illegal, { type: "illegal" });
-        }
-        return mm;
-      }
-      function compileMode(mode, parent) {
-        const cmode = (
-          /** @type CompiledMode */
-          mode
-        );
-        if (mode.isCompiled) return cmode;
-        [
-          scopeClassName,
-          // do this early so compiler extensions generally don't have to worry about
-          // the distinction between match/begin
-          compileMatch,
-          MultiClass,
-          beforeMatchExt
-        ].forEach((ext) => ext(mode, parent));
-        language.compilerExtensions.forEach((ext) => ext(mode, parent));
-        mode.__beforeBegin = null;
-        [
-          beginKeywords,
-          // do this later so compiler extensions that come earlier have access to the
-          // raw array if they wanted to perhaps manipulate it, etc.
-          compileIllegal,
-          // default to 1 relevance if not specified
-          compileRelevance
-        ].forEach((ext) => ext(mode, parent));
-        mode.isCompiled = true;
-        let keywordPattern = null;
-        if (typeof mode.keywords === "object" && mode.keywords.$pattern) {
-          mode.keywords = Object.assign({}, mode.keywords);
-          keywordPattern = mode.keywords.$pattern;
-          delete mode.keywords.$pattern;
-        }
-        keywordPattern = keywordPattern || /\w+/;
-        if (mode.keywords) {
-          mode.keywords = compileKeywords(mode.keywords, language.case_insensitive);
-        }
-        cmode.keywordPatternRe = langRe(keywordPattern, true);
-        if (parent) {
-          if (!mode.begin) mode.begin = /\B|\b/;
-          cmode.beginRe = langRe(cmode.begin);
-          if (!mode.end && !mode.endsWithParent) mode.end = /\B|\b/;
-          if (mode.end) cmode.endRe = langRe(cmode.end);
-          cmode.terminatorEnd = source(cmode.end) || "";
-          if (mode.endsWithParent && parent.terminatorEnd) {
-            cmode.terminatorEnd += (mode.end ? "|" : "") + parent.terminatorEnd;
-          }
-        }
-        if (mode.illegal) cmode.illegalRe = langRe(
-          /** @type {RegExp | string} */
-          mode.illegal
-        );
-        if (!mode.contains) mode.contains = [];
-        mode.contains = [].concat(...mode.contains.map(function(c) {
-          return expandOrCloneMode(c === "self" ? mode : c);
-        }));
-        mode.contains.forEach(function(c) {
-          compileMode(
-            /** @type Mode */
-            c,
-            cmode
-          );
-        });
-        if (mode.starts) {
-          compileMode(mode.starts, parent);
-        }
-        cmode.matcher = buildModeRegex(cmode);
-        return cmode;
-      }
-      if (!language.compilerExtensions) language.compilerExtensions = [];
-      if (language.contains && language.contains.includes("self")) {
-        throw new Error("ERR: contains `self` is not supported at the top-level of a language.  See documentation.");
-      }
-      language.classNameAliases = inherit$1(language.classNameAliases || {});
-      return compileMode(
-        /** @type Mode */
-        language
-      );
-    }
-    function dependencyOnParent(mode) {
-      if (!mode) return false;
-      return mode.endsWithParent || dependencyOnParent(mode.starts);
-    }
-    function expandOrCloneMode(mode) {
-      if (mode.variants && !mode.cachedVariants) {
-        mode.cachedVariants = mode.variants.map(function(variant) {
-          return inherit$1(mode, { variants: null }, variant);
-        });
-      }
-      if (mode.cachedVariants) {
-        return mode.cachedVariants;
-      }
-      if (dependencyOnParent(mode)) {
-        return inherit$1(mode, { starts: mode.starts ? inherit$1(mode.starts) : null });
-      }
-      if (Object.isFrozen(mode)) {
-        return inherit$1(mode);
-      }
-      return mode;
-    }
-    var version = "11.11.1";
-    var HTMLInjectionError = class extends Error {
-      constructor(reason, html3) {
-        super(reason);
-        this.name = "HTMLInjectionError";
-        this.html = html3;
-      }
-    };
-    var escape4 = escapeHTML;
-    var inherit = inherit$1;
-    var NO_MATCH = Symbol("nomatch");
-    var MAX_KEYWORD_HITS = 7;
-    var HLJS = function(hljs) {
-      const languages = /* @__PURE__ */ Object.create(null);
-      const aliases = /* @__PURE__ */ Object.create(null);
-      const plugins = [];
-      let SAFE_MODE = true;
-      const LANGUAGE_NOT_FOUND = "Could not find the language '{}', did you forget to load/include a language module?";
-      const PLAINTEXT_LANGUAGE = { disableAutodetect: true, name: "Plain text", contains: [] };
-      let options3 = {
-        ignoreUnescapedHTML: false,
-        throwUnescapedHTML: false,
-        noHighlightRe: /^(no-?highlight)$/i,
-        languageDetectRe: /\blang(?:uage)?-([\w-]+)\b/i,
-        classPrefix: "hljs-",
-        cssSelector: "pre code",
-        languages: null,
-        // beta configuration options, subject to change, welcome to discuss
-        // https://github.com/highlightjs/highlight.js/issues/1086
-        __emitter: TokenTreeEmitter
-      };
-      function shouldNotHighlight(languageName) {
-        return options3.noHighlightRe.test(languageName);
-      }
-      function blockLanguage(block2) {
-        let classes = block2.className + " ";
-        classes += block2.parentNode ? block2.parentNode.className : "";
-        const match = options3.languageDetectRe.exec(classes);
-        if (match) {
-          const language = getLanguage(match[1]);
-          if (!language) {
-            warn(LANGUAGE_NOT_FOUND.replace("{}", match[1]));
-            warn("Falling back to no-highlight mode for this block.", block2);
-          }
-          return language ? match[1] : "no-highlight";
-        }
-        return classes.split(/\s+/).find((_class) => shouldNotHighlight(_class) || getLanguage(_class));
-      }
-      function highlight2(codeOrLanguageName, optionsOrCode, ignoreIllegals) {
-        let code = "";
-        let languageName = "";
-        if (typeof optionsOrCode === "object") {
-          code = codeOrLanguageName;
-          ignoreIllegals = optionsOrCode.ignoreIllegals;
-          languageName = optionsOrCode.language;
-        } else {
-          deprecated("10.7.0", "highlight(lang, code, ...args) has been deprecated.");
-          deprecated("10.7.0", "Please use highlight(code, options) instead.\nhttps://github.com/highlightjs/highlight.js/issues/2277");
-          languageName = codeOrLanguageName;
-          code = optionsOrCode;
-        }
-        if (ignoreIllegals === void 0) {
-          ignoreIllegals = true;
-        }
-        const context = {
-          code,
-          language: languageName
-        };
-        fire("before:highlight", context);
-        const result = context.result ? context.result : _highlight(context.language, context.code, ignoreIllegals);
-        result.code = context.code;
-        fire("after:highlight", result);
-        return result;
-      }
-      function _highlight(languageName, codeToHighlight, ignoreIllegals, continuation) {
-        const keywordHits = /* @__PURE__ */ Object.create(null);
-        function keywordData(mode, matchText) {
-          return mode.keywords[matchText];
-        }
-        function processKeywords() {
-          if (!top.keywords) {
-            emitter.addText(modeBuffer);
-            return;
-          }
-          let lastIndex = 0;
-          top.keywordPatternRe.lastIndex = 0;
-          let match = top.keywordPatternRe.exec(modeBuffer);
-          let buf = "";
-          while (match) {
-            buf += modeBuffer.substring(lastIndex, match.index);
-            const word = language.case_insensitive ? match[0].toLowerCase() : match[0];
-            const data = keywordData(top, word);
-            if (data) {
-              const [kind, keywordRelevance] = data;
-              emitter.addText(buf);
-              buf = "";
-              keywordHits[word] = (keywordHits[word] || 0) + 1;
-              if (keywordHits[word] <= MAX_KEYWORD_HITS) relevance += keywordRelevance;
-              if (kind.startsWith("_")) {
-                buf += match[0];
-              } else {
-                const cssClass = language.classNameAliases[kind] || kind;
-                emitKeyword(match[0], cssClass);
-              }
-            } else {
-              buf += match[0];
-            }
-            lastIndex = top.keywordPatternRe.lastIndex;
-            match = top.keywordPatternRe.exec(modeBuffer);
-          }
-          buf += modeBuffer.substring(lastIndex);
-          emitter.addText(buf);
-        }
-        function processSubLanguage() {
-          if (modeBuffer === "") return;
-          let result2 = null;
-          if (typeof top.subLanguage === "string") {
-            if (!languages[top.subLanguage]) {
-              emitter.addText(modeBuffer);
-              return;
-            }
-            result2 = _highlight(top.subLanguage, modeBuffer, true, continuations[top.subLanguage]);
-            continuations[top.subLanguage] = /** @type {CompiledMode} */
-            result2._top;
-          } else {
-            result2 = highlightAuto(modeBuffer, top.subLanguage.length ? top.subLanguage : null);
-          }
-          if (top.relevance > 0) {
-            relevance += result2.relevance;
-          }
-          emitter.__addSublanguage(result2._emitter, result2.language);
-        }
-        function processBuffer() {
-          if (top.subLanguage != null) {
-            processSubLanguage();
-          } else {
-            processKeywords();
-          }
-          modeBuffer = "";
-        }
-        function emitKeyword(keyword, scope) {
-          if (keyword === "") return;
-          emitter.startScope(scope);
-          emitter.addText(keyword);
-          emitter.endScope();
-        }
-        function emitMultiClass(scope, match) {
-          let i = 1;
-          const max = match.length - 1;
-          while (i <= max) {
-            if (!scope._emit[i]) {
-              i++;
-              continue;
-            }
-            const klass = language.classNameAliases[scope[i]] || scope[i];
-            const text2 = match[i];
-            if (klass) {
-              emitKeyword(text2, klass);
-            } else {
-              modeBuffer = text2;
-              processKeywords();
-              modeBuffer = "";
-            }
-            i++;
-          }
-        }
-        function startNewMode(mode, match) {
-          if (mode.scope && typeof mode.scope === "string") {
-            emitter.openNode(language.classNameAliases[mode.scope] || mode.scope);
-          }
-          if (mode.beginScope) {
-            if (mode.beginScope._wrap) {
-              emitKeyword(modeBuffer, language.classNameAliases[mode.beginScope._wrap] || mode.beginScope._wrap);
-              modeBuffer = "";
-            } else if (mode.beginScope._multi) {
-              emitMultiClass(mode.beginScope, match);
-              modeBuffer = "";
-            }
-          }
-          top = Object.create(mode, { parent: { value: top } });
-          return top;
-        }
-        function endOfMode(mode, match, matchPlusRemainder) {
-          let matched = startsWith(mode.endRe, matchPlusRemainder);
-          if (matched) {
-            if (mode["on:end"]) {
-              const resp = new Response(mode);
-              mode["on:end"](match, resp);
-              if (resp.isMatchIgnored) matched = false;
-            }
-            if (matched) {
-              while (mode.endsParent && mode.parent) {
-                mode = mode.parent;
-              }
-              return mode;
-            }
-          }
-          if (mode.endsWithParent) {
-            return endOfMode(mode.parent, match, matchPlusRemainder);
-          }
-        }
-        function doIgnore(lexeme) {
-          if (top.matcher.regexIndex === 0) {
-            modeBuffer += lexeme[0];
-            return 1;
-          } else {
-            resumeScanAtSamePosition = true;
-            return 0;
-          }
-        }
-        function doBeginMatch(match) {
-          const lexeme = match[0];
-          const newMode = match.rule;
-          const resp = new Response(newMode);
-          const beforeCallbacks = [newMode.__beforeBegin, newMode["on:begin"]];
-          for (const cb of beforeCallbacks) {
-            if (!cb) continue;
-            cb(match, resp);
-            if (resp.isMatchIgnored) return doIgnore(lexeme);
-          }
-          if (newMode.skip) {
-            modeBuffer += lexeme;
-          } else {
-            if (newMode.excludeBegin) {
-              modeBuffer += lexeme;
-            }
-            processBuffer();
-            if (!newMode.returnBegin && !newMode.excludeBegin) {
-              modeBuffer = lexeme;
-            }
-          }
-          startNewMode(newMode, match);
-          return newMode.returnBegin ? 0 : lexeme.length;
-        }
-        function doEndMatch(match) {
-          const lexeme = match[0];
-          const matchPlusRemainder = codeToHighlight.substring(match.index);
-          const endMode = endOfMode(top, match, matchPlusRemainder);
-          if (!endMode) {
-            return NO_MATCH;
-          }
-          const origin = top;
-          if (top.endScope && top.endScope._wrap) {
-            processBuffer();
-            emitKeyword(lexeme, top.endScope._wrap);
-          } else if (top.endScope && top.endScope._multi) {
-            processBuffer();
-            emitMultiClass(top.endScope, match);
-          } else if (origin.skip) {
-            modeBuffer += lexeme;
-          } else {
-            if (!(origin.returnEnd || origin.excludeEnd)) {
-              modeBuffer += lexeme;
-            }
-            processBuffer();
-            if (origin.excludeEnd) {
-              modeBuffer = lexeme;
-            }
-          }
-          do {
-            if (top.scope) {
-              emitter.closeNode();
-            }
-            if (!top.skip && !top.subLanguage) {
-              relevance += top.relevance;
-            }
-            top = top.parent;
-          } while (top !== endMode.parent);
-          if (endMode.starts) {
-            startNewMode(endMode.starts, match);
-          }
-          return origin.returnEnd ? 0 : lexeme.length;
-        }
-        function processContinuations() {
-          const list2 = [];
-          for (let current = top; current !== language; current = current.parent) {
-            if (current.scope) {
-              list2.unshift(current.scope);
-            }
-          }
-          list2.forEach((item) => emitter.openNode(item));
-        }
-        let lastMatch = {};
-        function processLexeme(textBeforeMatch, match) {
-          const lexeme = match && match[0];
-          modeBuffer += textBeforeMatch;
-          if (lexeme == null) {
-            processBuffer();
-            return 0;
-          }
-          if (lastMatch.type === "begin" && match.type === "end" && lastMatch.index === match.index && lexeme === "") {
-            modeBuffer += codeToHighlight.slice(match.index, match.index + 1);
-            if (!SAFE_MODE) {
-              const err = new Error(`0 width match regex (${languageName})`);
-              err.languageName = languageName;
-              err.badRule = lastMatch.rule;
-              throw err;
-            }
-            return 1;
-          }
-          lastMatch = match;
-          if (match.type === "begin") {
-            return doBeginMatch(match);
-          } else if (match.type === "illegal" && !ignoreIllegals) {
-            const err = new Error('Illegal lexeme "' + lexeme + '" for mode "' + (top.scope || "<unnamed>") + '"');
-            err.mode = top;
-            throw err;
-          } else if (match.type === "end") {
-            const processed = doEndMatch(match);
-            if (processed !== NO_MATCH) {
-              return processed;
-            }
-          }
-          if (match.type === "illegal" && lexeme === "") {
-            modeBuffer += "\n";
-            return 1;
-          }
-          if (iterations > 1e5 && iterations > match.index * 3) {
-            const err = new Error("potential infinite loop, way more iterations than matches");
-            throw err;
-          }
-          modeBuffer += lexeme;
-          return lexeme.length;
-        }
-        const language = getLanguage(languageName);
-        if (!language) {
-          error(LANGUAGE_NOT_FOUND.replace("{}", languageName));
-          throw new Error('Unknown language: "' + languageName + '"');
-        }
-        const md = compileLanguage(language);
-        let result = "";
-        let top = continuation || md;
-        const continuations = {};
-        const emitter = new options3.__emitter(options3);
-        processContinuations();
-        let modeBuffer = "";
-        let relevance = 0;
-        let index = 0;
-        let iterations = 0;
-        let resumeScanAtSamePosition = false;
-        try {
-          if (!language.__emitTokens) {
-            top.matcher.considerAll();
-            for (; ; ) {
-              iterations++;
-              if (resumeScanAtSamePosition) {
-                resumeScanAtSamePosition = false;
-              } else {
-                top.matcher.considerAll();
-              }
-              top.matcher.lastIndex = index;
-              const match = top.matcher.exec(codeToHighlight);
-              if (!match) break;
-              const beforeMatch = codeToHighlight.substring(index, match.index);
-              const processedCount = processLexeme(beforeMatch, match);
-              index = match.index + processedCount;
-            }
-            processLexeme(codeToHighlight.substring(index));
-          } else {
-            language.__emitTokens(codeToHighlight, emitter);
-          }
-          emitter.finalize();
-          result = emitter.toHTML();
-          return {
-            language: languageName,
-            value: result,
-            relevance,
-            illegal: false,
-            _emitter: emitter,
-            _top: top
-          };
-        } catch (err) {
-          if (err.message && err.message.includes("Illegal")) {
-            return {
-              language: languageName,
-              value: escape4(codeToHighlight),
-              illegal: true,
-              relevance: 0,
-              _illegalBy: {
-                message: err.message,
-                index,
-                context: codeToHighlight.slice(index - 100, index + 100),
-                mode: err.mode,
-                resultSoFar: result
-              },
-              _emitter: emitter
-            };
-          } else if (SAFE_MODE) {
-            return {
-              language: languageName,
-              value: escape4(codeToHighlight),
-              illegal: false,
-              relevance: 0,
-              errorRaised: err,
-              _emitter: emitter,
-              _top: top
-            };
-          } else {
-            throw err;
-          }
-        }
-      }
-      function justTextHighlightResult(code) {
-        const result = {
-          value: escape4(code),
-          illegal: false,
-          relevance: 0,
-          _top: PLAINTEXT_LANGUAGE,
-          _emitter: new options3.__emitter(options3)
-        };
-        result._emitter.addText(code);
-        return result;
-      }
-      function highlightAuto(code, languageSubset) {
-        languageSubset = languageSubset || options3.languages || Object.keys(languages);
-        const plaintext2 = justTextHighlightResult(code);
-        const results = languageSubset.filter(getLanguage).filter(autoDetection).map(
-          (name) => _highlight(name, code, false)
-        );
-        results.unshift(plaintext2);
-        const sorted = results.sort((a, b) => {
-          if (a.relevance !== b.relevance) return b.relevance - a.relevance;
-          if (a.language && b.language) {
-            if (getLanguage(a.language).supersetOf === b.language) {
-              return 1;
-            } else if (getLanguage(b.language).supersetOf === a.language) {
-              return -1;
-            }
-          }
-          return 0;
-        });
-        const [best, secondBest] = sorted;
-        const result = best;
-        result.secondBest = secondBest;
-        return result;
-      }
-      function updateClassName(element, currentLang, resultLang) {
-        const language = currentLang && aliases[currentLang] || resultLang;
-        element.classList.add("hljs");
-        element.classList.add(`language-${language}`);
-      }
-      function highlightElement(element) {
-        let node2 = null;
-        const language = blockLanguage(element);
-        if (shouldNotHighlight(language)) return;
-        fire(
-          "before:highlightElement",
-          { el: element, language }
-        );
-        if (element.dataset.highlighted) {
-          console.log("Element previously highlighted. To highlight again, first unset `dataset.highlighted`.", element);
-          return;
-        }
-        if (element.children.length > 0) {
-          if (!options3.ignoreUnescapedHTML) {
-            console.warn("One of your code blocks includes unescaped HTML. This is a potentially serious security risk.");
-            console.warn("https://github.com/highlightjs/highlight.js/wiki/security");
-            console.warn("The element with unescaped HTML:");
-            console.warn(element);
-          }
-          if (options3.throwUnescapedHTML) {
-            const err = new HTMLInjectionError(
-              "One of your code blocks includes unescaped HTML.",
-              element.innerHTML
-            );
-            throw err;
-          }
-        }
-        node2 = element;
-        const text2 = node2.textContent;
-        const result = language ? highlight2(text2, { language, ignoreIllegals: true }) : highlightAuto(text2);
-        element.innerHTML = result.value;
-        element.dataset.highlighted = "yes";
-        updateClassName(element, language, result.language);
-        element.result = {
-          language: result.language,
-          // TODO: remove with version 11.0
-          re: result.relevance,
-          relevance: result.relevance
-        };
-        if (result.secondBest) {
-          element.secondBest = {
-            language: result.secondBest.language,
-            relevance: result.secondBest.relevance
-          };
-        }
-        fire("after:highlightElement", { el: element, result, text: text2 });
-      }
-      function configure(userOptions) {
-        options3 = inherit(options3, userOptions);
-      }
-      const initHighlighting = () => {
-        highlightAll();
-        deprecated("10.6.0", "initHighlighting() deprecated.  Use highlightAll() now.");
-      };
-      function initHighlightingOnLoad() {
-        highlightAll();
-        deprecated("10.6.0", "initHighlightingOnLoad() deprecated.  Use highlightAll() now.");
-      }
-      let wantsHighlight = false;
-      function highlightAll() {
-        function boot() {
-          highlightAll();
-        }
-        if (document.readyState === "loading") {
-          if (!wantsHighlight) {
-            window.addEventListener("DOMContentLoaded", boot, false);
-          }
-          wantsHighlight = true;
-          return;
-        }
-        const blocks = document.querySelectorAll(options3.cssSelector);
-        blocks.forEach(highlightElement);
-      }
-      function registerLanguage(languageName, languageDefinition) {
-        let lang = null;
-        try {
-          lang = languageDefinition(hljs);
-        } catch (error$1) {
-          error("Language definition for '{}' could not be registered.".replace("{}", languageName));
-          if (!SAFE_MODE) {
-            throw error$1;
-          } else {
-            error(error$1);
-          }
-          lang = PLAINTEXT_LANGUAGE;
-        }
-        if (!lang.name) lang.name = languageName;
-        languages[languageName] = lang;
-        lang.rawDefinition = languageDefinition.bind(null, hljs);
-        if (lang.aliases) {
-          registerAliases(lang.aliases, { languageName });
-        }
-      }
-      function unregisterLanguage(languageName) {
-        delete languages[languageName];
-        for (const alias of Object.keys(aliases)) {
-          if (aliases[alias] === languageName) {
-            delete aliases[alias];
-          }
-        }
-      }
-      function listLanguages() {
-        return Object.keys(languages);
-      }
-      function getLanguage(name) {
-        name = (name || "").toLowerCase();
-        return languages[name] || languages[aliases[name]];
-      }
-      function registerAliases(aliasList, { languageName }) {
-        if (typeof aliasList === "string") {
-          aliasList = [aliasList];
-        }
-        aliasList.forEach((alias) => {
-          aliases[alias.toLowerCase()] = languageName;
-        });
-      }
-      function autoDetection(name) {
-        const lang = getLanguage(name);
-        return lang && !lang.disableAutodetect;
-      }
-      function upgradePluginAPI(plugin) {
-        if (plugin["before:highlightBlock"] && !plugin["before:highlightElement"]) {
-          plugin["before:highlightElement"] = (data) => {
-            plugin["before:highlightBlock"](
-              Object.assign({ block: data.el }, data)
-            );
-          };
-        }
-        if (plugin["after:highlightBlock"] && !plugin["after:highlightElement"]) {
-          plugin["after:highlightElement"] = (data) => {
-            plugin["after:highlightBlock"](
-              Object.assign({ block: data.el }, data)
-            );
-          };
-        }
-      }
-      function addPlugin(plugin) {
-        upgradePluginAPI(plugin);
-        plugins.push(plugin);
-      }
-      function removePlugin(plugin) {
-        const index = plugins.indexOf(plugin);
-        if (index !== -1) {
-          plugins.splice(index, 1);
-        }
-      }
-      function fire(event, args) {
-        const cb = event;
-        plugins.forEach(function(plugin) {
-          if (plugin[cb]) {
-            plugin[cb](args);
-          }
-        });
-      }
-      function deprecateHighlightBlock(el) {
-        deprecated("10.7.0", "highlightBlock will be removed entirely in v12.0");
-        deprecated("10.7.0", "Please use highlightElement now.");
-        return highlightElement(el);
-      }
-      Object.assign(hljs, {
-        highlight: highlight2,
-        highlightAuto,
-        highlightAll,
-        highlightElement,
-        // TODO: Remove with v12 API
-        highlightBlock: deprecateHighlightBlock,
-        configure,
-        initHighlighting,
-        initHighlightingOnLoad,
-        registerLanguage,
-        unregisterLanguage,
-        listLanguages,
-        getLanguage,
-        registerAliases,
-        autoDetection,
-        inherit,
-        addPlugin,
-        removePlugin
-      });
-      hljs.debugMode = function() {
-        SAFE_MODE = false;
-      };
-      hljs.safeMode = function() {
-        SAFE_MODE = true;
-      };
-      hljs.versionString = version;
-      hljs.regex = {
-        concat,
-        lookahead,
-        either,
-        optional,
-        anyNumberOfTimes
-      };
-      for (const key in MODES) {
-        if (typeof MODES[key] === "object") {
-          deepFreeze(MODES[key]);
-        }
-      }
-      Object.assign(hljs, MODES);
-      return hljs;
-    };
-    var highlight = HLJS({});
-    highlight.newInstance = () => HLJS({});
-    module.exports = highlight;
-    highlight.HighlightJS = highlight;
-    highlight.default = highlight;
-  }
-});
-
-// src_web/comfyui/nodes/markdown-renderer/markdown_renderer.ts
-import { app as app2 } from "/scripts/app.js";
+// src_web/comfyui/nodes/field-inspector/field_inspector.ts
+import { app } from "/scripts/app.js";
 
 // node_modules/@comfyorg/litegraph/dist/litegraph.es.js
 var _onPointerDownOrMove, _onPointerUp, _onKeyDownOrUp;
@@ -1618,12 +56,12 @@ var InputIndicators = class {
     this.controller = new AbortController();
     const { signal } = this.controller;
     const element = canvas2.canvas;
-    const options22 = { capture: true, signal };
-    element.addEventListener("pointerdown", __privateGet(this, _onPointerDownOrMove), options22);
-    element.addEventListener("pointermove", __privateGet(this, _onPointerDownOrMove), options22);
-    element.addEventListener("pointerup", __privateGet(this, _onPointerUp), options22);
-    element.addEventListener("keydown", __privateGet(this, _onKeyDownOrUp), options22);
-    document.addEventListener("keyup", __privateGet(this, _onKeyDownOrUp), options22);
+    const options2 = { capture: true, signal };
+    element.addEventListener("pointerdown", __privateGet(this, _onPointerDownOrMove), options2);
+    element.addEventListener("pointermove", __privateGet(this, _onPointerDownOrMove), options2);
+    element.addEventListener("pointerup", __privateGet(this, _onPointerUp), options2);
+    element.addEventListener("keydown", __privateGet(this, _onKeyDownOrUp), options2);
+    document.addEventListener("keyup", __privateGet(this, _onKeyDownOrUp), options2);
     const origDrawFrontCanvas = canvas2.drawFrontCanvas.bind(canvas2);
     signal.addEventListener("abort", () => {
       canvas2.drawFrontCanvas = origDrawFrontCanvas;
@@ -1692,9 +130,9 @@ var InputIndicators = class {
     if (this.mouse2Down) mouseMarker(mouseDotX + 30, mouseDotY, rightButtonColour);
     ctx.fillStyle = fillStyle;
     ctx.font = font;
-    function textMarker(x22, y2, text2, colour) {
+    function textMarker(x22, y2, text, colour) {
       ctx.fillStyle = colour;
-      ctx.fillText(text2, x22, y2);
+      ctx.fillText(text, x22, y2);
     }
     function mouseMarker(x22, y2, colour) {
       ctx.beginPath();
@@ -1707,8 +145,8 @@ var InputIndicators = class {
     }
   }
   dispose() {
-    var _a2;
-    (_a2 = this.controller) == null ? void 0 : _a2.abort();
+    var _a;
+    (_a = this.controller) == null ? void 0 : _a.abort();
     this.controller = void 0;
   }
 };
@@ -1726,37 +164,37 @@ var ContextMenu = class _ContextMenu {
    * - ignore_item_callbacks: ignores the callback inside the item, it just calls the options.callback
    * - event: you can pass a MouseEvent, this way the ContextMenu appears in that position
    */
-  constructor(values, options22) {
+  constructor(values, options2) {
     __publicField(this, "options");
     __publicField(this, "parentMenu");
     __publicField(this, "root");
     __publicField(this, "current_submenu");
     __publicField(this, "lock");
-    var _a2, _b, _c;
-    options22 || (options22 = {});
-    this.options = options22;
-    const parent = options22.parentMenu;
+    var _a, _b, _c;
+    options2 || (options2 = {});
+    this.options = options2;
+    const parent = options2.parentMenu;
     if (parent) {
       if (!(parent instanceof _ContextMenu)) {
         console.error("parentMenu must be of class ContextMenu, ignoring it");
-        options22.parentMenu = void 0;
+        options2.parentMenu = void 0;
       } else {
         this.parentMenu = parent;
         this.parentMenu.lock = true;
         this.parentMenu.current_submenu = this;
       }
-      if (((_a2 = parent.options) == null ? void 0 : _a2.className) === "dark") {
-        options22.className = "dark";
+      if (((_a = parent.options) == null ? void 0 : _a.className) === "dark") {
+        options2.className = "dark";
       }
     }
-    const eventClass = options22.event ? options22.event.constructor.name : null;
+    const eventClass = options2.event ? options2.event.constructor.name : null;
     if (eventClass !== "MouseEvent" && eventClass !== "CustomEvent" && eventClass !== "PointerEvent") {
       console.error(`Event passed to ContextMenu is not of type MouseEvent or CustomEvent. Ignoring it. (${eventClass})`);
-      options22.event = void 0;
+      options2.event = void 0;
     }
     const root = document.createElement("div");
     let classes = "litegraph litecontextmenu litemenubar-panel";
-    if (options22.className) classes += ` ${options22.className}`;
+    if (options2.className) classes += ` ${options2.className}`;
     root.className = classes;
     root.style.minWidth = "100";
     root.style.minHeight = "100";
@@ -1793,10 +231,10 @@ var ContextMenu = class _ContextMenu {
       true
     );
     this.root = root;
-    if (options22.title) {
+    if (options2.title) {
       const element = document.createElement("div");
       element.className = "litemenu-title";
-      element.innerHTML = options22.title;
+      element.innerHTML = options2.title;
       root.append(element);
     }
     for (let i = 0; i < values.length; i++) {
@@ -1805,25 +243,25 @@ var ContextMenu = class _ContextMenu {
       if (typeof name !== "string") {
         name = name != null ? name.content === void 0 ? String(name) : name.content : name;
       }
-      this.addItem(name, value, options22);
+      this.addItem(name, value, options2);
     }
     root.addEventListener("pointerenter", function() {
       if (root.closing_timer) {
         clearTimeout(root.closing_timer);
       }
     });
-    const ownerDocument = (_c = (_b = options22.event) == null ? void 0 : _b.target) == null ? void 0 : _c.ownerDocument;
+    const ownerDocument = (_c = (_b = options2.event) == null ? void 0 : _b.target) == null ? void 0 : _c.ownerDocument;
     const root_document = ownerDocument || document;
     if (root_document.fullscreenElement)
       root_document.fullscreenElement.append(root);
     else
       root_document.body.append(root);
-    let left = options22.left || 0;
-    let top = options22.top || 0;
-    if (options22.event) {
-      left = options22.event.clientX - 10;
-      top = options22.event.clientY - 10;
-      if (options22.title) top -= 20;
+    let left = options2.left || 0;
+    let top = options2.top || 0;
+    if (options2.event) {
+      left = options2.event.clientX - 10;
+      top = options2.event.clientY - 10;
+      if (options2.title) top -= 20;
       if (parent) {
         const rect = parent.root.getBoundingClientRect();
         left = rect.left + rect.width;
@@ -1839,13 +277,13 @@ var ContextMenu = class _ContextMenu {
     }
     root.style.left = `${left}px`;
     root.style.top = `${top}px`;
-    if (LiteGraph.context_menu_scaling && options22.scale) {
-      root.style.transform = `scale(${Math.round(options22.scale * 4) * 0.25})`;
+    if (LiteGraph.context_menu_scaling && options2.scale) {
+      root.style.transform = `scale(${Math.round(options2.scale * 4) * 0.25})`;
     }
   }
-  addItem(name, value, options22) {
-    var _a2;
-    options22 || (options22 = {});
+  addItem(name, value, options2) {
+    var _a;
+    options2 || (options2 = {});
     const element = document.createElement("div");
     element.className = "litemenu-entry submenu";
     let disabled = false;
@@ -1856,7 +294,7 @@ var ContextMenu = class _ContextMenu {
       if (typeof value === "string") {
         element.innerHTML = innerHtml;
       } else {
-        element.innerHTML = (_a2 = value == null ? void 0 : value.title) != null ? _a2 : innerHtml;
+        element.innerHTML = (_a = value == null ? void 0 : value.title) != null ? _a : innerHtml;
         if (value.disabled) {
           disabled = true;
           element.classList.add("disabled");
@@ -1880,12 +318,12 @@ var ContextMenu = class _ContextMenu {
     }
     this.root.append(element);
     if (!disabled) element.addEventListener("click", inner_onclick);
-    if (!disabled && options22.autoopen)
+    if (!disabled && options2.autoopen)
       element.addEventListener("pointerenter", inner_over);
     const setAriaExpanded = () => {
-      const entries2 = this.root.querySelectorAll("div.litemenu-entry.has_submenu");
-      if (entries2) {
-        for (const entry of entries2) {
+      const entries = this.root.querySelectorAll("div.litemenu-entry.has_submenu");
+      if (entries) {
+        for (const entry of entries) {
           entry.setAttribute("aria-expanded", "false");
         }
       }
@@ -1899,33 +337,33 @@ var ContextMenu = class _ContextMenu {
     }
     const that = this;
     function inner_onclick(e2) {
-      var _a3;
+      var _a2;
       const value2 = this.value;
       let close_parent = true;
-      (_a3 = that.current_submenu) == null ? void 0 : _a3.close(e2);
+      (_a2 = that.current_submenu) == null ? void 0 : _a2.close(e2);
       if ((value2 == null ? void 0 : value2.has_submenu) || (value2 == null ? void 0 : value2.submenu)) {
         setAriaExpanded();
       }
-      if (options22.callback) {
-        const r = options22.callback.call(
+      if (options2.callback) {
+        const r = options2.callback.call(
           this,
           value2,
-          options22,
+          options2,
           e2,
           that,
-          options22.node
+          options2.node
         );
         if (r === true) close_parent = false;
       }
       if (typeof value2 === "object") {
-        if (value2.callback && !options22.ignore_item_callbacks && value2.disabled !== true) {
+        if (value2.callback && !options2.ignore_item_callbacks && value2.disabled !== true) {
           const r = value2.callback.call(
             this,
             value2,
-            options22,
+            options2,
             e2,
             that,
-            options22.extra
+            options2.extra
           );
           if (r === true) close_parent = false;
         }
@@ -1938,7 +376,7 @@ var ContextMenu = class _ContextMenu {
             ignore_item_callbacks: value2.submenu.ignore_item_callbacks,
             title: value2.submenu.title,
             extra: value2.submenu.extra,
-            autoopen: options22.autoopen
+            autoopen: options2.autoopen
           });
           close_parent = false;
         }
@@ -1948,7 +386,7 @@ var ContextMenu = class _ContextMenu {
     return element;
   }
   close(e2, ignore_parent_menu) {
-    var _a2;
+    var _a;
     this.root.remove();
     if (this.parentMenu && !ignore_parent_menu) {
       this.parentMenu.lock = false;
@@ -1963,7 +401,7 @@ var ContextMenu = class _ContextMenu {
         );
       }
     }
-    (_a2 = this.current_submenu) == null ? void 0 : _a2.close(e2, true);
+    (_a = this.current_submenu) == null ? void 0 : _a.close(e2, true);
     if (this.root.closing_timer) clearTimeout(this.root.closing_timer);
   }
   // this code is used to trigger events easily (used in the context menu mouseleave
@@ -2365,13 +803,13 @@ var DragAndScale = class {
   }
   /** @deprecated Has not been kept up to date */
   mouseDrag(x2, y) {
-    var _a2;
+    var _a;
     this.offset[0] += x2 / this.scale;
     this.offset[1] += y / this.scale;
-    (_a2 = this.onredraw) == null ? void 0 : _a2.call(this, this);
+    (_a = this.onredraw) == null ? void 0 : _a.call(this, this);
   }
   changeScale(value, zooming_center) {
-    var _a2;
+    var _a;
     if (value < this.min_scale) {
       value = this.min_scale;
     } else if (value > this.max_scale) {
@@ -2396,7 +834,7 @@ var DragAndScale = class {
     ];
     this.offset[0] += delta_offset[0];
     this.offset[1] += delta_offset[1];
-    (_a2 = this.onredraw) == null ? void 0 : _a2.call(this, this);
+    (_a = this.onredraw) == null ? void 0 : _a.call(this, this);
   }
   changeDeltaScale(value, zooming_center) {
     this.changeScale(this.scale * value, zooming_center);
@@ -2410,7 +848,7 @@ var DragAndScale = class {
     zoom = 0.75,
     easing = EaseFunction.EASE_IN_OUT_QUAD
   } = {}) {
-    var _a2;
+    var _a;
     if (!(duration > 0)) throw new RangeError("Duration must be greater than 0");
     const easeFunctions = {
       linear: (t) => t,
@@ -2418,7 +856,7 @@ var DragAndScale = class {
       easeOutQuad: (t) => t * (2 - t),
       easeInOutQuad: (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
     };
-    const easeFunction = (_a2 = easeFunctions[easing]) != null ? _a2 : easeFunctions.linear;
+    const easeFunction = (_a = easeFunctions[easing]) != null ? _a : easeFunctions.linear;
     const startTimestamp = performance.now();
     const cw = this.element.width / window.devicePixelRatio;
     const ch = this.element.height / window.devicePixelRatio;
@@ -2570,11 +1008,11 @@ var LinkConnectorEventTarget = class extends EventTarget {
     const event = new CustomEvent(type, { detail });
     return super.dispatchEvent(event);
   }
-  addEventListener(type, listener, options22) {
-    super.addEventListener(type, listener, options22);
+  addEventListener(type, listener, options2) {
+    super.addEventListener(type, listener, options2);
   }
-  removeEventListener(type, listener, options22) {
-    super.removeEventListener(type, listener, options22);
+  removeEventListener(type, listener, options2) {
+    super.removeEventListener(type, listener, options2);
   }
   /** @deprecated Use {@link dispatch}. */
   dispatchEvent(event) {
@@ -2661,9 +1099,9 @@ var _LLink = class _LLink {
    * this reroute or the reroute before it.  Otherwise, an empty array.
    */
   static getReroutes(network, linkSegment) {
-    var _a2, _b;
+    var _a, _b;
     if (!linkSegment.parentId) return [];
-    return (_b = (_a2 = network.reroutes.get(linkSegment.parentId)) == null ? void 0 : _a2.getReroutes()) != null ? _b : [];
+    return (_b = (_a = network.reroutes.get(linkSegment.parentId)) == null ? void 0 : _a.getReroutes()) != null ? _b : [];
   }
   static getFirstReroute(network, linkSegment) {
     return _LLink.getReroutes(network, linkSegment).at(0);
@@ -2677,9 +1115,9 @@ var _LLink = class _LLink {
    * @returns The reroute that was found, `undefined` if no reroute was found, or `null` if an infinite loop was detected.
    */
   static findNextReroute(network, linkSegment, rerouteId) {
-    var _a2;
+    var _a;
     if (!linkSegment.parentId) return;
-    return (_a2 = network.reroutes.get(linkSegment.parentId)) == null ? void 0 : _a2.findNextReroute(rerouteId);
+    return (_a = network.reroutes.get(linkSegment.parentId)) == null ? void 0 : _a.findNextReroute(rerouteId);
   }
   configure(o) {
     if (Array.isArray(o)) {
@@ -2798,7 +1236,7 @@ var _LLink = class _LLink {
 _color = new WeakMap();
 var LLink = _LLink;
 var FloatingRenderLink = class {
-  constructor(network, link2, toType, fromReroute, dragDirection = LinkDirection.CENTER) {
+  constructor(network, link, toType, fromReroute, dragDirection = LinkDirection.CENTER) {
     __publicField(this, "node");
     __publicField(this, "fromSlot");
     __publicField(this, "fromPos");
@@ -2814,9 +1252,9 @@ var FloatingRenderLink = class {
     __publicField(this, "inputSlot");
     __publicField(this, "inputIndex", -1);
     __publicField(this, "inputPos");
-    var _a2, _b, _c;
+    var _a, _b, _c;
     this.network = network;
-    this.link = link2;
+    this.link = link;
     this.toType = toType;
     this.fromReroute = fromReroute;
     this.dragDirection = dragDirection;
@@ -2825,12 +1263,12 @@ var FloatingRenderLink = class {
       target_id: inputNodeId,
       origin_slot: outputIndex,
       target_slot: inputIndex
-    } = link2;
+    } = link;
     if (outputNodeId !== -1) {
-      const outputNode = (_a2 = network.getNodeById(outputNodeId)) != null ? _a2 : void 0;
-      if (!outputNode) throw new Error(`Creating DraggingRenderLink for link [${link2.id}] failed: Output node [${outputNodeId}] not found.`);
+      const outputNode = (_a = network.getNodeById(outputNodeId)) != null ? _a : void 0;
+      if (!outputNode) throw new Error(`Creating DraggingRenderLink for link [${link.id}] failed: Output node [${outputNodeId}] not found.`);
       const outputSlot = outputNode == null ? void 0 : outputNode.outputs.at(outputIndex);
-      if (!outputSlot) throw new Error(`Creating DraggingRenderLink for link [${link2.id}] failed: Output slot [${outputIndex}] not found.`);
+      if (!outputSlot) throw new Error(`Creating DraggingRenderLink for link [${link.id}] failed: Output slot [${outputIndex}] not found.`);
       this.outputNodeId = outputNodeId;
       this.outputNode = outputNode;
       this.outputSlot = outputSlot;
@@ -2844,9 +1282,9 @@ var FloatingRenderLink = class {
       this.fromSlotIndex = outputIndex;
     } else {
       const inputNode = (_c = network.getNodeById(inputNodeId)) != null ? _c : void 0;
-      if (!inputNode) throw new Error(`Creating DraggingRenderLink for link [${link2.id}] failed: Input node [${inputNodeId}] not found.`);
+      if (!inputNode) throw new Error(`Creating DraggingRenderLink for link [${link.id}] failed: Input node [${inputNodeId}] not found.`);
       const inputSlot = inputNode == null ? void 0 : inputNode.inputs.at(inputIndex);
-      if (!inputSlot) throw new Error(`Creating DraggingRenderLink for link [${link2.id}] failed: Input slot [${inputIndex}] not found.`);
+      if (!inputSlot) throw new Error(`Creating DraggingRenderLink for link [${link.id}] failed: Input slot [${inputIndex}] not found.`);
       this.inputNodeId = inputNodeId;
       this.inputNode = inputNode;
       this.inputSlot = inputSlot;
@@ -2866,56 +1304,56 @@ var FloatingRenderLink = class {
     return this.toType === "output";
   }
   canConnectToReroute(reroute) {
-    var _a2, _b;
+    var _a, _b;
     if (this.toType === "input") {
-      if (reroute.origin_id === ((_a2 = this.inputNode) == null ? void 0 : _a2.id)) return false;
+      if (reroute.origin_id === ((_a = this.inputNode) == null ? void 0 : _a.id)) return false;
     } else {
       if (reroute.origin_id === ((_b = this.outputNode) == null ? void 0 : _b.id)) return false;
     }
     return true;
   }
   connectToInput(node2, input, _events) {
-    var _a2, _b;
+    var _a, _b;
     const floatingLink = this.link;
     floatingLink.target_id = node2.id;
     floatingLink.target_slot = node2.inputs.indexOf(input);
     node2.disconnectInput(node2.inputs.indexOf(input));
-    (_a2 = this.fromSlot._floatingLinks) == null ? void 0 : _a2.delete(floatingLink);
+    (_a = this.fromSlot._floatingLinks) == null ? void 0 : _a.delete(floatingLink);
     (_b = input._floatingLinks) != null ? _b : input._floatingLinks = /* @__PURE__ */ new Set();
     input._floatingLinks.add(floatingLink);
   }
   connectToOutput(node2, output, _events) {
-    var _a2, _b;
+    var _a, _b;
     const floatingLink = this.link;
     floatingLink.origin_id = node2.id;
     floatingLink.origin_slot = node2.outputs.indexOf(output);
-    (_a2 = this.fromSlot._floatingLinks) == null ? void 0 : _a2.delete(floatingLink);
+    (_a = this.fromSlot._floatingLinks) == null ? void 0 : _a.delete(floatingLink);
     (_b = output._floatingLinks) != null ? _b : output._floatingLinks = /* @__PURE__ */ new Set();
     output._floatingLinks.add(floatingLink);
   }
   connectToRerouteInput(reroute, { node: inputNode, input }, events) {
-    var _a2, _b;
+    var _a, _b;
     const floatingLink = this.link;
     floatingLink.target_id = inputNode.id;
     floatingLink.target_slot = inputNode.inputs.indexOf(input);
-    (_a2 = this.fromSlot._floatingLinks) == null ? void 0 : _a2.delete(floatingLink);
+    (_a = this.fromSlot._floatingLinks) == null ? void 0 : _a.delete(floatingLink);
     (_b = input._floatingLinks) != null ? _b : input._floatingLinks = /* @__PURE__ */ new Set();
     input._floatingLinks.add(floatingLink);
     events.dispatch("input-moved", this);
   }
   connectToRerouteOutput(reroute, outputNode, output, events) {
-    var _a2, _b;
+    var _a, _b;
     const floatingLink = this.link;
     floatingLink.origin_id = outputNode.id;
     floatingLink.origin_slot = outputNode.outputs.indexOf(output);
-    (_a2 = this.fromSlot._floatingLinks) == null ? void 0 : _a2.delete(floatingLink);
+    (_a = this.fromSlot._floatingLinks) == null ? void 0 : _a.delete(floatingLink);
     (_b = output._floatingLinks) != null ? _b : output._floatingLinks = /* @__PURE__ */ new Set();
     output._floatingLinks.add(floatingLink);
     events.dispatch("output-moved", this);
   }
 };
 var MovingLinkBase = class {
-  constructor(network, link2, toType, fromReroute, dragDirection = LinkDirection.CENTER) {
+  constructor(network, link, toType, fromReroute, dragDirection = LinkDirection.CENTER) {
     __publicField(this, "outputNodeId");
     __publicField(this, "outputNode");
     __publicField(this, "outputSlot");
@@ -2926,9 +1364,9 @@ var MovingLinkBase = class {
     __publicField(this, "inputSlot");
     __publicField(this, "inputIndex");
     __publicField(this, "inputPos");
-    var _a2, _b;
+    var _a, _b;
     this.network = network;
-    this.link = link2;
+    this.link = link;
     this.toType = toType;
     this.fromReroute = fromReroute;
     this.dragDirection = dragDirection;
@@ -2937,20 +1375,20 @@ var MovingLinkBase = class {
       target_id: inputNodeId,
       origin_slot: outputIndex,
       target_slot: inputIndex
-    } = link2;
-    const outputNode = (_a2 = network.getNodeById(outputNodeId)) != null ? _a2 : void 0;
-    if (!outputNode) throw new Error(`Creating MovingRenderLink for link [${link2.id}] failed: Output node [${outputNodeId}] not found.`);
+    } = link;
+    const outputNode = (_a = network.getNodeById(outputNodeId)) != null ? _a : void 0;
+    if (!outputNode) throw new Error(`Creating MovingRenderLink for link [${link.id}] failed: Output node [${outputNodeId}] not found.`);
     const outputSlot = outputNode.outputs.at(outputIndex);
-    if (!outputSlot) throw new Error(`Creating MovingRenderLink for link [${link2.id}] failed: Output slot [${outputIndex}] not found.`);
+    if (!outputSlot) throw new Error(`Creating MovingRenderLink for link [${link.id}] failed: Output slot [${outputIndex}] not found.`);
     this.outputNodeId = outputNodeId;
     this.outputNode = outputNode;
     this.outputSlot = outputSlot;
     this.outputIndex = outputIndex;
     this.outputPos = outputNode.getOutputPos(outputIndex);
     const inputNode = (_b = network.getNodeById(inputNodeId)) != null ? _b : void 0;
-    if (!inputNode) throw new Error(`Creating DraggingRenderLink for link [${link2.id}] failed: Input node [${inputNodeId}] not found.`);
+    if (!inputNode) throw new Error(`Creating DraggingRenderLink for link [${link.id}] failed: Input node [${inputNodeId}] not found.`);
     const inputSlot = inputNode.inputs.at(inputIndex);
-    if (!inputSlot) throw new Error(`Creating DraggingRenderLink for link [${link2.id}] failed: Input slot [${inputIndex}] not found.`);
+    if (!inputSlot) throw new Error(`Creating DraggingRenderLink for link [${link.id}] failed: Input slot [${inputIndex}] not found.`);
     this.inputNodeId = inputNodeId;
     this.inputNode = inputNode;
     this.inputSlot = inputSlot;
@@ -2959,9 +1397,9 @@ var MovingLinkBase = class {
   }
 };
 var MovingInputLink = class extends MovingLinkBase {
-  constructor(network, link2, fromReroute, dragDirection = LinkDirection.CENTER) {
-    var _a2;
-    super(network, link2, "input", fromReroute, dragDirection);
+  constructor(network, link, fromReroute, dragDirection = LinkDirection.CENTER) {
+    var _a;
+    super(network, link, "input", fromReroute, dragDirection);
     __publicField(this, "toType", "input");
     __publicField(this, "node");
     __publicField(this, "fromSlot");
@@ -2970,7 +1408,7 @@ var MovingInputLink = class extends MovingLinkBase {
     __publicField(this, "fromSlotIndex");
     this.node = this.outputNode;
     this.fromSlot = this.outputSlot;
-    this.fromPos = (_a2 = fromReroute == null ? void 0 : fromReroute.pos) != null ? _a2 : this.outputPos;
+    this.fromPos = (_a = fromReroute == null ? void 0 : fromReroute.pos) != null ? _a : this.outputPos;
     this.fromDirection = LinkDirection.NONE;
     this.fromSlotIndex = this.outputIndex;
   }
@@ -2984,12 +1422,12 @@ var MovingInputLink = class extends MovingLinkBase {
     return reroute.origin_id !== this.inputNode.id;
   }
   connectToInput(inputNode, input, events) {
-    var _a2;
+    var _a;
     if (input === this.inputSlot) return;
     this.inputNode.disconnectInput(this.inputIndex, true);
-    const link2 = this.outputNode.connectSlots(this.outputSlot, inputNode, input, (_a2 = this.fromReroute) == null ? void 0 : _a2.id);
-    if (link2) events.dispatch("input-moved", this);
-    return link2;
+    const link = this.outputNode.connectSlots(this.outputSlot, inputNode, input, (_a = this.fromReroute) == null ? void 0 : _a.id);
+    if (link) events.dispatch("input-moved", this);
+    return link;
   }
   connectToOutput() {
     throw new Error("MovingInputLink cannot connect to an output.");
@@ -3009,9 +1447,9 @@ var MovingInputLink = class extends MovingLinkBase {
   }
 };
 var MovingOutputLink = class extends MovingLinkBase {
-  constructor(network, link2, fromReroute, dragDirection = LinkDirection.CENTER) {
-    var _a2;
-    super(network, link2, "output", fromReroute, dragDirection);
+  constructor(network, link, fromReroute, dragDirection = LinkDirection.CENTER) {
+    var _a;
+    super(network, link, "output", fromReroute, dragDirection);
     __publicField(this, "toType", "output");
     __publicField(this, "node");
     __publicField(this, "fromSlot");
@@ -3020,7 +1458,7 @@ var MovingOutputLink = class extends MovingLinkBase {
     __publicField(this, "fromSlotIndex");
     this.node = this.inputNode;
     this.fromSlot = this.inputSlot;
-    this.fromPos = (_a2 = fromReroute == null ? void 0 : fromReroute.pos) != null ? _a2 : this.inputPos;
+    this.fromPos = (_a = fromReroute == null ? void 0 : fromReroute.pos) != null ? _a : this.inputPos;
     this.fromDirection = LinkDirection.LEFT;
     this.fromSlotIndex = this.inputIndex;
   }
@@ -3038,17 +1476,17 @@ var MovingOutputLink = class extends MovingLinkBase {
   }
   connectToOutput(outputNode, output, events) {
     if (output === this.outputSlot) return;
-    const link2 = outputNode.connectSlots(output, this.inputNode, this.inputSlot, this.link.parentId);
-    if (link2) events.dispatch("output-moved", this);
-    return link2;
+    const link = outputNode.connectSlots(output, this.inputNode, this.inputSlot, this.link.parentId);
+    if (link) events.dispatch("output-moved", this);
+    return link;
   }
   connectToRerouteInput() {
     throw new Error("MovingOutputLink cannot connect to an input.");
   }
   connectToRerouteOutput(reroute, outputNode, output, events) {
-    var _a2;
+    var _a;
     const { inputNode, inputSlot, fromReroute } = this;
-    const floatingTerminus = ((_a2 = reroute == null ? void 0 : reroute.floating) == null ? void 0 : _a2.slotType) === "output";
+    const floatingTerminus = ((_a = reroute == null ? void 0 : reroute.floating) == null ? void 0 : _a.slotType) === "output";
     if (fromReroute) {
       fromReroute.parentId = reroute.id;
     } else {
@@ -3092,9 +1530,9 @@ var ToInputRenderLink = class {
     input,
     link: existingLink
   }, events, originalReroutes) {
-    var _a2;
+    var _a;
     const { node: outputNode, fromSlot, fromReroute } = this;
-    const floatingTerminus = ((_a2 = fromReroute == null ? void 0 : fromReroute.floating) == null ? void 0 : _a2.slotType) === "output";
+    const floatingTerminus = ((_a = fromReroute == null ? void 0 : fromReroute.floating) == null ? void 0 : _a.slotType) === "output";
     reroute.parentId = fromReroute == null ? void 0 : fromReroute.id;
     const newLink = outputNode.connectSlots(fromSlot, inputNode, input, existingLink.parentId);
     if (floatingTerminus) fromReroute.removeAllFloatingLinks();
@@ -3206,12 +1644,12 @@ var LinkConnector = class {
   }
   /** Drag an existing link to a different input. */
   moveInputLink(network, input) {
-    var _a2;
+    var _a;
     if (this.isConnecting) throw new Error("Already dragging links.");
     const { state, inputLinks, renderLinks } = this;
     const linkId = input.link;
     if (linkId == null) {
-      const floatingLink = (_a2 = input._floatingLinks) == null ? void 0 : _a2.values().next().value;
+      const floatingLink = (_a = input._floatingLinks) == null ? void 0 : _a.values().next().value;
       if ((floatingLink == null ? void 0 : floatingLink.parentId) == null) return;
       try {
         const reroute = network.reroutes.get(floatingLink.parentId);
@@ -3226,11 +1664,11 @@ var LinkConnector = class {
       floatingLink._dragging = true;
       this.floatingLinks.push(floatingLink);
     } else {
-      const link2 = network.links.get(linkId);
-      if (!link2) return;
+      const link = network.links.get(linkId);
+      if (!link) return;
       try {
-        const reroute = network.getReroute(link2.parentId);
-        const renderLink = new MovingInputLink(network, link2, reroute);
+        const reroute = network.getReroute(link.parentId);
+        const renderLink = new MovingInputLink(network, link, reroute);
         const mayContinue = this.events.dispatch("before-move-input", renderLink);
         if (mayContinue === false) return;
         renderLinks.push(renderLink);
@@ -3238,11 +1676,11 @@ var LinkConnector = class {
           e2.detail.link.disconnect(network, "output");
         });
       } catch (error) {
-        console.warn(`Could not create render link for link id: [${link2.id}].`, link2, error);
+        console.warn(`Could not create render link for link id: [${link.id}].`, link, error);
         return;
       }
-      link2._dragging = true;
-      inputLinks.push(link2);
+      link._dragging = true;
+      inputLinks.push(link);
     }
     state.connectingTo = "input";
     state.draggingExistingLinks = true;
@@ -3250,10 +1688,10 @@ var LinkConnector = class {
   }
   /** Drag all links from an output to a new output. */
   moveOutputLink(network, output) {
-    var _a2, _b;
+    var _a, _b;
     if (this.isConnecting) throw new Error("Already dragging links.");
     const { state, renderLinks } = this;
-    if ((_a2 = output._floatingLinks) == null ? void 0 : _a2.size) {
+    if ((_a = output._floatingLinks) == null ? void 0 : _a.size) {
       for (const floatingLink of output._floatingLinks.values()) {
         try {
           const reroute = LLink.getFirstReroute(network, floatingLink);
@@ -3270,23 +1708,23 @@ var LinkConnector = class {
     }
     if ((_b = output.links) == null ? void 0 : _b.length) {
       for (const linkId of output.links) {
-        const link2 = network.links.get(linkId);
-        if (!link2) continue;
-        const firstReroute = LLink.getFirstReroute(network, link2);
+        const link = network.links.get(linkId);
+        if (!link) continue;
+        const firstReroute = LLink.getFirstReroute(network, link);
         if (firstReroute) {
           firstReroute._dragging = true;
           this.hiddenReroutes.add(firstReroute);
         } else {
-          link2._dragging = true;
+          link._dragging = true;
         }
-        this.outputLinks.push(link2);
+        this.outputLinks.push(link);
         try {
-          const renderLink = new MovingOutputLink(network, link2, firstReroute, LinkDirection.RIGHT);
+          const renderLink = new MovingOutputLink(network, link, firstReroute, LinkDirection.RIGHT);
           const mayContinue = this.events.dispatch("before-move-output", renderLink);
           if (mayContinue === false) continue;
           renderLinks.push(renderLink);
         } catch (error) {
-          console.warn(`Could not create render link for link id: [${link2.id}].`, link2, error);
+          console.warn(`Could not create render link for link id: [${link.id}].`, link, error);
           continue;
         }
       }
@@ -3331,13 +1769,13 @@ var LinkConnector = class {
    * @param reroute The reroute that the link is being dragged from
    */
   dragFromReroute(network, reroute) {
-    var _a2;
+    var _a;
     if (this.isConnecting) throw new Error("Already dragging links.");
-    const link2 = (_a2 = reroute.firstLink) != null ? _a2 : reroute.firstFloatingLink;
-    if (!link2) return;
-    const outputNode = network.getNodeById(link2.origin_id);
+    const link = (_a = reroute.firstLink) != null ? _a : reroute.firstFloatingLink;
+    if (!link) return;
+    const outputNode = network.getNodeById(link.origin_id);
     if (!outputNode) return;
-    const outputSlot = outputNode.outputs.at(link2.origin_slot);
+    const outputSlot = outputNode.outputs.at(link.origin_slot);
     if (!outputSlot) return;
     const renderLink = new ToInputRenderLink(network, outputNode, outputSlot, reroute);
     renderLink.fromDirection = LinkDirection.NONE;
@@ -3365,13 +1803,13 @@ var LinkConnector = class {
    * @param event Contains the drop location, in canvas space
    */
   dropLinks(locator, event) {
-    var _a2;
+    var _a;
     if (!this.isConnecting) return this.reset();
     const { renderLinks } = this;
     const mayContinue = this.events.dispatch("before-drop-links", { renderLinks, event });
     if (mayContinue === false) return this.reset();
     const { canvasX, canvasY } = event;
-    const node2 = (_a2 = locator.getNodeOnPos(canvasX, canvasY)) != null ? _a2 : void 0;
+    const node2 = (_a = locator.getNodeOnPos(canvasX, canvasY)) != null ? _a : void 0;
     if (node2) {
       this.dropOnNode(node2, event);
     } else {
@@ -3389,7 +1827,7 @@ var LinkConnector = class {
     const { renderLinks, state } = this;
     const { connectingTo } = state;
     const { canvasX, canvasY } = event;
-    if (renderLinks.every((link2) => link2.node === node2)) return;
+    if (renderLinks.every((link) => link.node === node2)) return;
     if (connectingTo === "output") {
       const output = node2.getOutputOnPos([canvasX, canvasY]);
       if (output) {
@@ -3430,18 +1868,18 @@ var LinkConnector = class {
         const floatingInLinks = reroute.getFloatingLinks("input");
         reroute.setFloatingLinkOrigin(node2, fromSlot, fromSlotIndex);
         if (floatingOutLinks && floatingInLinks) {
-          for (const link2 of floatingOutLinks) {
-            link2.origin_id = node2.id;
-            link2.origin_slot = fromSlotIndex;
+          for (const link of floatingOutLinks) {
+            link.origin_id = node2.id;
+            link.origin_slot = fromSlotIndex;
             for (const originalReroute of originalReroutes) {
               if (fromReroute != null && originalReroute.id === fromReroute.id) break;
-              originalReroute.floatingLinkIds.delete(link2.id);
+              originalReroute.floatingLinkIds.delete(link.id);
             }
           }
-          for (const link2 of floatingInLinks) {
+          for (const link of floatingInLinks) {
             for (const originalReroute of originalReroutes) {
               if (fromReroute != null && originalReroute.id === fromReroute.id) break;
-              originalReroute.floatingLinkIds.delete(link2.id);
+              originalReroute.floatingLinkIds.delete(link.id);
             }
           }
         }
@@ -3453,34 +1891,34 @@ var LinkConnector = class {
       }
       return;
     }
-    for (const link2 of this.renderLinks) {
-      if (link2.toType !== "output") continue;
+    for (const link of this.renderLinks) {
+      if (link.toType !== "output") continue;
       const result = reroute.findSourceOutput();
       if (!result) continue;
       const { node: node2, output } = result;
-      if (!link2.canConnectToOutput(node2, output)) continue;
-      link2.connectToRerouteOutput(reroute, node2, output, this.events);
+      if (!link.canConnectToOutput(node2, output)) continue;
+      link.connectToRerouteOutput(reroute, node2, output, this.events);
     }
   }
   dropOnNothing(event) {
     if (this.state.connectingTo === "input") {
-      for (const link2 of this.renderLinks) {
-        if (link2 instanceof MovingInputLink) {
-          link2.inputNode.disconnectInput(link2.inputIndex, true);
+      for (const link of this.renderLinks) {
+        if (link instanceof MovingInputLink) {
+          link.inputNode.disconnectInput(link.inputIndex, true);
         }
       }
     }
     this.events.dispatch("dropped-on-canvas", event);
   }
   isNodeValidDrop(node2) {
-    var _a2;
+    var _a;
     if (this.state.connectingTo === "output") {
-      return node2.outputs.some((output) => this.renderLinks.some((link2) => link2.canConnectToOutput(node2, output)));
+      return node2.outputs.some((output) => this.renderLinks.some((link) => link.canConnectToOutput(node2, output)));
     }
-    if ((_a2 = node2.widgets) == null ? void 0 : _a2.length) {
+    if ((_a = node2.widgets) == null ? void 0 : _a.length) {
       return true;
     }
-    return node2.inputs.some((input) => this.renderLinks.some((link2) => link2.canConnectToInput(node2, input)));
+    return node2.inputs.some((input) => this.renderLinks.some((link) => link.canConnectToInput(node2, input)));
   }
   /**
    * Checks if a reroute is a valid drop target for any of the links being connected.
@@ -3530,8 +1968,8 @@ var LinkConnector = class {
    * @param eventName The event to listen for.
    * @param listener The listener to call when the event is fired.
    */
-  listenUntilReset(eventName, listener, options22) {
-    this.events.addEventListener(eventName, listener, options22);
+  listenUntilReset(eventName, listener, options2) {
+    this.events.addEventListener(eventName, listener, options2);
     this.events.addEventListener("reset", () => this.events.removeEventListener(eventName, listener), { once: true });
   }
   /**
@@ -3544,9 +1982,9 @@ var LinkConnector = class {
     const { state, outputLinks, inputLinks, hiddenReroutes, renderLinks, floatingLinks } = this;
     if (!force && state.connectingTo === void 0) return;
     state.connectingTo = void 0;
-    for (const link2 of outputLinks) delete link2._dragging;
-    for (const link2 of inputLinks) delete link2._dragging;
-    for (const link2 of floatingLinks) delete link2._dragging;
+    for (const link of outputLinks) delete link._dragging;
+    for (const link of inputLinks) delete link._dragging;
+    for (const link of floatingLinks) delete link._dragging;
     for (const reroute of hiddenReroutes) delete reroute._dragging;
     renderLinks.length = 0;
     inputLinks.length = 0;
@@ -3565,14 +2003,14 @@ _LinkConnector_instances = new WeakSet();
  * @param event Contains the drop location, in canvas space
  */
 dropOnNodeBackground_fn = function(node2, event) {
-  var _a2, _b;
+  var _a, _b;
   const { state: { connectingTo } } = this;
   const mayContinue = this.events.dispatch("dropped-on-node", { node: node2, event });
   if (mayContinue === false) return;
   const firstLink = this.renderLinks[0];
   if (!firstLink) return;
   if (connectingTo === "output") {
-    const output = (_a2 = node2.findOutputByType(firstLink.fromSlot.type)) == null ? void 0 : _a2.slot;
+    const output = (_a = node2.findOutputByType(firstLink.fromSlot.type)) == null ? void 0 : _a.slot;
     if (!output) {
       console.warn(`Could not find slot for link type: [${firstLink.fromSlot.type}].`);
       return;
@@ -3588,64 +2026,64 @@ dropOnNodeBackground_fn = function(node2, event) {
   }
 };
 dropOnInput_fn = function(node2, input) {
-  for (const link2 of this.renderLinks) {
-    if (!link2.canConnectToInput(node2, input)) continue;
-    link2.connectToInput(node2, input, this.events);
+  for (const link of this.renderLinks) {
+    if (!link.canConnectToInput(node2, input)) continue;
+    link.connectToInput(node2, input, this.events);
   }
 };
 dropOnOutput_fn = function(node2, output) {
-  for (const link2 of this.renderLinks) {
-    if (!link2.canConnectToOutput(node2, output)) {
-      if (link2 instanceof MovingOutputLink && link2.link.parentId !== void 0) {
-        link2.outputNode.connectSlots(link2.outputSlot, link2.inputNode, link2.inputSlot, void 0);
+  for (const link of this.renderLinks) {
+    if (!link.canConnectToOutput(node2, output)) {
+      if (link instanceof MovingOutputLink && link.link.parentId !== void 0) {
+        link.outputNode.connectSlots(link.outputSlot, link.inputNode, link.inputSlot, void 0);
       }
       continue;
     }
-    link2.connectToOutput(node2, output, this.events);
+    link.connectToOutput(node2, output, this.events);
   }
 };
 /** Sets connecting_links, used by some extensions still. */
 setLegacyLinks_fn = function(fromSlotIsInput) {
-  const links = this.renderLinks.map((link2) => {
-    var _a2, _b;
-    const input = fromSlotIsInput ? link2.fromSlot : null;
-    const output = fromSlotIsInput ? null : link2.fromSlot;
-    const afterRerouteId = link2 instanceof MovingLinkBase ? (_a2 = link2.link) == null ? void 0 : _a2.parentId : (_b = link2.fromReroute) == null ? void 0 : _b.id;
+  const links = this.renderLinks.map((link) => {
+    var _a, _b;
+    const input = fromSlotIsInput ? link.fromSlot : null;
+    const output = fromSlotIsInput ? null : link.fromSlot;
+    const afterRerouteId = link instanceof MovingLinkBase ? (_a = link.link) == null ? void 0 : _a.parentId : (_b = link.fromReroute) == null ? void 0 : _b.id;
     return {
-      node: link2.node,
-      slot: link2.fromSlotIndex,
+      node: link.node,
+      slot: link.fromSlotIndex,
       input,
       output,
-      pos: link2.fromPos,
+      pos: link.fromPos,
       afterRerouteId
     };
   });
   __privateGet(this, _setConnectingLinks).call(this, links);
 };
-function canConnectInputLinkToReroute(link2, inputNode, input, reroute) {
-  var _a2, _b, _c;
-  const { fromReroute } = link2;
-  if (!link2.canConnectToInput(inputNode, input) || // Would result in no change
+function canConnectInputLinkToReroute(link, inputNode, input, reroute) {
+  var _a, _b, _c;
+  const { fromReroute } = link;
+  if (!link.canConnectToInput(inputNode, input) || // Would result in no change
   (fromReroute == null ? void 0 : fromReroute.id) === reroute.id || // Cannot connect from child to parent reroute
-  ((_a2 = fromReroute == null ? void 0 : fromReroute.getReroutes()) == null ? void 0 : _a2.includes(reroute))) {
+  ((_a = fromReroute == null ? void 0 : fromReroute.getReroutes()) == null ? void 0 : _a.includes(reroute))) {
     return false;
   }
-  if (link2 instanceof ToInputRenderLink) {
+  if (link instanceof ToInputRenderLink) {
     if (reroute.parentId == null) {
-      if ((_b = reroute.firstLink) == null ? void 0 : _b.hasOrigin(link2.node.id, link2.fromSlotIndex)) return false;
-    } else if (((_c = link2.fromReroute) == null ? void 0 : _c.id) === reroute.parentId) {
+      if ((_b = reroute.firstLink) == null ? void 0 : _b.hasOrigin(link.node.id, link.fromSlotIndex)) return false;
+    } else if (((_c = link.fromReroute) == null ? void 0 : _c.id) === reroute.parentId) {
       return false;
     }
   }
   return true;
 }
 function getNodeInputOnPos(node2, x2, y) {
-  var _a2, _b, _c, _d, _e;
+  var _a, _b, _c, _d, _e;
   const { inputs } = node2;
   if (!inputs) return;
   for (const [index, input] of inputs.entries()) {
     const pos = node2.getInputPos(index);
-    const nameLength = (_e = (_c = (_a2 = input.label) == null ? void 0 : _a2.length) != null ? _c : (_b = input.localized_name) == null ? void 0 : _b.length) != null ? _e : (_d = input.name) == null ? void 0 : _d.length;
+    const nameLength = (_e = (_c = (_a = input.label) == null ? void 0 : _a.length) != null ? _c : (_b = input.localized_name) == null ? void 0 : _b.length) != null ? _e : (_d = input.name) == null ? void 0 : _d.length;
     const width2 = 20 + (nameLength || 3) * 7;
     if (isInRectangle(
       x2,
@@ -3744,9 +2182,9 @@ var _CanvasPointer = class _CanvasPointer {
     return __privateGet(this, _finally);
   }
   set finally(value) {
-    var _a2;
+    var _a;
     try {
-      (_a2 = __privateGet(this, _finally)) == null ? void 0 : _a2.call(this);
+      (_a = __privateGet(this, _finally)) == null ? void 0 : _a.call(this);
     } finally {
       __privateSet(this, _finally, value);
     }
@@ -3766,7 +2204,7 @@ var _CanvasPointer = class _CanvasPointer {
    * @param e The `pointermove` event
    */
   move(e2) {
-    var _a2;
+    var _a;
     const { eDown } = this;
     if (!eDown) return;
     if (!e2.buttons) {
@@ -3779,7 +2217,7 @@ var _CanvasPointer = class _CanvasPointer {
       return;
     }
     this.eMove = e2;
-    (_a2 = this.onDrag) == null ? void 0 : _a2.call(this, e2);
+    (_a = this.onDrag) == null ? void 0 : _a.call(this, e2);
     if (this.dragStarted) return;
     const longerThanBufferTime = e2.timeStamp - eDown.timeStamp > _CanvasPointer.bufferTime;
     if (longerThanBufferTime || !__privateMethod(this, _CanvasPointer_instances, hasSamePosition_fn).call(this, e2, eDown)) {
@@ -3791,8 +2229,8 @@ var _CanvasPointer = class _CanvasPointer {
    * @param e The `pointerup` event
    */
   up(e2) {
-    var _a2;
-    if (e2.button !== ((_a2 = this.eDown) == null ? void 0 : _a2.button)) return false;
+    var _a;
+    if (e2.button !== ((_a = this.eDown) == null ? void 0 : _a.button)) return false;
     __privateMethod(this, _CanvasPointer_instances, completeClick_fn).call(this, e2);
     const { dragStarted } = this;
     this.reset();
@@ -3831,12 +2269,12 @@ _maxClickDrift2 = new WeakMap();
 _finally = new WeakMap();
 _CanvasPointer_instances = new WeakSet();
 completeClick_fn = function(e2) {
-  var _a2, _b, _c;
+  var _a, _b, _c;
   const { eDown } = this;
   if (!eDown) return;
   this.eUp = e2;
   if (this.dragStarted) {
-    (_a2 = this.onDragEnd) == null ? void 0 : _a2.call(this, e2);
+    (_a = this.onDragEnd) == null ? void 0 : _a.call(this, e2);
   } else if (!__privateMethod(this, _CanvasPointer_instances, hasSamePosition_fn).call(this, e2, eDown)) {
     __privateMethod(this, _CanvasPointer_instances, setDragStarted_fn).call(this);
     (_b = this.onDragEnd) == null ? void 0 : _b.call(this, e2);
@@ -3871,9 +2309,9 @@ isDoubleClick_fn = function() {
   return diff > 0 && diff < _CanvasPointer.doubleClickTime && __privateMethod(this, _CanvasPointer_instances, hasSamePosition_fn).call(this, eDown, eLastDown, tolerance2);
 };
 setDragStarted_fn = function() {
-  var _a2;
+  var _a;
   this.dragStarted = true;
-  (_a2 = this.onDragStart) == null ? void 0 : _a2.call(this, this);
+  (_a = this.onDragStart) == null ? void 0 : _a.call(this, this);
   delete this.onDragStart;
 };
 /** Maximum time in milliseconds to ignore click drift */
@@ -3897,7 +2335,7 @@ var BadgePosition = /* @__PURE__ */ ((BadgePosition2) => {
 })(BadgePosition || {});
 var LGraphBadge = class {
   constructor({
-    text: text2,
+    text,
     fgColor = "white",
     bgColor = "#0F1F0F",
     fontSize = 12,
@@ -3912,7 +2350,7 @@ var LGraphBadge = class {
     __publicField(this, "padding");
     __publicField(this, "height");
     __publicField(this, "cornerRadius");
-    this.text = text2;
+    this.text = text;
     this.fgColor = fgColor;
     this.bgColor = bgColor;
     this.fontSize = fontSize;
@@ -3959,12 +2397,12 @@ function shallowCloneCommonProps(slot) {
   return { color_off, color_on, dir, label, localized_name, locked, name, nameLocked, removable, shape, type };
 }
 function inputAsSerialisable(slot) {
-  const { link: link2 } = slot;
+  const { link } = slot;
   const widgetOrPos = slot.widget ? { widget: { name: slot.widget.name } } : { pos: slot.pos };
   return {
     ...shallowCloneCommonProps(slot),
     ...widgetOrPos,
-    link: link2
+    link
   };
 }
 function outputAsSerialisable(slot) {
@@ -4024,7 +2462,7 @@ var NodeSlot = class {
   renderingColor(context) {
     return this.isConnected() ? this.connectedColor(context) : this.disconnectedColor(context);
   }
-  draw(ctx, options22) {
+  draw(ctx, options2) {
     const {
       pos,
       colorContext,
@@ -4032,8 +2470,8 @@ var NodeSlot = class {
       labelPosition = LabelPosition.Right,
       lowQuality = false,
       highlight = false
-    } = options22;
-    let { doStroke = false } = options22;
+    } = options2;
+    let { doStroke = false } = options2;
     const originalFillStyle = ctx.fillStyle;
     const originalStrokeStyle = ctx.strokeStyle;
     const originalLineWidth = ctx.lineWidth;
@@ -4085,20 +2523,20 @@ var NodeSlot = class {
     if (doFill) ctx.fill();
     if (!lowQuality && doStroke) ctx.stroke();
     if (!lowQuality) {
-      const text2 = this.renderingLabel;
-      if (text2) {
+      const text = this.renderingLabel;
+      if (text) {
         ctx.fillStyle = labelColor;
         if (labelPosition === LabelPosition.Right) {
           if (this.dir == LinkDirection.UP) {
-            ctx.fillText(text2, pos[0], pos[1] - 10);
+            ctx.fillText(text, pos[0], pos[1] - 10);
           } else {
-            ctx.fillText(text2, pos[0] + 10, pos[1] + 5);
+            ctx.fillText(text, pos[0] + 10, pos[1] + 5);
           }
         } else {
           if (this.dir == LinkDirection.DOWN) {
-            ctx.fillText(text2, pos[0], pos[1] - 8);
+            ctx.fillText(text, pos[0], pos[1] - 8);
           } else {
-            ctx.fillText(text2, pos[0] - 10, pos[1] + 5);
+            ctx.fillText(text, pos[0] - 10, pos[1] + 5);
           }
         }
       }
@@ -4114,8 +2552,8 @@ var NodeSlot = class {
     ctx.strokeStyle = originalStrokeStyle;
     ctx.lineWidth = originalLineWidth;
   }
-  drawCollapsed(ctx, options22) {
-    const [x2, y] = options22.pos;
+  drawCollapsed(ctx, options2) {
+    const [x2, y] = options2.pos;
     const originalFillStyle = ctx.fillStyle;
     ctx.fillStyle = "#686";
     ctx.beginPath();
@@ -4155,11 +2593,11 @@ var NodeInputSlot = class extends NodeSlot {
   isValidTarget(fromSlot) {
     return "links" in fromSlot && LiteGraph.isValidConnection(this.type, fromSlot.type);
   }
-  draw(ctx, options22) {
+  draw(ctx, options2) {
     const originalTextAlign = ctx.textAlign;
     ctx.textAlign = "left";
     super.draw(ctx, {
-      ...options22,
+      ...options2,
       labelPosition: LabelPosition.Right,
       doStroke: false
     });
@@ -4185,13 +2623,13 @@ var NodeOutputSlot = class extends NodeSlot {
   isConnected() {
     return this.links != null && this.links.length > 0;
   }
-  draw(ctx, options22) {
+  draw(ctx, options2) {
     const originalTextAlign = ctx.textAlign;
     const originalStrokeStyle = ctx.strokeStyle;
     ctx.textAlign = "right";
     ctx.strokeStyle = "black";
     super.draw(ctx, {
-      ...options22,
+      ...options2,
       labelPosition: LabelPosition.Left,
       doStroke: true
     });
@@ -4225,7 +2663,7 @@ function findFirstNode(items) {
   }
 }
 function findFreeSlotOfType(slots, type) {
-  var _a2, _b, _c;
+  var _a, _b, _c;
   if (!(slots == null ? void 0 : slots.length)) return;
   let occupiedSlot;
   let wildSlot;
@@ -4236,7 +2674,7 @@ function findFreeSlotOfType(slots, type) {
     for (const validType of validTypes) {
       for (const slotType of slotTypes) {
         if (slotType === validType) {
-          if (slot.link == null && !((_a2 = slot.links) == null ? void 0 : _a2.length)) {
+          if (slot.link == null && !((_a = slot.links) == null ? void 0 : _a.length)) {
             return { index, slot };
           }
           occupiedSlot != null ? occupiedSlot : occupiedSlot = { index, slot };
@@ -4273,10 +2711,10 @@ function distributeSpace(totalSpace, requests) {
     return requests.map((req) => req.minSize);
   }
   let allocations = requests.map((req) => {
-    var _a2, _b;
+    var _a, _b;
     return {
       computedSize: req.minSize,
-      maxSize: (_a2 = req.maxSize) != null ? _a2 : Infinity,
+      maxSize: (_a = req.maxSize) != null ? _a : Infinity,
       remaining: ((_b = req.maxSize) != null ? _b : Infinity) - req.minSize
     };
   });
@@ -4350,14 +2788,14 @@ var BaseWidget = class {
    * @param value The value to set
    * @param options The options for setting the value
    */
-  setValue(value, options22) {
-    var _a2, _b, _c, _d;
-    const { node: node2, canvas: canvas2, e: e2 } = options22;
+  setValue(value, options2) {
+    var _a, _b, _c, _d;
+    const { node: node2, canvas: canvas2, e: e2 } = options2;
     const oldValue = this.value;
     if (value === this.value) return;
     const v2 = this.type === "number" ? Number(value) : value;
     this.value = v2;
-    if (((_a2 = this.options) == null ? void 0 : _a2.property) && node2.properties[this.options.property] !== void 0) {
+    if (((_a = this.options) == null ? void 0 : _a.property) && node2.properties[this.options.property] !== void 0) {
       node2.setProperty(this.options.property, v2);
     }
     const pos = canvas2.graph_mouse;
@@ -4413,16 +2851,16 @@ var BooleanWidget = class extends BaseWidget {
       );
     }
   }
-  onClick(options22) {
-    this.setValue(!this.value, options22);
+  onClick(options2) {
+    this.setValue(!this.value, options2);
   }
 };
 var ButtonWidget = class extends BaseWidget {
   constructor(widget) {
-    var _a2;
+    var _a;
     super(widget);
     this.type = "button";
-    this.clicked = (_a2 = widget.clicked) != null ? _a2 : false;
+    this.clicked = (_a = widget.clicked) != null ? _a : false;
   }
   /**
    * Draws the widget
@@ -4462,13 +2900,13 @@ var ButtonWidget = class extends BaseWidget {
     ctx.strokeStyle = originalStrokeStyle;
     ctx.fillStyle = originalFillStyle;
   }
-  onClick(options22) {
-    var _a2;
-    const { e: e2, node: node2, canvas: canvas2 } = options22;
+  onClick(options2) {
+    var _a;
+    const { e: e2, node: node2, canvas: canvas2 } = options2;
     const pos = canvas2.graph_mouse;
     this.clicked = true;
     canvas2.setDirty(true);
-    (_a2 = this.callback) == null ? void 0 : _a2.call(this, this, canvas2, node2, pos, e2);
+    (_a = this.callback) == null ? void 0 : _a.call(this, this, canvas2, node2, pos, e2);
   }
 };
 var ComboWidget = class extends BaseWidget {
@@ -4567,8 +3005,8 @@ var ComboWidget = class extends BaseWidget {
     ctx.strokeStyle = originalStrokeStyle;
     ctx.fillStyle = originalFillStyle;
   }
-  onClick(options22) {
-    const { e: e2, node: node2, canvas: canvas2 } = options22;
+  onClick(options2) {
+    const { e: e2, node: node2, canvas: canvas2 } = options2;
     const x2 = e2.canvasX - node2.pos[0];
     const width2 = this.width || node2.size[0];
     const delta2 = x2 < 40 ? -1 : x2 > width2 - 40 ? 1 : 0;
@@ -4611,8 +3049,8 @@ var ComboWidget = class extends BaseWidget {
     });
   }
 };
-function getWidgetStep(options22) {
-  return options22.step2 || (options22.step || 10) * 0.1;
+function getWidgetStep(options2) {
+  return options2.step2 || (options2.step || 10) * 0.1;
 }
 var KnobWidget = class extends BaseWidget {
   constructor(widget) {
@@ -4644,7 +3082,7 @@ var KnobWidget = class extends BaseWidget {
     show_text = true,
     margin = 15
   }) {
-    var _a2;
+    var _a;
     const originalTextAlign = ctx.textAlign;
     const originalStrokeStyle = ctx.strokeStyle;
     const originalFillStyle = ctx.fillStyle;
@@ -4752,7 +3190,7 @@ var KnobWidget = class extends BaseWidget {
     if (show_text) {
       ctx.textAlign = "center";
       ctx.fillStyle = this.text_color;
-      const fixedValue = Number(this.value).toFixed((_a2 = this.options.precision) != null ? _a2 : 3);
+      const fixedValue = Number(this.value).toFixed((_a = this.options.precision) != null ? _a : 3);
       ctx.fillText(
         `${this.label || this.name}
 ${fixedValue}`,
@@ -4767,9 +3205,9 @@ ${fixedValue}`,
   onClick() {
     this.current_drag_offset = 0;
   }
-  onDrag(options22) {
+  onDrag(options2) {
     if (this.options.read_only) return;
-    const { e: e2 } = options22;
+    const { e: e2 } = options2;
     const step = getWidgetStep(this.options);
     const range = this.options.max - this.options.min;
     const range_10_percent = range / 10;
@@ -4799,7 +3237,7 @@ ${fixedValue}`,
       this.options.max
     );
     if (newValue2 !== this.value) {
-      this.setValue(newValue2, options22);
+      this.setValue(newValue2, options2);
     }
   }
 };
@@ -4809,7 +3247,7 @@ var NumberWidget = class extends BaseWidget {
     this.type = "number";
     this.value = widget.value;
   }
-  setValue(value, options22) {
+  setValue(value, options2) {
     let newValue2 = value;
     if (this.options.min != null && newValue2 < this.options.min) {
       newValue2 = this.options.min;
@@ -4817,7 +3255,7 @@ var NumberWidget = class extends BaseWidget {
     if (this.options.max != null && newValue2 > this.options.max) {
       newValue2 = this.options.max;
     }
-    super.setValue(newValue2, options22);
+    super.setValue(newValue2, options2);
   }
   /**
    * Draws the widget
@@ -4903,14 +3341,14 @@ var NumberWidget = class extends BaseWidget {
    * Handles drag events for the number widget
    * @param options The options for handling the drag event
    */
-  onDrag(options22) {
-    var _a2;
-    const { e: e2, node: node2, canvas: canvas2 } = options22;
+  onDrag(options2) {
+    var _a;
+    const { e: e2, node: node2, canvas: canvas2 } = options2;
     const width2 = this.width || node2.width;
     const x2 = e2.canvasX - node2.pos[0];
     const delta2 = x2 < 40 ? -1 : x2 > width2 - 40 ? 1 : 0;
     if (delta2 && (x2 > -3 && x2 < width2 + 3)) return;
-    this.setValue(this.value + ((_a2 = e2.deltaX) != null ? _a2 : 0) * getWidgetStep(this.options), { e: e2, node: node2, canvas: canvas2 });
+    this.setValue(this.value + ((_a = e2.deltaX) != null ? _a : 0) * getWidgetStep(this.options), { e: e2, node: node2, canvas: canvas2 });
   }
 };
 var SliderWidget = class extends BaseWidget {
@@ -4933,7 +3371,7 @@ var SliderWidget = class extends BaseWidget {
     show_text = true,
     margin = 15
   }) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     const originalTextAlign = ctx.textAlign;
     const originalStrokeStyle = ctx.strokeStyle;
     const originalFillStyle = ctx.fillStyle;
@@ -4943,7 +3381,7 @@ var SliderWidget = class extends BaseWidget {
     const range = this.options.max - this.options.min;
     let nvalue = (this.value - this.options.min) / range;
     nvalue = clamp(nvalue, 0, 1);
-    ctx.fillStyle = (_a2 = this.options.slider_color) != null ? _a2 : "#678";
+    ctx.fillStyle = (_a = this.options.slider_color) != null ? _a : "#678";
     ctx.fillRect(margin, y, nvalue * (width2 - margin * 2), height);
     if (show_text && !this.disabled) {
       ctx.strokeStyle = this.outline_color;
@@ -4977,37 +3415,37 @@ var SliderWidget = class extends BaseWidget {
   /**
    * Handles click events for the slider widget
    */
-  onClick(options22) {
+  onClick(options2) {
     if (this.options.read_only) return;
-    const { e: e2, node: node2 } = options22;
+    const { e: e2, node: node2 } = options2;
     const width2 = this.width || node2.size[0];
     const x2 = e2.canvasX - node2.pos[0];
     const slideFactor = clamp((x2 - 15) / (width2 - 30), 0, 1);
     const newValue2 = this.options.min + (this.options.max - this.options.min) * slideFactor;
     if (newValue2 !== this.value) {
-      this.setValue(newValue2, options22);
+      this.setValue(newValue2, options2);
     }
   }
   /**
    * Handles drag events for the slider widget
    */
-  onDrag(options22) {
+  onDrag(options2) {
     if (this.options.read_only) return false;
-    const { e: e2, node: node2 } = options22;
+    const { e: e2, node: node2 } = options2;
     const width2 = this.width || node2.size[0];
     const x2 = e2.canvasX - node2.pos[0];
     const slideFactor = clamp((x2 - 15) / (width2 - 30), 0, 1);
     const newValue2 = this.options.min + (this.options.max - this.options.min) * slideFactor;
     if (newValue2 !== this.value) {
-      this.setValue(newValue2, options22);
+      this.setValue(newValue2, options2);
     }
   }
 };
 var TextWidget = class extends BaseWidget {
   constructor(widget) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     super(widget);
-    this.type = (_a2 = widget.type) != null ? _a2 : "string";
+    this.type = (_a = widget.type) != null ? _a : "string";
     this.value = (_c = (_b = widget.value) == null ? void 0 : _b.toString()) != null ? _c : "";
   }
   /**
@@ -5059,9 +3497,9 @@ var TextWidget = class extends BaseWidget {
     ctx.strokeStyle = originalStrokeStyle;
     ctx.fillStyle = originalFillStyle;
   }
-  onClick(options22) {
-    var _a2, _b;
-    const { e: e2, node: node2, canvas: canvas2 } = options22;
+  onClick(options2) {
+    var _a, _b;
+    const { e: e2, node: node2, canvas: canvas2 } = options2;
     canvas2.prompt(
       "Value",
       this.value,
@@ -5071,7 +3509,7 @@ var TextWidget = class extends BaseWidget {
         }
       },
       e2,
-      (_b = (_a2 = this.options) == null ? void 0 : _a2.multiline) != null ? _b : false
+      (_b = (_a = this.options) == null ? void 0 : _a.multiline) != null ? _b : false
     );
   }
 };
@@ -5211,14 +3649,14 @@ var _LGraphNode = class _LGraphNode {
   }
   /** The box color used to render the node. */
   get renderingBoxColor() {
-    var _a2;
+    var _a;
     if (this.boxcolor) return this.boxcolor;
     if (LiteGraph.node_box_coloured_when_on) {
       if (this.action_triggered) return "#FFF";
       if (this.execute_triggered) return "#AAA";
     }
     if (LiteGraph.node_box_coloured_by_mode) {
-      const modeColour = LiteGraph.NODE_MODES_COLORS[(_a2 = this.mode) != null ? _a2 : LGraphEventMode.ALWAYS];
+      const modeColour = LiteGraph.NODE_MODES_COLORS[(_a = this.mode) != null ? _a : LGraphEventMode.ALWAYS];
       if (modeColour) return modeColour;
     }
     return LiteGraph.NODE_DEFAULT_BOXCOLOR;
@@ -5235,10 +3673,10 @@ var _LGraphNode = class _LGraphNode {
   }
   /** @inheritdoc {@link IColorable.getColorOption} */
   getColorOption() {
-    var _a2;
-    return (_a2 = Object.values(LGraphCanvas.node_colors).find(
+    var _a;
+    return (_a = Object.values(LGraphCanvas.node_colors).find(
       (colorOption) => colorOption.color === this.color && colorOption.bgcolor === this.bgcolor
-    )) != null ? _a2 : null;
+    )) != null ? _a : null;
   }
   /**
    * Rect describing the node area, including shadows and any protrusions.
@@ -5276,8 +3714,8 @@ var _LGraphNode = class _LGraphNode {
    * The size of the node used for rendering.
    */
   get renderingSize() {
-    var _a2;
-    return this.flags.collapsed ? [(_a2 = this._collapsed_width) != null ? _a2 : 0, 0] : this._size;
+    var _a;
+    return this.flags.collapsed ? [(_a = this._collapsed_width) != null ? _a : 0, 0] : this._size;
   }
   get shape() {
     return this._shape;
@@ -5316,14 +3754,14 @@ var _LGraphNode = class _LGraphNode {
     this.selected = value;
   }
   get title_mode() {
-    var _a2;
-    return (_a2 = this.constructor.title_mode) != null ? _a2 : TitleMode.NORMAL_TITLE;
+    var _a;
+    return (_a = this.constructor.title_mode) != null ? _a : TitleMode.NORMAL_TITLE;
   }
   /**
    * configure a node from an object containing the serialized info
    */
   configure(info) {
-    var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
     if (this.graph) {
       this.graph._version++;
     }
@@ -5331,7 +3769,7 @@ var _LGraphNode = class _LGraphNode {
       if (j == "properties") {
         for (const k in info.properties) {
           this.properties[k] = info.properties[k];
-          (_a2 = this.onPropertyChanged) == null ? void 0 : _a2.call(this, k, info.properties[k]);
+          (_a = this.onPropertyChanged) == null ? void 0 : _a.call(this, k, info.properties[k]);
         }
         continue;
       }
@@ -5353,8 +3791,8 @@ var _LGraphNode = class _LGraphNode {
     (_d = this.inputs) != null ? _d : this.inputs = [];
     this.inputs = this.inputs.map((input) => toClass(NodeInputSlot, input));
     for (const [i, input] of this.inputs.entries()) {
-      const link2 = this.graph && input.link != null ? this.graph._links.get(input.link) : null;
-      (_e = this.onConnectionsChange) == null ? void 0 : _e.call(this, NodeSlotType.INPUT, i, true, link2, input);
+      const link = this.graph && input.link != null ? this.graph._links.get(input.link) : null;
+      (_e = this.onConnectionsChange) == null ? void 0 : _e.call(this, NodeSlotType.INPUT, i, true, link, input);
       (_f = this.onInputAdded) == null ? void 0 : _f.call(this, input);
     }
     (_g = this.outputs) != null ? _g : this.outputs = [];
@@ -5362,8 +3800,8 @@ var _LGraphNode = class _LGraphNode {
     for (const [i, output] of this.outputs.entries()) {
       if (!output.links) continue;
       for (const linkId of output.links) {
-        const link2 = this.graph ? this.graph._links.get(linkId) : null;
-        (_h = this.onConnectionsChange) == null ? void 0 : _h.call(this, NodeSlotType.OUTPUT, i, true, link2, output);
+        const link = this.graph ? this.graph._links.get(linkId) : null;
+        (_h = this.onConnectionsChange) == null ? void 0 : _h.call(this, NodeSlotType.OUTPUT, i, true, link, output);
       }
       (_i = this.onOutputAdded) == null ? void 0 : _i.call(this, output);
     }
@@ -5389,7 +3827,7 @@ var _LGraphNode = class _LGraphNode {
    * serialize the content
    */
   serialize() {
-    var _a2;
+    var _a;
     const o = {
       id: this.id,
       type: this.type,
@@ -5418,7 +3856,7 @@ var _LGraphNode = class _LGraphNode {
     if (this.bgcolor) o.bgcolor = this.bgcolor;
     if (this.boxcolor) o.boxcolor = this.boxcolor;
     if (this.shape) o.shape = this.shape;
-    if ((_a2 = this.onSerialize) == null ? void 0 : _a2.call(this, o)) console.warn("node onSerialize shouldnt return anything, data should be stored in the object pass in the first parameter");
+    if ((_a = this.onSerialize) == null ? void 0 : _a.call(this, o)) console.warn("node onSerialize shouldnt return anything, data should be stored in the object pass in the first parameter");
     return o;
   }
   /* Creates a clone of this node */
@@ -5461,12 +3899,12 @@ var _LGraphNode = class _LGraphNode {
    * @param value
    */
   setProperty(name, value) {
-    var _a2;
+    var _a;
     this.properties || (this.properties = {});
     if (value === this.properties[name]) return;
     const prev_value = this.properties[name];
     this.properties[name] = value;
-    if (((_a2 = this.onPropertyChanged) == null ? void 0 : _a2.call(this, name, value, prev_value)) === false)
+    if (((_a = this.onPropertyChanged) == null ? void 0 : _a.call(this, name, value, prev_value)) === false)
       this.properties[name] = prev_value;
     if (this.widgets) {
       for (const w of this.widgets) {
@@ -5494,8 +3932,8 @@ var _LGraphNode = class _LGraphNode {
     const { links } = outputs[slot];
     if (links) {
       for (const id of links) {
-        const link2 = this.graph._links.get(id);
-        if (link2) link2.data = data;
+        const link = this.graph._links.get(id);
+        if (link) link.data = data;
       }
     }
   }
@@ -5512,8 +3950,8 @@ var _LGraphNode = class _LGraphNode {
     const { links } = outputs[slot];
     if (links) {
       for (const id of links) {
-        const link2 = this.graph._links.get(id);
-        if (link2) link2.type = type;
+        const link = this.graph._links.get(id);
+        if (link) link.type = type;
       }
     }
   }
@@ -5524,22 +3962,22 @@ var _LGraphNode = class _LGraphNode {
    * @returns data or if it is not connected returns undefined
    */
   getInputData(slot, force_update) {
-    var _a2;
+    var _a;
     if (!this.inputs) return;
     if (slot >= this.inputs.length || this.inputs[slot].link == null) return;
     if (!this.graph) throw new NullGraphError();
     const link_id = this.inputs[slot].link;
-    const link2 = this.graph._links.get(link_id);
-    if (!link2) return null;
-    if (!force_update) return link2.data;
-    const node2 = this.graph.getNodeById(link2.origin_id);
-    if (!node2) return link2.data;
+    const link = this.graph._links.get(link_id);
+    if (!link) return null;
+    if (!force_update) return link.data;
+    const node2 = this.graph.getNodeById(link.origin_id);
+    if (!node2) return link.data;
     if (node2.updateOutputData) {
-      node2.updateOutputData(link2.origin_slot);
+      node2.updateOutputData(link.origin_slot);
     } else {
-      (_a2 = node2.onExecute) == null ? void 0 : _a2.call(node2);
+      (_a = node2.onExecute) == null ? void 0 : _a.call(node2);
     }
-    return link2.data;
+    return link.data;
   }
   /**
    * Retrieves the input data type (in case this supports multiple input types)
@@ -5551,11 +3989,11 @@ var _LGraphNode = class _LGraphNode {
     if (slot >= this.inputs.length || this.inputs[slot].link == null) return null;
     if (!this.graph) throw new NullGraphError();
     const link_id = this.inputs[slot].link;
-    const link2 = this.graph._links.get(link_id);
-    if (!link2) return null;
-    const node2 = this.graph.getNodeById(link2.origin_id);
-    if (!node2) return link2.type;
-    const output_info = node2.outputs[link2.origin_slot];
+    const link = this.graph._links.get(link_id);
+    if (!link) return null;
+    const node2 = this.graph.getNodeById(link.origin_id);
+    if (!node2) return link.type;
+    const output_info = node2.outputs[link.origin_slot];
     return output_info ? output_info.type : null;
   }
   /**
@@ -5589,13 +4027,13 @@ var _LGraphNode = class _LGraphNode {
    * @returns object or null
    */
   getInputLink(slot) {
-    var _a2;
+    var _a;
     if (!this.inputs) return null;
     if (slot < this.inputs.length) {
       if (!this.graph) throw new NullGraphError();
       const input = this.inputs[slot];
       if (input.link != null) {
-        return (_a2 = this.graph._links.get(input.link)) != null ? _a2 : null;
+        return (_a = this.graph._links.get(input.link)) != null ? _a : null;
       }
     }
     return null;
@@ -5626,8 +4064,8 @@ var _LGraphNode = class _LGraphNode {
     if (!this.graph) throw new NullGraphError();
     for (const input of inputs) {
       if (name == input.name && input.link != null) {
-        const link2 = this.graph._links.get(input.link);
-        if (link2) return link2.data;
+        const link = this.graph._links.get(input.link);
+        if (link) return link.data;
       }
     }
     return this.properties[name];
@@ -5653,19 +4091,19 @@ var _LGraphNode = class _LGraphNode {
    * tells you if there is a connection in one output slot
    */
   isOutputConnected(slot) {
-    var _a2;
+    var _a;
     if (!this.outputs) return false;
-    return slot < this.outputs.length && Number((_a2 = this.outputs[slot].links) == null ? void 0 : _a2.length) > 0;
+    return slot < this.outputs.length && Number((_a = this.outputs[slot].links) == null ? void 0 : _a.length) > 0;
   }
   /**
    * tells you if there is any connection in the output slots
    */
   isAnyOutputConnected() {
-    var _a2;
+    var _a;
     const { outputs } = this;
     if (!outputs) return false;
     for (const output of outputs) {
-      if ((_a2 = output.links) == null ? void 0 : _a2.length) return true;
+      if ((_a = output.links) == null ? void 0 : _a.length) return true;
     }
     return false;
   }
@@ -5681,9 +4119,9 @@ var _LGraphNode = class _LGraphNode {
     if (!this.graph) throw new NullGraphError();
     const r = [];
     for (const id of links) {
-      const link2 = this.graph._links.get(id);
-      if (link2) {
-        const target_node = this.graph.getNodeById(link2.target_id);
+      const link = this.graph._links.get(id);
+      if (link) {
+        const target_node = this.graph.getNodeById(link.target_id);
         if (target_node) {
           r.push(target_node);
         }
@@ -5711,10 +4149,10 @@ var _LGraphNode = class _LGraphNode {
     }
     return trigS;
   }
-  onAfterExecuteNode(param, options22) {
+  onAfterExecuteNode(param, options2) {
     const trigS = this.findOutputSlot("onExecuted");
     if (trigS != -1) {
-      this.triggerSlot(trigS, param, null, options22);
+      this.triggerSlot(trigS, param, null, options2);
     }
   }
   changeMode(modeTo) {
@@ -5741,50 +4179,50 @@ var _LGraphNode = class _LGraphNode {
   /**
    * Triggers the node code execution, place a boolean/counter to mark the node as being executed
    */
-  doExecute(param, options22) {
-    var _a2;
-    options22 = options22 || {};
+  doExecute(param, options2) {
+    var _a;
+    options2 = options2 || {};
     if (this.onExecute) {
-      options22.action_call || (options22.action_call = `${this.id}_exec_${Math.floor(Math.random() * 9999)}`);
+      options2.action_call || (options2.action_call = `${this.id}_exec_${Math.floor(Math.random() * 9999)}`);
       if (!this.graph) throw new NullGraphError();
       this.graph.nodes_executing[this.id] = true;
-      this.onExecute(param, options22);
+      this.onExecute(param, options2);
       this.graph.nodes_executing[this.id] = false;
       this.exec_version = this.graph.iteration;
-      if (options22 == null ? void 0 : options22.action_call) {
-        this.action_call = options22.action_call;
-        this.graph.nodes_executedAction[this.id] = options22.action_call;
+      if (options2 == null ? void 0 : options2.action_call) {
+        this.action_call = options2.action_call;
+        this.graph.nodes_executedAction[this.id] = options2.action_call;
       }
     }
     this.execute_triggered = 2;
-    (_a2 = this.onAfterExecuteNode) == null ? void 0 : _a2.call(this, param, options22);
+    (_a = this.onAfterExecuteNode) == null ? void 0 : _a.call(this, param, options2);
   }
   /**
    * Triggers an action, wrapped by logics to control execution flow
    * @param action name
    */
-  actionDo(action, param, options22) {
-    var _a2;
-    options22 = options22 || {};
+  actionDo(action, param, options2) {
+    var _a;
+    options2 = options2 || {};
     if (this.onAction) {
-      options22.action_call || (options22.action_call = `${this.id}_${action || "action"}_${Math.floor(Math.random() * 9999)}`);
+      options2.action_call || (options2.action_call = `${this.id}_${action || "action"}_${Math.floor(Math.random() * 9999)}`);
       if (!this.graph) throw new NullGraphError();
       this.graph.nodes_actioning[this.id] = action || "actioning";
-      this.onAction(action, param, options22);
+      this.onAction(action, param, options2);
       this.graph.nodes_actioning[this.id] = false;
-      if (options22 == null ? void 0 : options22.action_call) {
-        this.action_call = options22.action_call;
-        this.graph.nodes_executedAction[this.id] = options22.action_call;
+      if (options2 == null ? void 0 : options2.action_call) {
+        this.action_call = options2.action_call;
+        this.graph.nodes_executedAction[this.id] = options2.action_call;
       }
     }
     this.action_triggered = 2;
-    (_a2 = this.onAfterExecuteNode) == null ? void 0 : _a2.call(this, param, options22);
+    (_a = this.onAfterExecuteNode) == null ? void 0 : _a.call(this, param, options2);
   }
   /**
    * Triggers an event in this node, this will trigger any output with the same name
    * @param action name ( "on_play", ... ) if action is equivalent to false then the event is send to all
    */
-  trigger(action, param, options22) {
+  trigger(action, param, options2) {
     const { outputs } = this;
     if (!outputs || !outputs.length) {
       return;
@@ -5794,7 +4232,7 @@ var _LGraphNode = class _LGraphNode {
       if (!output || output.type !== LiteGraph.EVENT || action && output.name != action) {
         continue;
       }
-      this.triggerSlot(i, param, null, options22);
+      this.triggerSlot(i, param, null, options2);
     }
   }
   /**
@@ -5802,9 +4240,9 @@ var _LGraphNode = class _LGraphNode {
    * @param slot the index of the output slot
    * @param link_id [optional] in case you want to trigger and specific output link in a slot
    */
-  triggerSlot(slot, param, link_id, options22) {
-    var _a2;
-    options22 = options22 || {};
+  triggerSlot(slot, param, link_id, options2) {
+    var _a;
+    options2 = options2 || {};
     if (!this.outputs) return;
     if (slot == null) {
       console.error("slot must be a number");
@@ -5826,14 +4264,14 @@ var _LGraphNode = class _LGraphNode {
       const node2 = this.graph.getNodeById(link_info.target_id);
       if (!node2) continue;
       if (node2.mode === LGraphEventMode.ON_TRIGGER) {
-        if (!options22.action_call)
-          options22.action_call = `${this.id}_trigg_${Math.floor(Math.random() * 9999)}`;
-        (_a2 = node2.doExecute) == null ? void 0 : _a2.call(node2, param, options22);
+        if (!options2.action_call)
+          options2.action_call = `${this.id}_trigg_${Math.floor(Math.random() * 9999)}`;
+        (_a = node2.doExecute) == null ? void 0 : _a.call(node2, param, options2);
       } else if (node2.onAction) {
-        if (!options22.action_call)
-          options22.action_call = `${this.id}_act_${Math.floor(Math.random() * 9999)}`;
+        if (!options2.action_call)
+          options2.action_call = `${this.id}_act_${Math.floor(Math.random() * 9999)}`;
         const target_connection = node2.inputs[link_info.target_slot];
-        node2.actionDo(target_connection.name, param, options22);
+        node2.actionDo(target_connection.name, param, options2);
       }
     }
   }
@@ -5860,9 +4298,9 @@ var _LGraphNode = class _LGraphNode {
    * changes node size and triggers callback
    */
   setSize(size) {
-    var _a2;
+    var _a;
     this.size = size;
-    (_a2 = this.onResize) == null ? void 0 : _a2.call(this, this.size);
+    (_a = this.onResize) == null ? void 0 : _a.call(this, this.size);
   }
   /**
    * Expands the node size to fit its content.
@@ -5894,12 +4332,12 @@ var _LGraphNode = class _LGraphNode {
    * @param extra_info this can be used to have special properties of an output (label, special color, position, etc)
    */
   addOutput(name, type, extra_info) {
-    var _a2;
+    var _a;
     const output = new NodeOutputSlot({ name, type, links: null });
     if (extra_info) Object.assign(output, extra_info);
     this.outputs || (this.outputs = []);
     this.outputs.push(output);
-    (_a2 = this.onOutputAdded) == null ? void 0 : _a2.call(this, output);
+    (_a = this.onOutputAdded) == null ? void 0 : _a.call(this, output);
     if (LiteGraph.auto_load_slot_types)
       LiteGraph.registerNodeAndSlotType(this, type, true);
     this.expandToFitContent();
@@ -5911,13 +4349,13 @@ var _LGraphNode = class _LGraphNode {
    * @param array of triplets like [[name,type,extra_info],[...]]
    */
   addOutputs(array) {
-    var _a2;
+    var _a;
     for (const info of array) {
       const o = new NodeOutputSlot({ name: info[0], type: info[1], links: null });
       if (array[2]) Object.assign(o, info[2]);
       this.outputs || (this.outputs = []);
       this.outputs.push(o);
-      (_a2 = this.onOutputAdded) == null ? void 0 : _a2.call(this, o);
+      (_a = this.onOutputAdded) == null ? void 0 : _a.call(this, o);
       if (LiteGraph.auto_load_slot_types)
         LiteGraph.registerNodeAndSlotType(this, info[1], true);
     }
@@ -5928,7 +4366,7 @@ var _LGraphNode = class _LGraphNode {
    * remove an existing output slot
    */
   removeOutput(slot) {
-    var _a2;
+    var _a;
     this.disconnectOutput(slot);
     const { outputs } = this;
     outputs.splice(slot, 1);
@@ -5937,11 +4375,11 @@ var _LGraphNode = class _LGraphNode {
       if (!output || !output.links) continue;
       for (const linkId of output.links) {
         if (!this.graph) throw new NullGraphError();
-        const link2 = this.graph._links.get(linkId);
-        if (link2) link2.origin_slot--;
+        const link = this.graph._links.get(linkId);
+        if (link) link.origin_slot--;
       }
     }
-    (_a2 = this.onOutputRemoved) == null ? void 0 : _a2.call(this, slot);
+    (_a = this.onOutputRemoved) == null ? void 0 : _a.call(this, slot);
     this.setDirtyCanvas(true, true);
   }
   /**
@@ -5950,14 +4388,14 @@ var _LGraphNode = class _LGraphNode {
    * @param extra_info this can be used to have special properties of an input (label, color, position, etc)
    */
   addInput(name, type, extra_info) {
-    var _a2;
+    var _a;
     type = type || 0;
     const input = new NodeInputSlot({ name, type, link: null });
     if (extra_info) Object.assign(input, extra_info);
     this.inputs || (this.inputs = []);
     this.inputs.push(input);
     this.expandToFitContent();
-    (_a2 = this.onInputAdded) == null ? void 0 : _a2.call(this, input);
+    (_a = this.onInputAdded) == null ? void 0 : _a.call(this, input);
     LiteGraph.registerNodeAndSlotType(this, type);
     this.setDirtyCanvas(true, true);
     return input;
@@ -5967,13 +4405,13 @@ var _LGraphNode = class _LGraphNode {
    * @param array of triplets like [[name,type,extra_info],[...]]
    */
   addInputs(array) {
-    var _a2;
+    var _a;
     for (const info of array) {
       const o = new NodeInputSlot({ name: info[0], type: info[1], link: null });
       if (array[2]) Object.assign(o, info[2]);
       this.inputs || (this.inputs = []);
       this.inputs.push(o);
-      (_a2 = this.onInputAdded) == null ? void 0 : _a2.call(this, o);
+      (_a = this.onInputAdded) == null ? void 0 : _a.call(this, o);
       LiteGraph.registerNodeAndSlotType(this, info[1]);
     }
     this.expandToFitContent();
@@ -5983,7 +4421,7 @@ var _LGraphNode = class _LGraphNode {
    * remove an existing input slot
    */
   removeInput(slot) {
-    var _a2;
+    var _a;
     this.disconnectInput(slot, true);
     const { inputs } = this;
     const slot_info = inputs.splice(slot, 1);
@@ -5991,10 +4429,10 @@ var _LGraphNode = class _LGraphNode {
       const input = inputs[i];
       if (!(input == null ? void 0 : input.link)) continue;
       if (!this.graph) throw new NullGraphError();
-      const link2 = this.graph._links.get(input.link);
-      if (link2) link2.target_slot--;
+      const link = this.graph._links.get(input.link);
+      if (link) link.target_slot--;
     }
-    (_a2 = this.onInputRemoved) == null ? void 0 : _a2.call(this, slot, slot_info[0]);
+    (_a = this.onInputRemoved) == null ? void 0 : _a.call(this, slot, slot_info[0]);
     this.setDirtyCanvas(true, true);
   }
   /**
@@ -6019,7 +4457,7 @@ var _LGraphNode = class _LGraphNode {
    * @returns the total size
    */
   computeSize(out) {
-    var _a2, _b;
+    var _a, _b;
     const ctorSize = this.constructor.size;
     if (ctorSize) return [ctorSize[0], ctorSize[1]];
     const { inputs, outputs } = this;
@@ -6035,23 +4473,23 @@ var _LGraphNode = class _LGraphNode {
     let output_width = 0;
     if (inputs) {
       for (const input of inputs) {
-        const text2 = input.label || input.localized_name || input.name || "";
-        const text_width = compute_text_size(text2);
+        const text = input.label || input.localized_name || input.name || "";
+        const text_width = compute_text_size(text);
         if (input_width < text_width)
           input_width = text_width;
       }
     }
     if (outputs) {
       for (const output of outputs) {
-        const text2 = output.label || output.localized_name || output.name || "";
-        const text_width = compute_text_size(text2);
+        const text = output.label || output.localized_name || output.name || "";
+        const text_width = compute_text_size(text);
         if (output_width < text_width)
           output_width = text_width;
       }
     }
     size[0] = Math.max(input_width + output_width + 10, title_width);
     size[0] = Math.max(size[0], LiteGraph.NODE_WIDTH);
-    if ((_a2 = this.widgets) == null ? void 0 : _a2.length)
+    if ((_a = this.widgets) == null ? void 0 : _a.length)
       size[0] = Math.max(size[0], LiteGraph.NODE_WIDTH * 1.5);
     size[1] = (this.constructor.slot_start_y || 0) + rows * LiteGraph.NODE_SLOT_HEIGHT;
     let widgets_height = 0;
@@ -6076,8 +4514,8 @@ var _LGraphNode = class _LGraphNode {
       size[1] = Math.max(size[1], widgets_height + this.widgets_start_y);
     else
       size[1] += widgets_height;
-    function compute_text_size(text2) {
-      return text2 ? font_size * text2.length * 0.6 : 0;
+    function compute_text_size(text) {
+      return text ? font_size * text.length * 0.6 : 0;
     }
     if (this.constructor.min_height && size[1] < this.constructor.min_height) {
       size[1] = this.constructor.min_height;
@@ -6103,7 +4541,7 @@ var _LGraphNode = class _LGraphNode {
    * @returns the object with all the available info
    */
   getPropertyInfo(property) {
-    var _a2;
+    var _a;
     let info = null;
     const { properties_info } = this;
     if (properties_info) {
@@ -6115,7 +4553,7 @@ var _LGraphNode = class _LGraphNode {
       }
     }
     if (this.constructor[`@${property}`]) info = this.constructor[`@${property}`];
-    if ((_a2 = this.constructor.widgets_info) == null ? void 0 : _a2[property])
+    if ((_a = this.constructor.widgets_info) == null ? void 0 : _a[property])
       info = this.constructor.widgets_info[property];
     if (!info && this.onGetPropertyInfo) {
       info = this.onGetPropertyInfo(property);
@@ -6134,17 +4572,17 @@ var _LGraphNode = class _LGraphNode {
    * @param options the object that contains special properties of this widget
    * @returns the created widget object
    */
-  addWidget(type, name, value, callback, options22) {
+  addWidget(type, name, value, callback, options2) {
     this.widgets || (this.widgets = []);
-    if (!options22 && callback && typeof callback === "object") {
-      options22 = callback;
+    if (!options2 && callback && typeof callback === "object") {
+      options2 = callback;
       callback = null;
     }
-    options22 || (options22 = {});
-    if (typeof options22 === "string")
-      options22 = { property: options22 };
+    options2 || (options2 = {});
+    if (typeof options2 === "string")
+      options2 = { property: options2 };
     if (callback && typeof callback === "string") {
-      options22.property = callback;
+      options2.property = callback;
       callback = null;
     }
     const w = {
@@ -6153,7 +4591,7 @@ var _LGraphNode = class _LGraphNode {
       name,
       value,
       callback: typeof callback !== "function" ? void 0 : callback,
-      options: options22,
+      options: options2,
       y: 0
     };
     if (w.options.y !== void 0) {
@@ -6191,13 +4629,13 @@ var _LGraphNode = class _LGraphNode {
    * @param ctx The canvas context to use for measuring text.
    */
   measure(out, ctx) {
-    var _a2, _b;
+    var _a, _b;
     const titleMode = this.title_mode;
     const renderTitle = titleMode != TitleMode.TRANSPARENT_TITLE && titleMode != TitleMode.NO_TITLE;
     const titleHeight = renderTitle ? LiteGraph.NODE_TITLE_HEIGHT : 0;
     out[0] = this.pos[0];
     out[1] = this.pos[1] + -titleHeight;
-    if (!((_a2 = this.flags) == null ? void 0 : _a2.collapsed)) {
+    if (!((_a = this.flags) == null ? void 0 : _a.collapsed)) {
       out[2] = this.size[0];
       out[3] = this.size[1] + titleHeight;
     } else {
@@ -6231,10 +4669,10 @@ var _LGraphNode = class _LGraphNode {
    * Called automatically at the start of every frame.
    */
   updateArea(ctx) {
-    var _a2;
+    var _a;
     const bounds = __privateGet(this, _boundingRect);
     this.measure(bounds, ctx);
-    (_a2 = this.onBounding) == null ? void 0 : _a2.call(this, bounds);
+    (_a = this.onBounding) == null ? void 0 : _a.call(this, bounds);
     const renderArea = __privateGet(this, _renderArea);
     renderArea.set(bounds);
     renderArea[0] -= 4;
@@ -6271,8 +4709,8 @@ var _LGraphNode = class _LGraphNode {
    * @returns The input slot at the given position if found, otherwise `undefined`.
    */
   getInputOnPos(pos) {
-    var _a2;
-    return (_a2 = getNodeInputOnPos(this, pos[0], pos[1])) == null ? void 0 : _a2.input;
+    var _a;
+    return (_a = getNodeInputOnPos(this, pos[0], pos[1])) == null ? void 0 : _a.input;
   }
   /**
    * Returns the output slot at the given position. Uses full 20x20 box for the slot.
@@ -6280,8 +4718,8 @@ var _LGraphNode = class _LGraphNode {
    * @returns The output slot at the given position if found, otherwise `undefined`.
    */
   getOutputOnPos(pos) {
-    var _a2;
-    return (_a2 = getNodeOutputOnPos(this, pos[0], pos[1])) == null ? void 0 : _a2.output;
+    var _a;
+    return (_a = getNodeOutputOnPos(this, pos[0], pos[1])) == null ? void 0 : _a.output;
   }
   /**
    * Returns the input or output slot at the given position.
@@ -6291,9 +4729,9 @@ var _LGraphNode = class _LGraphNode {
    * @returns The input or output slot at the given position if found, otherwise `undefined`.
    */
   getSlotOnPos(pos) {
-    var _a2;
+    var _a;
     if (!isPointInRect(pos, this.boundingRect)) return;
-    return (_a2 = this.getInputOnPos(pos)) != null ? _a2 : this.getOutputOnPos(pos);
+    return (_a = this.getInputOnPos(pos)) != null ? _a : this.getOutputOnPos(pos);
   }
   /**
    * @deprecated Use {@link getSlotOnPos} instead.
@@ -6329,7 +4767,7 @@ var _LGraphNode = class _LGraphNode {
    * @returns The widget found, otherwise `null`
    */
   getWidgetOnPos(canvasX, canvasY, includeDisabled = false) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     const { widgets, pos, size } = this;
     if (!(widgets == null ? void 0 : widgets.length)) return null;
     const x2 = canvasX - pos[0];
@@ -6339,7 +4777,7 @@ var _LGraphNode = class _LGraphNode {
       if (widget.disabled && !includeDisabled || widget.hidden || widget.advanced && !this.showAdvanced) {
         continue;
       }
-      const h = (_c = (_b = widget.computedHeight) != null ? _b : (_a2 = widget.computeSize) == null ? void 0 : _a2.call(widget, nodeWidth)[1]) != null ? _c : LiteGraph.NODE_WIDGET_HEIGHT;
+      const h = (_c = (_b = widget.computedHeight) != null ? _b : (_a = widget.computeSize) == null ? void 0 : _a.call(widget, nodeWidth)[1]) != null ? _c : LiteGraph.NODE_WIDGET_HEIGHT;
       const w = widget.width || nodeWidth;
       if (widget.last_y !== void 0 && isInRectangle(x2, y, 6, widget.last_y, w - 12, h)) {
         return widget;
@@ -6391,18 +4829,18 @@ var _LGraphNode = class _LGraphNode {
    * @see {connectByType}
    * @see {connectByTypeOutput}
    */
-  findConnectByTypeSlot(findInputs, node2, slotType, options22) {
-    if (options22 && typeof options22 === "object") {
-      if ("firstFreeIfInputGeneralInCase" in options22) options22.wildcardToTyped = !!options22.firstFreeIfInputGeneralInCase;
-      if ("firstFreeIfOutputGeneralInCase" in options22) options22.wildcardToTyped = !!options22.firstFreeIfOutputGeneralInCase;
-      if ("generalTypeInCase" in options22) options22.typedToWildcard = !!options22.generalTypeInCase;
+  findConnectByTypeSlot(findInputs, node2, slotType, options2) {
+    if (options2 && typeof options2 === "object") {
+      if ("firstFreeIfInputGeneralInCase" in options2) options2.wildcardToTyped = !!options2.firstFreeIfInputGeneralInCase;
+      if ("firstFreeIfOutputGeneralInCase" in options2) options2.wildcardToTyped = !!options2.firstFreeIfOutputGeneralInCase;
+      if ("generalTypeInCase" in options2) options2.typedToWildcard = !!options2.generalTypeInCase;
     }
     const optsDef = {
       createEventInCase: true,
       wildcardToTyped: true,
       typedToWildcard: true
     };
-    const opts = Object.assign(optsDef, options22);
+    const opts = Object.assign(optsDef, options2);
     if (!this.graph) throw new NullGraphError();
     if (node2 && typeof node2 === "number") {
       const nodeById = this.graph.getNodeById(node2);
@@ -6504,7 +4942,7 @@ var _LGraphNode = class _LGraphNode {
    * @returns the link_info is created, otherwise null
    */
   connect(slot, target_node, target_slot, afterRerouteId) {
-    var _a2;
+    var _a;
     let targetIndex;
     const { graph, outputs } = this;
     if (!graph) {
@@ -6557,14 +4995,14 @@ var _LGraphNode = class _LGraphNode {
     const input = target_node.inputs[targetIndex];
     const output = outputs[slot];
     if (!output) return null;
-    if ((_a2 = output.links) == null ? void 0 : _a2.length) {
+    if ((_a = output.links) == null ? void 0 : _a.length) {
       if (output.type === LiteGraph.EVENT && !LiteGraph.allow_multi_output_for_events) {
         graph.beforeChange();
         this.disconnectOutput(slot, false, { doProcessChange: false });
       }
     }
-    const link2 = this.connectSlots(output, target_node, input, afterRerouteId);
-    return link2 != null ? link2 : null;
+    const link = this.connectSlots(output, target_node, input, afterRerouteId);
+    return link != null ? link : null;
   }
   /**
    * Connect two slots between two nodes
@@ -6575,7 +5013,7 @@ var _LGraphNode = class _LGraphNode {
    * @returns The link that was created, or null if the connection was blocked
    */
   connectSlots(output, inputNode, input, afterRerouteId) {
-    var _a2, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f;
     const { graph } = this;
     if (!graph) throw new NullGraphError();
     const outputIndex = this.outputs.indexOf(output);
@@ -6592,7 +5030,7 @@ var _LGraphNode = class _LGraphNode {
       this.setDirtyCanvas(false, true);
       return null;
     }
-    if (((_a2 = inputNode.onConnectInput) == null ? void 0 : _a2.call(inputNode, inputIndex, output.type, output, this, outputIndex)) === false)
+    if (((_a = inputNode.onConnectInput) == null ? void 0 : _a.call(inputNode, inputIndex, output.type, output, this, outputIndex)) === false)
       return null;
     if (((_b = this.onConnectOutput) == null ? void 0 : _b.call(this, outputIndex, input.type, input, inputNode, inputIndex)) === false)
       return null;
@@ -6600,7 +5038,7 @@ var _LGraphNode = class _LGraphNode {
       graph.beforeChange();
       inputNode.disconnectInput(inputIndex, true);
     }
-    const link2 = new LLink(
+    const link = new LLink(
       ++graph.state.lastLinkId,
       input.type || output.type,
       this.id,
@@ -6609,22 +5047,22 @@ var _LGraphNode = class _LGraphNode {
       inputIndex,
       afterRerouteId
     );
-    graph._links.set(link2.id, link2);
+    graph._links.set(link.id, link);
     (_d = output.links) != null ? _d : output.links = [];
-    output.links.push(link2.id);
-    inputNode.inputs[inputIndex].link = link2.id;
-    const reroutes = LLink.getReroutes(graph, link2);
+    output.links.push(link.id);
+    inputNode.inputs[inputIndex].link = link.id;
+    const reroutes = LLink.getReroutes(graph, link);
     for (const reroute of reroutes) {
-      reroute.linkIds.add(link2.id);
+      reroute.linkIds.add(link.id);
       if (reroute.floating) delete reroute.floating;
       reroute._dragging = void 0;
     }
     const lastReroute = reroutes.at(-1);
     if (lastReroute) {
       for (const linkId of lastReroute.floatingLinkIds) {
-        const link22 = graph.floatingLinks.get(linkId);
-        if ((link22 == null ? void 0 : link22.parentId) === lastReroute.id) {
-          graph.removeFloatingLink(link22);
+        const link2 = graph.floatingLinks.get(linkId);
+        if ((link2 == null ? void 0 : link2.parentId) === lastReroute.id) {
+          graph.removeFloatingLink(link2);
         }
       }
     }
@@ -6634,7 +5072,7 @@ var _LGraphNode = class _LGraphNode {
       NodeSlotType.OUTPUT,
       outputIndex,
       true,
-      link2,
+      link,
       output
     );
     (_f = inputNode.onConnectionsChange) == null ? void 0 : _f.call(
@@ -6642,16 +5080,16 @@ var _LGraphNode = class _LGraphNode {
       NodeSlotType.INPUT,
       inputIndex,
       true,
-      link2,
+      link,
       input
     );
     this.setDirtyCanvas(false, true);
     graph.afterChange();
     graph.connectionChange(this);
-    return link2;
+    return link;
   }
   connectFloatingReroute(pos, slot, afterRerouteId) {
-    var _a2, _b;
+    var _a, _b;
     const { graph, id } = this;
     if (!graph) throw new NullGraphError();
     const inputIndex = this.inputs.indexOf(slot);
@@ -6665,9 +5103,9 @@ var _LGraphNode = class _LGraphNode {
       floating: { slotType }
     });
     const parentReroute = graph.getReroute(afterRerouteId);
-    const fromLastFloatingReroute = ((_a2 = parentReroute == null ? void 0 : parentReroute.floating) == null ? void 0 : _a2.slotType) === "output";
+    const fromLastFloatingReroute = ((_a = parentReroute == null ? void 0 : parentReroute.floating) == null ? void 0 : _a.slotType) === "output";
     if (afterRerouteId == null || !fromLastFloatingReroute) {
-      const link22 = new LLink(
+      const link2 = new LLink(
         -1,
         slot.type,
         outputIndex === -1 ? -1 : id,
@@ -6675,15 +5113,15 @@ var _LGraphNode = class _LGraphNode {
         inputIndex === -1 ? -1 : id,
         inputIndex
       );
-      link22.parentId = reroute.id;
-      graph.addFloatingLink(link22);
+      link2.parentId = reroute.id;
+      graph.addFloatingLink(link2);
       return reroute;
     }
     if (!parentReroute) throw new Error("[connectFloatingReroute] Parent reroute not found");
-    const link2 = (_b = parentReroute.getFloatingLinks("output")) == null ? void 0 : _b[0];
-    if (!link2) throw new Error("[connectFloatingReroute] Floating link not found");
-    reroute.floatingLinkIds.add(link2.id);
-    link2.parentId = reroute.id;
+    const link = (_b = parentReroute.getFloatingLinks("output")) == null ? void 0 : _b[0];
+    if (!link) throw new Error("[connectFloatingReroute] Floating link not found");
+    reroute.floatingLinkIds.add(link.id);
+    link.parentId = reroute.id;
     delete parentReroute.floating;
     return reroute;
   }
@@ -6695,7 +5133,7 @@ var _LGraphNode = class _LGraphNode {
    * @returns if it was disconnected successfully
    */
   disconnectOutput(slot, target_node) {
-    var _a2, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e;
     if (typeof slot === "string") {
       slot = this.findOutputSlot(slot);
       if (slot == -1) {
@@ -6709,9 +5147,9 @@ var _LGraphNode = class _LGraphNode {
     const output = this.outputs[slot];
     if (!output) return false;
     if (output._floatingLinks) {
-      for (const link2 of output._floatingLinks) {
-        if (link2.hasOrigin(this.id, slot)) {
-          (_a2 = this.graph) == null ? void 0 : _a2.removeFloatingLink(link2);
+      for (const link of output._floatingLinks) {
+        if (link.hasOrigin(this.id, slot)) {
+          (_a = this.graph) == null ? void 0 : _a.removeFloatingLink(link);
         }
       }
     }
@@ -6789,7 +5227,7 @@ var _LGraphNode = class _LGraphNode {
    * @returns true if disconnected successfully or already disconnected, otherwise false
    */
   disconnectInput(slot, keepReroutes) {
-    var _a2, _b, _c, _d;
+    var _a, _b, _c, _d;
     if (typeof slot === "string") {
       slot = this.findInputSlot(slot);
       if (slot == -1) {
@@ -6806,9 +5244,9 @@ var _LGraphNode = class _LGraphNode {
     if (!input) return false;
     const { graph } = this;
     if (!graph) throw new NullGraphError();
-    if ((_a2 = input._floatingLinks) == null ? void 0 : _a2.size) {
-      for (const link2 of input._floatingLinks) {
-        graph.removeFloatingLink(link2);
+    if ((_a = input._floatingLinks) == null ? void 0 : _a.size) {
+      for (const link of input._floatingLinks) {
+        graph.removeFloatingLink(link);
       }
     }
     const link_id = this.inputs[slot].link;
@@ -6860,7 +5298,7 @@ var _LGraphNode = class _LGraphNode {
    * @returns the position
    */
   getConnectionPos(is_input, slot_number, out) {
-    var _a2, _b;
+    var _a, _b;
     out || (out = new Float32Array(2));
     const { pos: [nodeX, nodeY], inputs, outputs } = this;
     if (this.flags.collapsed) {
@@ -6874,7 +5312,7 @@ var _LGraphNode = class _LGraphNode {
       out[1] = nodeY + LiteGraph.NODE_TITLE_HEIGHT * 0.5;
       return out;
     }
-    const inputPos = (_a2 = inputs == null ? void 0 : inputs[slot_number]) == null ? void 0 : _a2.pos;
+    const inputPos = (_a = inputs == null ? void 0 : inputs[slot_number]) == null ? void 0 : _a.pos;
     const outputPos = (_b = outputs == null ? void 0 : outputs[slot_number]) == null ? void 0 : _b.pos;
     if (is_input && inputPos) {
       out[0] = nodeX + inputPos[0];
@@ -6898,13 +5336,13 @@ var _LGraphNode = class _LGraphNode {
    * @returns Position of the input slot
    */
   getInputPos(slot) {
-    var _a2;
+    var _a;
     const { pos: [nodeX, nodeY], inputs } = this;
     if (this.flags.collapsed) {
       const halfTitle = LiteGraph.NODE_TITLE_HEIGHT * 0.5;
       return [nodeX, nodeY - halfTitle];
     }
-    const inputPos = (_a2 = inputs == null ? void 0 : inputs[slot]) == null ? void 0 : _a2.pos;
+    const inputPos = (_a = inputs == null ? void 0 : inputs[slot]) == null ? void 0 : _a.pos;
     if (inputPos) return [nodeX + inputPos[0], nodeY + inputPos[1]];
     const offsetX = LiteGraph.NODE_SLOT_HEIGHT * 0.5;
     const nodeOffsetY = this.constructor.slot_start_y || 0;
@@ -6919,14 +5357,14 @@ var _LGraphNode = class _LGraphNode {
    * @returns Position of the output slot
    */
   getOutputPos(slot) {
-    var _a2;
+    var _a;
     const { pos: [nodeX, nodeY], outputs, size: [width2] } = this;
     if (this.flags.collapsed) {
       const width22 = this._collapsed_width || LiteGraph.NODE_COLLAPSED_WIDTH;
       const halfTitle = LiteGraph.NODE_TITLE_HEIGHT * 0.5;
       return [nodeX + width22, nodeY - halfTitle];
     }
-    const outputPos = (_a2 = outputs == null ? void 0 : outputs[slot]) == null ? void 0 : _a2.pos;
+    const outputPos = (_a = outputs == null ? void 0 : outputs[slot]) == null ? void 0 : _a.pos;
     if (outputPos) return outputPos;
     const offsetX = LiteGraph.NODE_SLOT_HEIGHT * 0.5;
     const nodeOffsetY = this.constructor.slot_start_y || 0;
@@ -6950,8 +5388,8 @@ var _LGraphNode = class _LGraphNode {
   }
   /* Forces to redraw or the main canvas (LGraphNode) or the bg canvas (links) */
   setDirtyCanvas(dirty_foreground, dirty_background) {
-    var _a2;
-    (_a2 = this.graph) == null ? void 0 : _a2.canvasAction((c) => c.setDirty(dirty_foreground, dirty_background));
+    var _a;
+    (_a = this.graph) == null ? void 0 : _a.canvasAction((c) => c.setDirty(dirty_foreground, dirty_background));
   }
   loadImage(url) {
     const img = new Image();
@@ -6967,8 +5405,8 @@ var _LGraphNode = class _LGraphNode {
   /* Allows to get onMouseMove and onMouseUp events even if the mouse is out of focus */
   captureInput(v2) {
     if (!this.graph || !this.graph.list_of_graphcanvas) return;
-    const list2 = this.graph.list_of_graphcanvas;
-    for (const c of list2) {
+    const list = this.graph.list_of_graphcanvas;
+    for (const c of list) {
       if (!v2 && c.node_capturing_input != this) continue;
       c.node_capturing_input = v2 ? this : null;
     }
@@ -6993,8 +5431,8 @@ var _LGraphNode = class _LGraphNode {
    * Toggles advanced mode of the node, showing advanced widgets
    */
   toggleAdvanced() {
-    var _a2;
-    if (!((_a2 = this.widgets) == null ? void 0 : _a2.some((w) => w.advanced))) return;
+    var _a;
+    if (!((_a = this.widgets) == null ? void 0 : _a.some((w) => w.advanced))) return;
     if (!this.graph) throw new NullGraphError();
     this.graph._version++;
     this.showAdvanced = !this.showAdvanced;
@@ -7052,12 +5490,12 @@ var _LGraphNode = class _LGraphNode {
   /**
    * Renders the node's title bar background
    */
-  drawTitleBarBackground(ctx, options22) {
+  drawTitleBarBackground(ctx, options2) {
     const {
       scale,
       title_height = LiteGraph.NODE_TITLE_HEIGHT,
       low_quality = false
-    } = options22;
+    } = options2;
     const fgcolor = this.renderingColor;
     const shape = this.renderingShape;
     const size = this.renderingSize;
@@ -7092,13 +5530,13 @@ var _LGraphNode = class _LGraphNode {
    * when clicked toggles the node's collapsed state. The term `title box` comes
    * from the original LiteGraph implementation.
    */
-  drawTitleBox(ctx, options22) {
+  drawTitleBox(ctx, options2) {
     const {
       scale,
       low_quality = false,
       title_height = LiteGraph.NODE_TITLE_HEIGHT,
       box_size = 10
-    } = options22;
+    } = options2;
     const size = this.renderingSize;
     const shape = this.renderingShape;
     if (this.onDrawTitleBox) {
@@ -7159,14 +5597,14 @@ var _LGraphNode = class _LGraphNode {
   /**
    * Renders the node's title text.
    */
-  drawTitleText(ctx, options22) {
-    var _a2;
+  drawTitleText(ctx, options2) {
+    var _a;
     const {
       scale,
       default_title_color,
       low_quality = false,
       title_height = LiteGraph.NODE_TITLE_HEIGHT
-    } = options22;
+    } = options2;
     const size = this.renderingSize;
     const selected = this.selected;
     if (this.onDrawTitleText) {
@@ -7184,7 +5622,7 @@ var _LGraphNode = class _LGraphNode {
       return;
     }
     ctx.font = this.titleFontStyle;
-    const rawTitle = (_a2 = this.getTitle()) != null ? _a2 : `\u274C ${this.type}`;
+    const rawTitle = (_a = this.getTitle()) != null ? _a : `\u274C ${this.type}`;
     const title = String(rawTitle) + (this.pinned ? "\u{1F4CC}" : "");
     if (title) {
       if (selected) {
@@ -7227,7 +5665,7 @@ var _LGraphNode = class _LGraphNode {
    * @todo Decision: Change API to return array of new links instead?
    */
   connectInputToOutput() {
-    var _a2;
+    var _a;
     const { inputs, outputs, graph } = this;
     if (!inputs || !outputs) return;
     if (!graph) throw new NullGraphError();
@@ -7243,7 +5681,7 @@ var _LGraphNode = class _LGraphNode {
       if (!inNode) continue;
       bypassAllLinks(output, inNode, inLink, graph);
     }
-    if (!((_a2 = this.flags.keepAllLinksOnBypass) != null ? _a2 : _LGraphNode.keepAllLinksOnBypass))
+    if (!((_a = this.flags.keepAllLinksOnBypass) != null ? _a : _LGraphNode.keepAllLinksOnBypass))
       return madeAnyConnections;
     for (const input of inputs) {
       if (input.link == null) continue;
@@ -7259,8 +5697,8 @@ var _LGraphNode = class _LGraphNode {
     }
     return madeAnyConnections;
     function bypassAllLinks(output, inNode, inLink, graph2) {
-      var _a3;
-      const outLinks = (_a3 = output.links) == null ? void 0 : _a3.map((x2) => _links.get(x2)).filter((x2) => !!x2);
+      var _a2;
+      const outLinks = (_a2 = output.links) == null ? void 0 : _a2.map((x2) => _links.get(x2)).filter((x2) => !!x2);
       if (!(outLinks == null ? void 0 : outLinks.length)) return;
       for (const outLink of outLinks) {
         const outNode = graph2.getNodeById(outLink.target_id);
@@ -7275,10 +5713,10 @@ var _LGraphNode = class _LGraphNode {
       }
     }
   }
-  drawWidgets(ctx, options22) {
-    var _a2;
+  drawWidgets(ctx, options2) {
+    var _a;
     if (!this.widgets) return;
-    const { colorContext, linkOverWidget, linkOverWidgetType, lowQuality = false, editorAlpha = 1 } = options22;
+    const { colorContext, linkOverWidget, linkOverWidgetType, lowQuality = false, editorAlpha = 1 } = options2;
     const width2 = this.size[0];
     const widgets = this.widgets;
     const H = LiteGraph.NODE_WIDGET_HEIGHT;
@@ -7308,7 +5746,7 @@ var _LGraphNode = class _LGraphNode {
       if (WidgetClass) {
         toClass(WidgetClass, w).drawWidget(ctx, { y, width: widget_width, show_text, margin });
       } else {
-        (_a2 = w.draw) == null ? void 0 : _a2.call(w, ctx, this, widget_width, y, H, lowQuality);
+        (_a = w.draw) == null ? void 0 : _a.call(w, ctx, this, widget_width, y, H, lowQuality);
       }
       ctx.globalAlpha = editorAlpha;
     }
@@ -7318,10 +5756,10 @@ var _LGraphNode = class _LGraphNode {
    * When {@link LGraphNode.collapsed} is `true`, this method draws the node's collapsed slots.
    */
   drawCollapsedSlots(ctx) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     let input_slot = null;
     let output_slot = null;
-    for (const slot of (_a2 = this.inputs) != null ? _a2 : []) {
+    for (const slot of (_a = this.inputs) != null ? _a : []) {
       if (slot.link == null) {
         continue;
       }
@@ -7351,14 +5789,14 @@ var _LGraphNode = class _LGraphNode {
     }
   }
   get highlightColor() {
-    var _a2, _b;
-    return (_b = (_a2 = LiteGraph.NODE_TEXT_HIGHLIGHT_COLOR) != null ? _a2 : LiteGraph.NODE_SELECTED_TITLE_COLOR) != null ? _b : LiteGraph.NODE_TEXT_COLOR;
+    var _a, _b;
+    return (_b = (_a = LiteGraph.NODE_TEXT_HIGHLIGHT_COLOR) != null ? _a : LiteGraph.NODE_SELECTED_TITLE_COLOR) != null ? _b : LiteGraph.NODE_TEXT_COLOR;
   }
   get slots() {
     return [...this.inputs, ...this.outputs];
   }
-  layoutSlot(slot, options22) {
-    const { slotIndex } = options22;
+  layoutSlot(slot, options2) {
+    const { slotIndex } = options2;
     const isInput = isINodeInputSlot(slot);
     const pos = isInput ? this.getInputPos(slotIndex) : this.getOutputPos(slotIndex);
     slot._layoutElement = new LayoutElement({
@@ -7372,10 +5810,10 @@ var _LGraphNode = class _LGraphNode {
     });
   }
   layoutSlots() {
-    var _a2;
+    var _a;
     const slots = [];
     for (const [i, slot] of this.inputs.entries()) {
-      if (((_a2 = this.widgets) == null ? void 0 : _a2.length) && isWidgetInputSlot(slot)) continue;
+      if (((_a = this.widgets) == null ? void 0 : _a.length) && isWidgetInputSlot(slot)) continue;
       this.layoutSlot(slot, {
         slotIndex: i
       });
@@ -7400,9 +5838,9 @@ var _LGraphNode = class _LGraphNode {
   /**
    * Draws the node's input and output slots.
    */
-  drawSlots(ctx, options22) {
-    var _a2;
-    const { fromSlot, colorContext, editorAlpha, lowQuality } = options22;
+  drawSlots(ctx, options2) {
+    var _a;
+    const { fromSlot, colorContext, editorAlpha, lowQuality } = options2;
     for (const slot of this.slots) {
       const layoutElement = slot._layoutElement;
       const slotInstance = toNodeSlotClass(slot);
@@ -7411,7 +5849,7 @@ var _LGraphNode = class _LGraphNode {
       const labelColor = highlight ? this.highlightColor : LiteGraph.NODE_TEXT_COLOR;
       ctx.globalAlpha = isValid ? editorAlpha : 0.4 * editorAlpha;
       slotInstance.draw(ctx, {
-        pos: (_a2 = layoutElement == null ? void 0 : layoutElement.center) != null ? _a2 : [0, 0],
+        pos: (_a = layoutElement == null ? void 0 : layoutElement.center) != null ? _a : [0, 0],
         colorContext,
         labelColor,
         lowQuality,
@@ -7425,11 +5863,11 @@ var _LGraphNode = class _LGraphNode {
    * -  {@link IBaseWidget.computedHeight}
    * -  {@link IBaseWidget.y}
    */
-  layoutWidgets(options22) {
-    var _a2, _b;
+  layoutWidgets(options2) {
+    var _a, _b;
     if (!this.widgets || !this.widgets.length) return;
     const bodyHeight = this.bodyHeight;
-    const widgetStartY = (_a2 = this.widgets_start_y) != null ? _a2 : (this.widgets_up ? 0 : options22.widgetStartY) + 2;
+    const widgetStartY = (_a = this.widgets_start_y) != null ? _a : (this.widgets_up ? 0 : options2.widgetStartY) + 2;
     let freeSpace = bodyHeight - widgetStartY;
     let fixedWidgetHeight = 0;
     const growableWidgets = [];
@@ -7476,12 +5914,12 @@ var _LGraphNode = class _LGraphNode {
    * Lays out the node's widget input slots.
    */
   layoutWidgetInputSlots() {
-    var _a2;
+    var _a;
     if (!this.widgets) return;
     const slotByWidgetName = /* @__PURE__ */ new Map();
     for (const [i, slot] of this.inputs.entries()) {
       if (!isWidgetInputSlot(slot)) continue;
-      slotByWidgetName.set((_a2 = slot.widget) == null ? void 0 : _a2.name, { ...slot, index: i });
+      slotByWidgetName.set((_a = slot.widget) == null ? void 0 : _a.name, { ...slot, index: i });
     }
     if (!slotByWidgetName.size) return;
     for (const widget of this.widgets) {
@@ -7533,18 +5971,18 @@ getSelectedStrokeStyle_fn = function() {
  * Finds the next free slot
  * @param slots The slots to search, i.e. this.inputs or this.outputs
  */
-findFreeSlot_fn = function(slots, options22) {
-  var _a2, _b, _c;
+findFreeSlot_fn = function(slots, options2) {
+  var _a, _b, _c;
   const defaults = {
     returnObj: false,
     typesNotAccepted: []
   };
-  const opts = Object.assign(defaults, options22 || {});
+  const opts = Object.assign(defaults, options2 || {});
   const length = slots == null ? void 0 : slots.length;
   if (!(length > 0)) return -1;
   for (let i = 0; i < length; ++i) {
     const slot = slots[i];
-    if (!slot || slot.link || ((_a2 = slot.links) == null ? void 0 : _a2.length)) continue;
+    if (!slot || slot.link || ((_a = slot.links) == null ? void 0 : _a.length)) continue;
     if ((_c = (_b = opts.typesNotAccepted) == null ? void 0 : _b.includes) == null ? void 0 : _c.call(_b, slot.type)) continue;
     return !opts.returnObj ? i : slot;
   }
@@ -7563,7 +6001,7 @@ findFreeSlot_fn = function(slots, options22) {
  * @returns If a match is found, the slot if returnObj is true, otherwise the index.  If no matches are found, -1
  */
 findSlotByType_fn = function(slots, type, returnObj, preferFreeSlot, doNotUseOccupied) {
-  var _a2;
+  var _a;
   const length = slots == null ? void 0 : slots.length;
   if (!length) return -1;
   if (type == "" || type == "*") type = 0;
@@ -7577,7 +6015,7 @@ findSlotByType_fn = function(slots, type, returnObj, preferFreeSlot, doNotUseOcc
       for (const destType of destTypes) {
         const dest = destType == "_event_" ? LiteGraph.EVENT : destType;
         if (source == dest || source === "*" || dest === "*") {
-          if (preferFreeSlot && (((_a2 = slot.links) == null ? void 0 : _a2.length) || slot.link != null)) {
+          if (preferFreeSlot && (((_a = slot.links) == null ? void 0 : _a.length) || slot.link != null)) {
             occupiedSlot != null ? occupiedSlot : occupiedSlot = returnObj ? slot : i;
             continue;
           }
@@ -7589,9 +6027,9 @@ findSlotByType_fn = function(slots, type, returnObj, preferFreeSlot, doNotUseOcc
   return doNotUseOccupied ? -1 : occupiedSlot != null ? occupiedSlot : -1;
 };
 getMouseOverSlot_fn = function(slot) {
-  var _a2, _b;
+  var _a, _b;
   const isInput = isINodeInputSlot(slot);
-  const mouseOverId = (_b = (_a2 = this.mouseOver) == null ? void 0 : _a2[isInput ? "inputId" : "outputId"]) != null ? _b : -1;
+  const mouseOverId = (_b = (_a = this.mouseOver) == null ? void 0 : _a[isInput ? "inputId" : "outputId"]) != null ? _b : -1;
   if (mouseOverId === -1) {
     return null;
   }
@@ -7647,10 +6085,10 @@ var _LGraphGroup = class _LGraphGroup {
   }
   /** @inheritdoc {@link IColorable.getColorOption} */
   getColorOption() {
-    var _a2;
-    return (_a2 = Object.values(LGraphCanvas.node_colors).find(
+    var _a;
+    return (_a = Object.values(LGraphCanvas.node_colors).find(
       (colorOption) => colorOption.groupcolor === this.color
-    )) != null ? _a2 : null;
+    )) != null ? _a : null;
   }
   /** Position of the group, as x,y co-ordinates in graph space */
   get pos() {
@@ -7930,8 +6368,8 @@ var _Reroute = class _Reroute {
     __privateSet(this, _parentId, value);
   }
   get parent() {
-    var _a2;
-    return (_a2 = __privateGet(this, _network).deref()) == null ? void 0 : _a2.getReroute(__privateGet(this, _parentId));
+    var _a;
+    return (_a = __privateGet(this, _network).deref()) == null ? void 0 : _a.getReroute(__privateGet(this, _parentId));
   }
   /** @inheritdoc */
   get pos() {
@@ -7954,24 +6392,24 @@ var _Reroute = class _Reroute {
     return this.linkIds.size + this.floatingLinkIds.size;
   }
   get firstLink() {
-    var _a2;
+    var _a;
     const linkId = this.linkIds.values().next().value;
-    return linkId === void 0 ? void 0 : (_a2 = __privateGet(this, _network).deref()) == null ? void 0 : _a2.links.get(linkId);
+    return linkId === void 0 ? void 0 : (_a = __privateGet(this, _network).deref()) == null ? void 0 : _a.links.get(linkId);
   }
   get firstFloatingLink() {
-    var _a2;
+    var _a;
     const linkId = this.floatingLinkIds.values().next().value;
-    return linkId === void 0 ? void 0 : (_a2 = __privateGet(this, _network).deref()) == null ? void 0 : _a2.floatingLinks.get(linkId);
+    return linkId === void 0 ? void 0 : (_a = __privateGet(this, _network).deref()) == null ? void 0 : _a.floatingLinks.get(linkId);
   }
   /** @inheritdoc */
   get origin_id() {
-    var _a2;
-    return (_a2 = this.firstLink) == null ? void 0 : _a2.origin_id;
+    var _a;
+    return (_a = this.firstLink) == null ? void 0 : _a.origin_id;
   }
   /** @inheritdoc */
   get origin_slot() {
-    var _a2;
-    return (_a2 = this.firstLink) == null ? void 0 : _a2.origin_slot;
+    var _a;
+    return (_a = this.firstLink) == null ? void 0 : _a.origin_slot;
   }
   /**
    * Applies a new parentId to the reroute, and optinoally a new position and linkId.
@@ -8011,11 +6449,11 @@ var _Reroute = class _Reroute {
    * `undefined` if the reroute chain or {@link LinkNetwork} are invalid.
    */
   getReroutes(visited = /* @__PURE__ */ new Set()) {
-    var _a2;
+    var _a;
     if (__privateGet(this, _parentId) === void 0) return [this];
     if (visited.has(this)) return null;
     visited.add(this);
-    const parent = (_a2 = __privateGet(this, _network).deref()) == null ? void 0 : _a2.reroutes.get(__privateGet(this, _parentId));
+    const parent = (_a = __privateGet(this, _network).deref()) == null ? void 0 : _a.reroutes.get(__privateGet(this, _parentId));
     if (!parent) {
       __privateSet(this, _parentId, void 0);
       return [this];
@@ -8031,24 +6469,24 @@ var _Reroute = class _Reroute {
    * @returns The reroute that was found, `undefined` if no reroute was found, or `null` if an infinite loop was detected.
    */
   findNextReroute(withParentId, visited = /* @__PURE__ */ new Set()) {
-    var _a2, _b;
+    var _a, _b;
     if (__privateGet(this, _parentId) === withParentId) return this;
     if (visited.has(this)) return null;
     visited.add(this);
     if (__privateGet(this, _parentId) === void 0) return;
-    return (_b = (_a2 = __privateGet(this, _network).deref()) == null ? void 0 : _a2.reroutes.get(__privateGet(this, _parentId))) == null ? void 0 : _b.findNextReroute(withParentId, visited);
+    return (_b = (_a = __privateGet(this, _network).deref()) == null ? void 0 : _a.reroutes.get(__privateGet(this, _parentId))) == null ? void 0 : _b.findNextReroute(withParentId, visited);
   }
   findSourceOutput() {
-    var _a2, _b;
-    const link2 = (_a2 = this.firstLink) != null ? _a2 : this.firstFloatingLink;
-    if (!link2) return;
-    const node2 = (_b = __privateGet(this, _network).deref()) == null ? void 0 : _b.getNodeById(link2.origin_id);
+    var _a, _b;
+    const link = (_a = this.firstLink) != null ? _a : this.firstFloatingLink;
+    if (!link) return;
+    const node2 = (_b = __privateGet(this, _network).deref()) == null ? void 0 : _b.getNodeById(link.origin_id);
     if (!node2) return;
     return {
       node: node2,
-      output: node2.outputs[link2.origin_slot],
-      outputIndex: link2.origin_slot,
-      link: link2
+      output: node2.outputs[link.origin_slot],
+      outputIndex: link.origin_slot,
+      link
     };
   }
   /**
@@ -8063,12 +6501,12 @@ var _Reroute = class _Reroute {
     return results;
     function addAllResults(network2, linkIds, links) {
       for (const linkId of linkIds) {
-        const link2 = links.get(linkId);
-        if (!link2) continue;
-        const node2 = network2.getNodeById(link2.target_id);
-        const input = node2 == null ? void 0 : node2.inputs[link2.target_slot];
+        const link = links.get(linkId);
+        if (!link) continue;
+        const node2 = network2.getNodeById(link.target_id);
+        const input = node2 == null ? void 0 : node2.inputs[link.target_slot];
         if (!input) continue;
-        results.push({ node: node2, input, inputIndex: link2.target_slot, link: link2 });
+        results.push({ node: node2, input, inputIndex: link.target_slot, link });
       }
     }
   }
@@ -8078,14 +6516,14 @@ var _Reroute = class _Reroute {
    * @returns An array of floating links
    */
   getFloatingLinks(from) {
-    var _a2;
-    const floatingLinks = (_a2 = __privateGet(this, _network).deref()) == null ? void 0 : _a2.floatingLinks;
+    var _a;
+    const floatingLinks = (_a = __privateGet(this, _network).deref()) == null ? void 0 : _a.floatingLinks;
     if (!floatingLinks) return;
     const idProp = from === "input" ? "origin_id" : "target_id";
     const out = [];
     for (const linkId of this.floatingLinkIds) {
-      const link2 = floatingLinks.get(linkId);
-      if ((link2 == null ? void 0 : link2[idProp]) === -1) out.push(link2);
+      const link = floatingLinks.get(linkId);
+      if ((link == null ? void 0 : link[idProp]) === -1) out.push(link);
     }
     return out;
   }
@@ -8096,17 +6534,17 @@ var _Reroute = class _Reroute {
    * @param index The slot index of {@link output}
    */
   setFloatingLinkOrigin(node2, output, index) {
-    var _a2, _b, _c, _d;
+    var _a, _b, _c, _d;
     const network = __privateGet(this, _network).deref();
     const floatingOutLinks = this.getFloatingLinks("output");
     if (!floatingOutLinks) throw new Error("[setFloatingLinkOrigin]: Invalid network.");
     if (!floatingOutLinks.length) return;
-    (_a2 = output._floatingLinks) != null ? _a2 : output._floatingLinks = /* @__PURE__ */ new Set();
-    for (const link2 of floatingOutLinks) {
-      output._floatingLinks.add(link2);
-      (_d = (_c = (_b = network == null ? void 0 : network.getNodeById(link2.origin_id)) == null ? void 0 : _b.outputs[link2.origin_slot]) == null ? void 0 : _c._floatingLinks) == null ? void 0 : _d.delete(link2);
-      link2.origin_id = node2.id;
-      link2.origin_slot = index;
+    (_a = output._floatingLinks) != null ? _a : output._floatingLinks = /* @__PURE__ */ new Set();
+    for (const link of floatingOutLinks) {
+      output._floatingLinks.add(link);
+      (_d = (_c = (_b = network == null ? void 0 : network.getNodeById(link.origin_id)) == null ? void 0 : _b.outputs[link.origin_slot]) == null ? void 0 : _c._floatingLinks) == null ? void 0 : _d.delete(link);
+      link.origin_id = node2.id;
+      link.origin_slot = index;
     }
   }
   /** @inheritdoc */
@@ -8143,14 +6581,14 @@ var _Reroute = class _Reroute {
    * @param link The link to remove.
    * @remarks Does not remove the link from the network.
    */
-  removeLink(link2) {
+  removeLink(link) {
     const network = __privateGet(this, _network).deref();
     if (!network) return;
-    const floatingLink = network.floatingLinks.get(link2.id);
-    if (link2 === floatingLink) {
-      this.floatingLinkIds.delete(link2.id);
+    const floatingLink = network.floatingLinks.get(link.id);
+    if (link === floatingLink) {
+      this.floatingLinkIds.delete(link.id);
     } else {
-      this.linkIds.delete(link2.id);
+      this.linkIds.delete(link.id);
     }
   }
   remove() {
@@ -8190,8 +6628,8 @@ var _Reroute = class _Reroute {
     this.controlPoint[1] = dist * -sin;
     function calculateAngles(linkIds, links) {
       for (const linkId of linkIds) {
-        const link2 = links.get(linkId);
-        const pos = getNextPos(network, link2, id);
+        const link = links.get(linkId);
+        const pos = getNextPos(network, link, id);
         if (!pos) continue;
         const angle = getDirection(thisPos, pos);
         angles.push(angle);
@@ -8206,7 +6644,7 @@ var _Reroute = class _Reroute {
    * @remarks Leaves {@link ctx}.fillStyle, strokeStyle, and lineWidth dirty (perf.).
    */
   draw(ctx, backgroundPattern) {
-    var _a2;
+    var _a;
     const { globalAlpha } = ctx;
     const { pos } = this;
     ctx.beginPath();
@@ -8216,7 +6654,7 @@ var _Reroute = class _Reroute {
       ctx.fill();
       ctx.globalAlpha = globalAlpha * 0.33;
     }
-    ctx.fillStyle = (_a2 = this._colour) != null ? _a2 : "#18184d";
+    ctx.fillStyle = (_a = this._colour) != null ? _a : "#18184d";
     ctx.lineWidth = _Reroute.radius * 0.1;
     ctx.strokeStyle = "rgb(0,0,0,0.5)";
     ctx.fill();
@@ -8276,13 +6714,13 @@ __publicField(_Reroute, "radius", 10);
 __publicField(_Reroute, "maxSplineOffset", 80);
 __publicField(_Reroute, "drawIdBadge", false);
 var Reroute = _Reroute;
-function getNextPos(network, link2, id) {
-  var _a2, _b;
-  if (!link2) return;
-  const linkPos = (_a2 = LLink.findNextReroute(network, link2, id)) == null ? void 0 : _a2.pos;
+function getNextPos(network, link, id) {
+  var _a, _b;
+  if (!link) return;
+  const linkPos = (_a = LLink.findNextReroute(network, link, id)) == null ? void 0 : _a.pos;
   if (linkPos) return linkPos;
-  if (link2.target_id === -1 || link2.target_slot === -1) return;
-  return (_b = network.getNodeById(link2.target_id)) == null ? void 0 : _b.getInputPos(link2.target_slot);
+  if (link.target_id === -1 || link.target_slot === -1) return;
+  return (_b = network.getNodeById(link.target_id)) == null ? void 0 : _b.getInputPos(link.target_slot);
 }
 function getDirection(fromPos, toPos) {
   return Math.atan2(toPos[1] - fromPos[1], toPos[0] - fromPos[0]);
@@ -8360,7 +6798,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @param graph The graph that owns this canvas.
    * @param options
    */
-  constructor(canvas2, graph, options22) {
+  constructor(canvas2, graph, options2) {
     __privateAdd(this, _LGraphCanvas_instances);
     /**
      * The state of this canvas, e.g. whether it is being dragged, or read-only.
@@ -8547,8 +6985,8 @@ var _LGraphCanvas = class _LGraphCanvas {
     __publicField(this, "onRender");
     /** Implement this function to allow conversion of widget types to input types, e.g. number -> INT or FLOAT for widget link validation checks */
     __publicField(this, "getWidgetLinkType");
-    options22 || (options22 = {});
-    this.options = options22;
+    options2 || (options2 = {});
+    this.options = options2;
     this.background_image = _LGraphCanvas.DEFAULT_BACKGROUND_IMAGE;
     this.ds = new DragAndScale(canvas2);
     this.pointer = new CanvasPointer(canvas2);
@@ -8556,7 +6994,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       this.connecting_links = null;
     });
     this.linkConnector.events.addEventListener("dropped-on-canvas", (customEvent) => {
-      var _a2;
+      var _a;
       if (!this.connecting_links) return;
       const e2 = customEvent.detail;
       this.emitEvent({
@@ -8575,7 +7013,7 @@ var _LGraphCanvas = class _LGraphCanvas {
           slot_from: firstLink.fromSlot,
           type_filter_out: firstLink.fromSlot.type
         };
-        const afterRerouteId = (_a2 = firstLink.fromReroute) == null ? void 0 : _a2.id;
+        const afterRerouteId = (_a = firstLink.fromReroute) == null ? void 0 : _a.id;
         if ("shiftKey" in e2 && e2.shiftKey) {
           if (this.allow_searchbox) {
             this.showSearchBox(e2, linkReleaseContext);
@@ -8646,18 +7084,18 @@ var _LGraphCanvas = class _LGraphCanvas {
     this.last_mouse_position = [0, 0];
     this.visible_area = this.ds.visible_area;
     this.connecting_links = null;
-    this.viewport = options22.viewport || null;
+    this.viewport = options2.viewport || null;
     this.graph = graph;
     graph == null ? void 0 : graph.attachCanvas(this);
     this.canvas = void 0;
     this.bgcanvas = void 0;
     this.ctx = void 0;
-    this.setCanvas(canvas2, options22.skip_events);
+    this.setCanvas(canvas2, options2.skip_events);
     this.clear();
-    if (!options22.skip_render) {
+    if (!options2.skip_render) {
       this.startRendering();
     }
-    this.autoresize = options22.autoresize;
+    this.autoresize = options2.autoresize;
   }
   // #region Legacy accessors
   /** @deprecated @inheritdoc {@link LGraphCanvasState.readOnly} */
@@ -8746,9 +7184,9 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @returns
    */
   static getBoundaryNodes(nodes) {
-    var _a2;
+    var _a;
     const _nodes = Array.isArray(nodes) ? nodes : Object.values(nodes);
-    return (_a2 = getBoundaryNodes(_nodes)) != null ? _a2 : {
+    return (_a = getBoundaryNodes(_nodes)) != null ? _a : {
       top: null,
       right: null,
       bottom: null,
@@ -8765,7 +7203,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     alignNodes(Object.values(nodes), direction, align_to);
     _LGraphCanvas.active_canvas.setDirty(true, true);
   }
-  static onNodeAlign(value, options22, event, prev_menu, node2) {
+  static onNodeAlign(value, options2, event, prev_menu, node2) {
     new LiteGraph.ContextMenu(["Top", "Bottom", "Left", "Right"], {
       event,
       callback: inner_clicked,
@@ -8780,7 +7218,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       _LGraphCanvas.active_canvas.setDirty(true, true);
     }
   }
-  static onGroupAlign(value, options22, event, prev_menu) {
+  static onGroupAlign(value, options2, event, prev_menu) {
     new LiteGraph.ContextMenu(["Top", "Bottom", "Left", "Right"], {
       event,
       callback: inner_clicked,
@@ -8794,7 +7232,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       _LGraphCanvas.active_canvas.setDirty(true, true);
     }
   }
-  static createDistributeMenu(value, options22, event, prev_menu) {
+  static createDistributeMenu(value, options2, event, prev_menu) {
     new LiteGraph.ContextMenu(["Vertically", "Horizontally"], {
       event,
       callback: inner_clicked,
@@ -8806,7 +7244,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       canvas2.setDirty(true, true);
     }
   }
-  static onMenuAdd(value, options22, e2, prev_menu, callback) {
+  static onMenuAdd(value, options2, e2, prev_menu, callback) {
     const canvas2 = _LGraphCanvas.active_canvas;
     const ref_window = canvas2.getCanvasWindow();
     const { graph } = canvas2;
@@ -8816,7 +7254,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     function inner_onMenuAdded(base_category, prev_menu2) {
       if (!graph) return;
       const categories = LiteGraph.getNodeTypesCategories(canvas2.filter || graph.filter).filter((category) => category.startsWith(base_category));
-      const entries2 = [];
+      const entries = [];
       for (const category of categories) {
         if (!category) continue;
         const base_category_regex = new RegExp(`^(${base_category})`);
@@ -8824,9 +7262,9 @@ var _LGraphCanvas = class _LGraphCanvas {
         const category_path = base_category === "" ? `${category_name}/` : `${base_category}${category_name}/`;
         let name = category_name;
         if (name.includes("::")) name = name.split("::", 2)[1];
-        const index = entries2.findIndex((entry) => entry.value === category_path);
+        const index = entries.findIndex((entry) => entry.value === category_path);
         if (index === -1) {
-          entries2.push({
+          entries.push({
             value: category_path,
             content: name,
             has_submenu: true,
@@ -8860,9 +7298,9 @@ var _LGraphCanvas = class _LGraphCanvas {
             canvas2.graph.afterChange();
           }
         };
-        entries2.push(entry);
+        entries.push(entry);
       }
-      new LiteGraph.ContextMenu(entries2, { event: e2, parentMenu: prev_menu2 }, ref_window);
+      new LiteGraph.ContextMenu(entries, { event: e2, parentMenu: prev_menu2 }, ref_window);
     }
   }
   static onMenuCollapseAll() {
@@ -8871,18 +7309,18 @@ var _LGraphCanvas = class _LGraphCanvas {
   }
   /** @param _options Parameter is never used */
   static showMenuNodeOptionalOutputs(v2, _options, e2, prev_menu, node2) {
-    var _a2;
+    var _a;
     if (!node2) return;
     const canvas2 = _LGraphCanvas.active_canvas;
-    let entries2 = [];
+    let entries = [];
     if (LiteGraph.do_add_triggers_slots && node2.findOutputSlot("onExecuted") == -1) {
-      entries2.push({ content: "On Executed", value: ["onExecuted", LiteGraph.EVENT, { nameLocked: true }], className: "event" });
+      entries.push({ content: "On Executed", value: ["onExecuted", LiteGraph.EVENT, { nameLocked: true }], className: "event" });
     }
-    const retEntries = (_a2 = node2.onMenuNodeOutputs) == null ? void 0 : _a2.call(node2, entries2);
-    if (retEntries) entries2 = retEntries;
-    if (!entries2.length) return;
+    const retEntries = (_a = node2.onMenuNodeOutputs) == null ? void 0 : _a.call(node2, entries);
+    if (retEntries) entries = retEntries;
+    if (!entries.length) return;
     new LiteGraph.ContextMenu(
-      entries2,
+      entries,
       {
         event: e2,
         callback: inner_clicked,
@@ -8891,17 +7329,17 @@ var _LGraphCanvas = class _LGraphCanvas {
       }
     );
     function inner_clicked(v22, e22, prev) {
-      var _a3;
+      var _a2;
       if (!node2) return;
       if (v22.callback) v22.callback.call(this, node2, v22, e22, prev);
       if (!v22.value) return;
       const value = v22.value[1];
       if (value && (typeof value === "object" || Array.isArray(value))) {
-        const entries22 = [];
+        const entries2 = [];
         for (const i in value) {
-          entries22.push({ content: i, value: value[i] });
+          entries2.push({ content: i, value: value[i] });
         }
-        new LiteGraph.ContextMenu(entries22, {
+        new LiteGraph.ContextMenu(entries2, {
           event: e22,
           callback: inner_clicked,
           parentMenu: prev_menu,
@@ -8913,18 +7351,18 @@ var _LGraphCanvas = class _LGraphCanvas {
       if (!graph) throw new NullGraphError();
       graph.beforeChange();
       node2.addOutput(v22.value[0], v22.value[1], v22.value[2]);
-      (_a3 = node2.onNodeOutputAdd) == null ? void 0 : _a3.call(node2, v22.value);
+      (_a2 = node2.onNodeOutputAdd) == null ? void 0 : _a2.call(node2, v22.value);
       canvas2.setDirty(true, true);
       graph.afterChange();
     }
     return false;
   }
   /** @param value Parameter is never used */
-  static onShowMenuNodeProperties(value, options22, e2, prev_menu, node2) {
+  static onShowMenuNodeProperties(value, options2, e2, prev_menu, node2) {
     if (!node2 || !node2.properties) return;
     const canvas2 = _LGraphCanvas.active_canvas;
     const ref_window = canvas2.getCanvasWindow();
-    const entries2 = [];
+    const entries = [];
     for (const i in node2.properties) {
       value = node2.properties[i] !== void 0 ? node2.properties[i] : " ";
       if (typeof value == "object")
@@ -8933,16 +7371,16 @@ var _LGraphCanvas = class _LGraphCanvas {
       if (info.type == "enum" || info.type == "combo")
         value = _LGraphCanvas.getPropertyPrintableValue(value, info.values);
       value = _LGraphCanvas.decodeHTML(stringOrEmpty(value));
-      entries2.push({
+      entries.push({
         content: `<span class='property_name'>${info.label || i}</span><span class='property_value'>${value}</span>`,
         value: i
       });
     }
-    if (!entries2.length) {
+    if (!entries.length) {
       return;
     }
     new LiteGraph.ContextMenu(
-      entries2,
+      entries,
       {
         event: e2,
         callback: inner_clicked,
@@ -8968,7 +7406,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     e2.textContent = str;
     return e2.innerHTML;
   }
-  static onMenuResizeNode(value, options22, e2, menu, node2) {
+  static onMenuResizeNode(value, options2, e2, menu, node2) {
     if (!node2) return;
     const fApplyMultiNode = function(node22) {
       node22.setSize(node22.computeSize());
@@ -8984,7 +7422,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     canvas2.setDirty(true, true);
   }
   // TODO refactor :: this is used fot title but not for properties!
-  static onShowPropertyEditor(item, options22, e2, menu, node2) {
+  static onShowPropertyEditor(item, options2, e2, menu, node2) {
     const property = item.property || "title";
     const value = node2[property];
     const title = document.createElement("span");
@@ -9077,7 +7515,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       return `${String(value)} (${desc_value})`;
     }
   }
-  static onMenuNodeCollapse(value, options22, e2, menu, node2) {
+  static onMenuNodeCollapse(value, options2, e2, menu, node2) {
     if (!node2.graph) throw new NullGraphError();
     node2.graph.beforeChange();
     const fApplyMultiNode = function(node22) {
@@ -9093,7 +7531,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     }
     node2.graph.afterChange();
   }
-  static onMenuToggleAdvanced(value, options22, e2, menu, node2) {
+  static onMenuToggleAdvanced(value, options2, e2, menu, node2) {
     if (!node2.graph) throw new NullGraphError();
     node2.graph.beforeChange();
     const fApplyMultiNode = function(node22) {
@@ -9109,7 +7547,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     }
     node2.graph.afterChange();
   }
-  static onMenuNodeMode(value, options22, e2, menu, node2) {
+  static onMenuNodeMode(value, options2, e2, menu, node2) {
     new LiteGraph.ContextMenu(
       LiteGraph.NODE_MODES,
       { event: e2, callback: inner_clicked, parentMenu: menu, node: node2 }
@@ -9137,7 +7575,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     return false;
   }
   /** @param value Parameter is never used */
-  static onMenuNodeColors(value, options22, e2, menu, node2) {
+  static onMenuNodeColors(value, options2, e2, menu, node2) {
     if (!node2) throw "no node for color";
     const values = [];
     values.push({
@@ -9176,7 +7614,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     }
     return false;
   }
-  static onMenuNodeShapes(value, options22, e2, menu, node2) {
+  static onMenuNodeShapes(value, options2, e2, menu, node2) {
     if (!node2) throw "no node passed";
     new LiteGraph.ContextMenu(LiteGraph.VALID_SHAPES, {
       event: e2,
@@ -9207,7 +7645,7 @@ var _LGraphCanvas = class _LGraphCanvas {
   static onMenuNodeRemove() {
     _LGraphCanvas.active_canvas.deleteSelected();
   }
-  static onMenuNodeClone(value, options22, e2, menu, node2) {
+  static onMenuNodeClone(value, options2, e2, menu, node2) {
     const { graph } = node2;
     if (!graph) throw new NullGraphError();
     graph.beforeChange();
@@ -9240,7 +7678,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    *
    */
   clear() {
-    var _a2, _b;
+    var _a, _b;
     this.frame = 0;
     this.last_draw_time = 0;
     this.render_time = 0;
@@ -9249,7 +7687,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     this.selected_nodes = {};
     this.selected_group = null;
     this.selectedItems.clear();
-    (_a2 = this.onSelectionChange) == null ? void 0 : _a2.call(this, this.selected_nodes);
+    (_a = this.onSelectionChange) == null ? void 0 : _a.call(this, this.selected_nodes);
     this.visible_nodes = [];
     this.node_over = void 0;
     this.node_capturing_input = null;
@@ -9293,7 +7731,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @param skip_events If true, events on the previous canvas will not be removed.  Has no effect on the first invocation.
    */
   setCanvas(canvas2, skip_events) {
-    var _a2;
+    var _a;
     const element = __privateMethod(this, _LGraphCanvas_instances, validateCanvas_fn).call(this, canvas2);
     if (element === this.canvas) return;
     if (!element && this.canvas && !skip_events) this.unbindEvents();
@@ -9306,7 +7744,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     this.bgcanvas = document.createElement("canvas");
     this.bgcanvas.width = this.canvas.width;
     this.bgcanvas.height = this.canvas.height;
-    const ctx = (_a2 = element.getContext) == null ? void 0 : _a2.call(element, "2d");
+    const ctx = (_a = element.getContext) == null ? void 0 : _a.call(element, "2d");
     if (ctx == null) {
       if (element.localName != "canvas") {
         throw `Element supplied for LGraphCanvas must be a <canvas> element, you passed a ${element.localName}`;
@@ -9444,9 +7882,9 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @returns The widget located at the current cursor position or null
    */
   getWidgetAtCursor(node2) {
-    var _a2;
+    var _a;
     node2 != null ? node2 : node2 = this.node_over;
-    return (_a2 = node2 == null ? void 0 : node2.getWidgetOnPos(this.graph_mouse[0], this.graph_mouse[1], true)) != null ? _a2 : null;
+    return (_a = node2 == null ? void 0 : node2.getWidgetOnPos(this.graph_mouse[0], this.graph_mouse[1], true)) != null ? _a : null;
   }
   /**
    * Clears highlight and mouse-over information from nodes that should not have it.
@@ -9456,7 +7894,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @param e MouseEvent that is triggering this
    */
   updateMouseOverNodes(node2, e2) {
-    var _a2, _b;
+    var _a, _b;
     if (!this.graph) throw new NullGraphError();
     const nodes = this.graph._nodes;
     for (const otherNode of nodes) {
@@ -9466,14 +7904,14 @@ var _LGraphCanvas = class _LGraphCanvas {
         this._highlight_pos = void 0;
         this.linkConnector.overWidget = void 0;
         otherNode.lostFocusAt = LiteGraph.getTime();
-        (_b = (_a2 = this.node_over) == null ? void 0 : _a2.onMouseLeave) == null ? void 0 : _b.call(_a2, e2);
+        (_b = (_a = this.node_over) == null ? void 0 : _a.onMouseLeave) == null ? void 0 : _b.call(_a, e2);
         this.node_over = void 0;
         this.dirty_canvas = true;
       }
     }
   }
   processMouseDown(e2) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     if (this.dragZoomEnabled && e2.ctrlKey && e2.shiftKey && !e2.altKey && e2.buttons) {
       __privateSet(this, _dragZoomStart, { pos: [e2.x, e2.y], scale: this.ds.scale });
       return;
@@ -9490,7 +7928,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     this.ds.viewport = this.viewport;
     const is_inside = !this.viewport || isInRect(x2, y, this.viewport);
     if (!is_inside) return;
-    const node2 = (_a2 = graph.getNodeOnPos(e2.canvasX, e2.canvasY, this.visible_nodes)) != null ? _a2 : void 0;
+    const node2 = (_a = graph.getNodeOnPos(e2.canvasX, e2.canvasY, this.visible_nodes)) != null ? _a : void 0;
     this.mouse[0] = x2;
     this.mouse[1] = y;
     this.graph_mouse[0] = e2.canvasX;
@@ -9523,7 +7961,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * Called when a mouse move event has to be processed
    */
   processMouseMove(e2) {
-    var _a2, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g;
     if (this.dragZoomEnabled && e2.ctrlKey && e2.shiftKey && __privateGet(this, _dragZoomStart)) {
       __privateMethod(this, _LGraphCanvas_instances, processDragZoom_fn).call(this, e2);
       return;
@@ -9594,7 +8032,7 @@ var _LGraphCanvas = class _LGraphCanvas {
           };
           this.node_over = node2;
           this.dirty_canvas = true;
-          (_a2 = node2.onMouseEnter) == null ? void 0 : _a2.call(node2, e2);
+          (_a = node2.onMouseEnter) == null ? void 0 : _a.call(node2, e2);
         }
         (_b = node2.onMouseMove) == null ? void 0 : _b.call(node2, e2, [e2.canvasX - node2.pos[0], e2.canvasY - node2.pos[1]], this);
         if (node2.mouseOver.inputId !== inputId || node2.mouseOver.outputId !== outputId || node2.mouseOver.overWidget !== overWidget) {
@@ -9705,7 +8143,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * Called when a mouse up event has to be processed
    */
   processMouseUp(e2) {
-    var _a2, _b, _c, _d;
+    var _a, _b, _c, _d;
     if (e2.isPrimary === false) return;
     const { graph, pointer } = this;
     if (!graph) return;
@@ -9734,7 +8172,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       const y = e2.canvasY;
       if (!this.linkConnector.isConnecting) {
         this.dirty_canvas = true;
-        (_b = (_a2 = this.node_over) == null ? void 0 : _a2.onMouseUp) == null ? void 0 : _b.call(_a2, e2, [x2 - this.node_over.pos[0], y - this.node_over.pos[1]], this);
+        (_b = (_a = this.node_over) == null ? void 0 : _a.onMouseUp) == null ? void 0 : _b.call(_a, e2, [x2 - this.node_over.pos[0], y - this.node_over.pos[1]], this);
         (_d = (_c = this.node_capturing_input) == null ? void 0 : _c.onMouseUp) == null ? void 0 : _d.call(_c, e2, [
           x2 - this.node_capturing_input.pos[0],
           y - this.node_capturing_input.pos[1]
@@ -9769,9 +8207,9 @@ var _LGraphCanvas = class _LGraphCanvas {
    * Called when a mouse wheel event has to be processed
    */
   processMouseWheel(e2) {
-    var _a2;
+    var _a;
     if (!this.graph || !this.allow_dragcanvas) return;
-    const delta2 = (_a2 = e2.wheelDeltaY) != null ? _a2 : e2.detail * -60;
+    const delta2 = (_a = e2.wheelDeltaY) != null ? _a : e2.detail * -60;
     this.adjustMouseEvent(e2);
     const pos = [e2.clientX, e2.clientY];
     if (this.viewport && !isPointInRect(pos, this.viewport)) return;
@@ -9787,7 +8225,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * process a key event
    */
   processKey(e2) {
-    var _a2, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g;
     __privateSet(this, _shiftDown, e2.shiftKey);
     if (!this.graph) return;
     let block_default = false;
@@ -9806,7 +8244,7 @@ var _LGraphCanvas = class _LGraphCanvas {
           e2.preventDefault();
           return;
         }
-        (_a2 = this.node_panel) == null ? void 0 : _a2.close();
+        (_a = this.node_panel) == null ? void 0 : _a.close();
         (_b = this.options_panel) == null ? void 0 : _b.close();
         block_default = true;
       } else if (e2.keyCode === 65 && e2.ctrlKey) {
@@ -9855,7 +8293,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @param items The items to copy.  If nullish, all selected items are copied.
    */
   copyToClipboard(items) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     const serialisable = {
       nodes: [],
       groups: [],
@@ -9865,15 +8303,15 @@ var _LGraphCanvas = class _LGraphCanvas {
     for (const item of items != null ? items : this.selectedItems) {
       if (item instanceof LGraphNode) {
         if (item.clonable === false) continue;
-        const cloned = (_a2 = item.clone()) == null ? void 0 : _a2.serialize();
+        const cloned = (_a = item.clone()) == null ? void 0 : _a.serialize();
         if (!cloned) continue;
         cloned.id = item.id;
         serialisable.nodes.push(cloned);
         if (item.inputs) {
           for (const { link: linkId } of item.inputs) {
             if (linkId == null) continue;
-            const link2 = (_c = (_b = this.graph) == null ? void 0 : _b._links.get(linkId)) == null ? void 0 : _c.asSerialisable();
-            if (link2) serialisable.links.push(link2);
+            const link = (_c = (_b = this.graph) == null ? void 0 : _b._links.get(linkId)) == null ? void 0 : _c.asSerialisable();
+            if (link) serialisable.links.push(link);
           }
         }
       } else if (item instanceof LGraphGroup) {
@@ -9910,12 +8348,12 @@ var _LGraphCanvas = class _LGraphCanvas {
   /**
    * Pastes the items from the canvas "clipbaord" - a local storage variable.
    */
-  _pasteFromClipboard(options22 = {}) {
-    var _a2, _b, _c, _d, _e;
+  _pasteFromClipboard(options2 = {}) {
+    var _a, _b, _c, _d, _e;
     const {
       connectInputs = false,
       position = this.graph_mouse
-    } = options22;
+    } = options2;
     if (!LiteGraph.ctrl_shift_v_paste_connect_unselected_outputs && connectInputs) return;
     const data = localStorage.getItem("litegrapheditor_clipboard");
     if (!data) return;
@@ -9923,7 +8361,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     if (!graph) throw new NullGraphError();
     graph.beforeChange();
     const parsed = JSON.parse(data);
-    (_a2 = parsed.nodes) != null ? _a2 : parsed.nodes = [];
+    (_a = parsed.nodes) != null ? _a : parsed.nodes = [];
     (_b = parsed.groups) != null ? _b : parsed.groups = [];
     (_c = parsed.reroutes) != null ? _c : parsed.reroutes = [];
     (_d = parsed.links) != null ? _d : parsed.links = [];
@@ -9986,19 +8424,19 @@ var _LGraphCanvas = class _LGraphCanvas {
       }
       const inNode = nodes.get(info.target_id);
       if (inNode) {
-        const link2 = outNode == null ? void 0 : outNode.connect(
+        const link = outNode == null ? void 0 : outNode.connect(
           info.origin_slot,
           inNode,
           info.target_slot,
           afterRerouteId
         );
-        if (link2) links.set(info.id, link2);
+        if (link) links.set(info.id, link);
       }
     }
     for (const reroute of reroutes.values()) {
       const ids = [...reroute.linkIds].map((x2) => {
-        var _a3, _b2;
-        return (_b2 = (_a3 = links.get(x2)) == null ? void 0 : _a3.id) != null ? _b2 : x2;
+        var _a2, _b2;
+        return (_b2 = (_a2 = links.get(x2)) == null ? void 0 : _a2.id) != null ? _b2 : x2;
       });
       reroute.update(reroute.parentId, void 0, ids, reroute.floating);
       if (!reroute.validateLinks(graph.links, graph.floatingLinks)) {
@@ -10013,17 +8451,17 @@ var _LGraphCanvas = class _LGraphCanvas {
     graph.afterChange();
     return results;
   }
-  pasteFromClipboard(options22 = {}) {
+  pasteFromClipboard(options2 = {}) {
     this.emitBeforeChange();
     try {
-      this._pasteFromClipboard(options22);
+      this._pasteFromClipboard(options2);
     } finally {
       this.emitAfterChange();
     }
   }
   processNodeDblClicked(n) {
-    var _a2, _b;
-    (_a2 = this.onShowNodePanel) == null ? void 0 : _a2.call(this, n);
+    var _a, _b;
+    (_a = this.onShowNodePanel) == null ? void 0 : _a.call(this, n);
     (_b = this.onNodeDblClicked) == null ? void 0 : _b.call(this, n);
     this.setDirty(true);
   }
@@ -10036,7 +8474,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * Accessibility: anyone using {@link mutli_select} always deselects when clicking empty space.
    */
   processSelect(item, e2, sticky = false) {
-    var _a2;
+    var _a;
     const addModifier = e2 == null ? void 0 : e2.shiftKey;
     const subtractModifier = e2 != null && (e2.metaKey || e2.ctrlKey);
     const eitherModifier = addModifier || subtractModifier;
@@ -10053,7 +8491,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     } else {
       return;
     }
-    (_a2 = this.onSelectionChange) == null ? void 0 : _a2.call(this, this.selected_nodes);
+    (_a = this.onSelectionChange) == null ? void 0 : _a.call(this, this.selected_nodes);
     this.setDirty(true);
   }
   /**
@@ -10061,12 +8499,12 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @param item The canvas item to add to the selection.
    */
   select(item) {
-    var _a2, _b;
+    var _a, _b;
     if (item.selected && this.selectedItems.has(item)) return;
     item.selected = true;
     this.selectedItems.add(item);
     if (!(item instanceof LGraphNode)) return;
-    (_a2 = item.onSelected) == null ? void 0 : _a2.call(item);
+    (_a = item.onSelected) == null ? void 0 : _a.call(item);
     this.selected_nodes[item.id] = item;
     (_b = this.onNodeSelected) == null ? void 0 : _b.call(this, item);
     if (item.inputs) {
@@ -10087,12 +8525,12 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @param item The canvas item to remove from the selection.
    */
   deselect(item) {
-    var _a2, _b;
+    var _a, _b;
     if (!item.selected && !this.selectedItems.has(item)) return;
     item.selected = false;
     this.selectedItems.delete(item);
     if (!(item instanceof LGraphNode)) return;
-    (_a2 = item.onDeselected) == null ? void 0 : _a2.call(item);
+    (_a = item.onDeselected) == null ? void 0 : _a.call(item);
     delete this.selected_nodes[item.id];
     (_b = this.onNodeDeselected) == null ? void 0 : _b.call(this, item);
     if (item.inputs) {
@@ -10138,11 +8576,11 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @param add_to_current_selection If set, the items will be added to the current selection instead of replacing it
    */
   selectItems(items, add_to_current_selection) {
-    var _a2;
+    var _a;
     const itemsToSelect = items != null ? items : this.positionableItems;
     if (!add_to_current_selection) this.deselectAll();
     for (const item of itemsToSelect) this.select(item);
-    (_a2 = this.onSelectionChange) == null ? void 0 : _a2.call(this, this.selected_nodes);
+    (_a = this.onSelectionChange) == null ? void 0 : _a.call(this, this.selected_nodes);
     this.setDirty(true);
   }
   /**
@@ -10161,7 +8599,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @param keepSelected If set, this item will not be removed from the selection.
    */
   deselectAll(keepSelected) {
-    var _a2, _b;
+    var _a, _b;
     if (!this.graph) return;
     const selected = this.selectedItems;
     if (!selected.size) return;
@@ -10171,7 +8609,7 @@ var _LGraphCanvas = class _LGraphCanvas {
         wasSelected = sel;
         continue;
       }
-      (_a2 = sel.onDeselected) == null ? void 0 : _a2.call(sel);
+      (_a = sel.onDeselected) == null ? void 0 : _a.call(sel);
       sel.selected = false;
     }
     selected.clear();
@@ -10207,7 +8645,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @todo Refactor deletion task to LGraph.  Selection is a canvas property, delete is a graph action.
    */
   deleteSelected() {
-    var _a2, _b;
+    var _a, _b;
     const { graph } = this;
     if (!graph) throw new NullGraphError();
     this.emitBeforeChange();
@@ -10218,7 +8656,7 @@ var _LGraphCanvas = class _LGraphCanvas {
         if (node2.block_delete) continue;
         node2.connectInputToOutput();
         graph.remove(node2);
-        (_a2 = this.onNodeDeselected) == null ? void 0 : _a2.call(this, node2);
+        (_a = this.onNodeDeselected) == null ? void 0 : _a.call(this, node2);
       } else if (item instanceof LGraphGroup) {
         graph.remove(item);
       } else if (item instanceof Reroute) {
@@ -10351,7 +8789,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * renders the whole canvas content, by rendering in two separated canvas, one containing the background grid and the connections, and one containing the nodes)
    */
   draw(force_canvas, force_bgcanvas) {
-    var _a2;
+    var _a;
     if (!this.canvas || this.canvas.width == 0 || this.canvas.height == 0) return;
     const now = LiteGraph.getTime();
     this.render_time = (now - this.last_draw_time) * 1e-3;
@@ -10361,7 +8799,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       this.computeVisibleNodes(void 0, this.visible_nodes);
       __privateSet(this, _visible_node_ids, new Set(this.visible_nodes.map((node2) => node2.id)));
     }
-    if (this.dirty_bgcanvas || force_bgcanvas || this.always_render_background || ((_a2 = this.graph) == null ? void 0 : _a2._last_trigger_time) && now - this.graph._last_trigger_time < 1e3) {
+    if (this.dirty_bgcanvas || force_bgcanvas || this.always_render_background || ((_a = this.graph) == null ? void 0 : _a._last_trigger_time) && now - this.graph._last_trigger_time < 1e3) {
       this.drawBackCanvas();
     }
     if (this.dirty_canvas || force_canvas) this.drawFrontCanvas();
@@ -10372,7 +8810,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * draws the front canvas (the one containing all the nodes)
    */
   drawFrontCanvas() {
-    var _a2, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e;
     this.dirty_canvas = false;
     const { ctx, canvas: canvas2, linkConnector } = this;
     if (ctx.start2D && !this.viewport) {
@@ -10387,7 +8825,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       ctx.rect(area[0], area[1], area[2], area[3]);
       ctx.clip();
     }
-    __privateSet(this, _snapToGrid, __privateGet(this, _shiftDown) || LiteGraph.alwaysSnapToGrid ? (_a2 = this.graph) == null ? void 0 : _a2.getSnapToGridSize() : void 0);
+    __privateSet(this, _snapToGrid, __privateGet(this, _shiftDown) || LiteGraph.alwaysSnapToGrid ? (_a = this.graph) == null ? void 0 : _a.getSnapToGridSize() : void 0);
     if (this.clear_background) {
       if (area) ctx.clearRect(area[0], area[1], area[2], area[3]);
       else ctx.clearRect(0, 0, canvas2.width, canvas2.height);
@@ -10526,7 +8964,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * draws the back canvas (the one containing the background and the connections)
    */
   drawBackCanvas() {
-    var _a2, _b;
+    var _a, _b;
     const canvas2 = this.bgcanvas;
     if (canvas2.width != this.canvas.width || canvas2.height != this.canvas.height) {
       canvas2.width = this.canvas.width;
@@ -10577,7 +9015,7 @@ var _LGraphCanvas = class _LGraphCanvas {
         }
         let pattern = this._pattern;
         if (pattern == null && this._bg_img.width > 0) {
-          pattern = (_a2 = ctx.createPattern(this._bg_img, "repeat")) != null ? _a2 : void 0;
+          pattern = (_a = ctx.createPattern(this._bg_img, "repeat")) != null ? _a : void 0;
           this._pattern_img = this._bg_img;
           this._pattern = pattern;
         }
@@ -10621,7 +9059,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * draws the given node inside the canvas
    */
   drawNode(node2, ctx) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     this.current_node = node2;
     const color = node2.renderingColor;
     const bgcolor = node2.renderingBgColor;
@@ -10635,7 +9073,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     } else {
       ctx.shadowColor = "transparent";
     }
-    if (node2.flags.collapsed && ((_a2 = node2.onDrawCollapsed) == null ? void 0 : _a2.call(node2, ctx, this)) == true)
+    if (node2.flags.collapsed && ((_a = node2.onDrawCollapsed) == null ? void 0 : _a.call(node2, ctx, this)) == true)
       return;
     const shape = node2._shape || RenderShape.BOX;
     const size = __privateGet(_LGraphCanvas, _temp_vec2);
@@ -10700,15 +9138,15 @@ var _LGraphCanvas = class _LGraphCanvas {
    * Called against {@link LGraphCanvas.over_link_center}.
    * @todo Split tooltip from hover, so it can be drawn / eased separately
    */
-  drawLinkTooltip(ctx, link2) {
-    var _a2;
-    const pos = link2._pos;
+  drawLinkTooltip(ctx, link) {
+    var _a;
+    const pos = link._pos;
     ctx.fillStyle = "black";
     ctx.beginPath();
     if (this.linkMarkerShape === LinkMarkerShape.Arrow) {
       const transform = ctx.getTransform();
       ctx.translate(pos[0], pos[1]);
-      if (Number.isFinite(link2._centreAngle)) ctx.rotate(link2._centreAngle);
+      if (Number.isFinite(link._centreAngle)) ctx.rotate(link._centreAngle);
       ctx.moveTo(-2, -3);
       ctx.lineTo(4, 0);
       ctx.lineTo(-2, 3);
@@ -10717,24 +9155,24 @@ var _LGraphCanvas = class _LGraphCanvas {
       ctx.arc(pos[0], pos[1], 3, 0, Math.PI * 2);
     }
     ctx.fill();
-    const { data } = link2;
+    const { data } = link;
     if (data == null) return;
-    if (((_a2 = this.onDrawLinkTooltip) == null ? void 0 : _a2.call(this, ctx, link2, this)) == true) return;
-    let text2 = null;
+    if (((_a = this.onDrawLinkTooltip) == null ? void 0 : _a.call(this, ctx, link, this)) == true) return;
+    let text = null;
     if (typeof data === "number")
-      text2 = data.toFixed(2);
+      text = data.toFixed(2);
     else if (typeof data === "string")
-      text2 = `"${data}"`;
+      text = `"${data}"`;
     else if (typeof data === "boolean")
-      text2 = String(data);
+      text = String(data);
     else if (data.toToolTip)
-      text2 = data.toToolTip();
+      text = data.toToolTip();
     else
-      text2 = `[${data.constructor.name}]`;
-    if (text2 == null) return;
-    text2 = text2.substring(0, 30);
+      text = `[${data.constructor.name}]`;
+    if (text == null) return;
+    text = text.substring(0, 30);
     ctx.font = "14px Courier New";
-    const info = ctx.measureText(text2);
+    const info = ctx.measureText(text);
     const w = info.width + 20;
     const h = 24;
     ctx.shadowColor = "black";
@@ -10751,7 +9189,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     ctx.shadowColor = "transparent";
     ctx.textAlign = "center";
     ctx.fillStyle = "#CEC";
-    ctx.fillText(text2, pos[0], pos[1] - 15 - h * 0.3);
+    ctx.fillText(text, pos[0], pos[1] - 15 - h * 0.3);
   }
   /**
    * Draws the shape of the given node on the canvas
@@ -10763,7 +9201,7 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @param _selected Whether to render the node as selected.  Likely to be removed in future, as current usage is simply the selected property of the node.
    */
   drawNodeShape(node2, ctx, size, fgcolor, bgcolor, _selected) {
-    var _a2, _b;
+    var _a, _b;
     ctx.strokeStyle = fgcolor;
     ctx.fillStyle = bgcolor;
     const title_height = LiteGraph.NODE_TITLE_HEIGHT;
@@ -10798,7 +9236,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       ctx.fillRect(0, -1, area[2], 2);
     }
     ctx.shadowColor = "transparent";
-    (_a2 = node2.onDrawBackground) == null ? void 0 : _a2.call(node2, ctx);
+    (_a = node2.onDrawBackground) == null ? void 0 : _a.call(node2, ctx);
     if (render_title || title_mode == TitleMode.TRANSPARENT_TITLE) {
       node2.drawTitleBarBackground(ctx, {
         scale: this.ds.scale,
@@ -10897,16 +9335,16 @@ var _LGraphCanvas = class _LGraphCanvas {
       for (const [i, input] of inputs.entries()) {
         if (!input || input.link == null) continue;
         const link_id = input.link;
-        const link2 = graph._links.get(link_id);
-        if (!link2) continue;
+        const link = graph._links.get(link_id);
+        if (!link) continue;
         const endPos = node2.getInputPos(i);
-        const start_node = graph.getNodeById(link2.origin_id);
+        const start_node = graph.getNodeById(link.origin_id);
         if (start_node == null) continue;
-        const outputId = link2.origin_slot;
+        const outputId = link.origin_slot;
         const startPos = outputId === -1 ? [start_node.pos[0] + 10, start_node.pos[1] + 10] : start_node.getOutputPos(outputId);
         const output = start_node.outputs[outputId];
         if (!output) continue;
-        __privateMethod(this, _LGraphCanvas_instances, renderAllLinkSegments_fn).call(this, ctx, link2, startPos, endPos, visibleReroutes, now, output.dir, input.dir);
+        __privateMethod(this, _LGraphCanvas_instances, renderAllLinkSegments_fn).call(this, ctx, link, startPos, endPos, visibleReroutes, now, output.dir, input.dir);
       }
     }
     if (graph.floatingLinks.size > 0) {
@@ -10933,15 +9371,15 @@ var _LGraphCanvas = class _LGraphCanvas {
    * @param start_dir the direction enum
    * @param end_dir the direction enum
    */
-  renderLink(ctx, a, b, link2, skip_border, flow, color, start_dir, end_dir, {
+  renderLink(ctx, a, b, link, skip_border, flow, color, start_dir, end_dir, {
     startControl,
     endControl,
     reroute,
     num_sublines = 1,
     disabled = false
   } = {}) {
-    var _a2, _b;
-    const linkColour = link2 != null && this.highlighted_links[link2.id] ? "#FFF" : color || (link2 == null ? void 0 : link2.color) || (link2 == null ? void 0 : link2.type) != null && _LGraphCanvas.link_type_colors[link2.type] || this.default_link_color;
+    var _a, _b;
+    const linkColour = link != null && this.highlighted_links[link.id] ? "#FFF" : color || (link == null ? void 0 : link.color) || (link == null ? void 0 : link.type) != null && _LGraphCanvas.link_type_colors[link.type] || this.default_link_color;
     const startDir = start_dir || LinkDirection.RIGHT;
     const endDir = end_dir || LinkDirection.LEFT;
     const dist = this.links_render_mode == LinkRenderType.SPLINE_LINK && (!endControl || !startControl) ? distance(a, b) : 0;
@@ -10952,11 +9390,11 @@ var _LGraphCanvas = class _LGraphCanvas {
     num_sublines || (num_sublines = 1);
     if (num_sublines > 1) ctx.lineWidth = 0.5;
     const path = new Path2D();
-    const linkSegment = reroute != null ? reroute : link2;
+    const linkSegment = reroute != null ? reroute : link;
     if (linkSegment) linkSegment.path = path;
     const innerA = __privateGet(_LGraphCanvas, _lTempA);
     const innerB = __privateGet(_LGraphCanvas, _lTempB);
-    const pos = (_a2 = linkSegment == null ? void 0 : linkSegment._pos) != null ? _a2 : [0, 0];
+    const pos = (_a = linkSegment == null ? void 0 : linkSegment._pos) != null ? _a : [0, 0];
     for (let i = 0; i < num_sublines; i++) {
       const offsety = (i - (num_sublines - 1) * 0.5) * 5;
       innerA[0] = a[0];
@@ -11248,7 +9686,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     return _LGraphCanvas.getBoundaryNodes(this.selected_nodes);
   }
   showLinkMenu(segment, e2) {
-    var _a2, _b;
+    var _a, _b;
     const { graph } = this;
     if (!graph) throw new NullGraphError();
     const title = "data" in segment && segment.data != null ? segment.data.constructor.name : void 0;
@@ -11261,21 +9699,21 @@ var _LGraphCanvas = class _LGraphCanvas {
       return false;
     }
     const node_left = graph.getNodeById(origin_id);
-    const fromType = (_b = (_a2 = node_left == null ? void 0 : node_left.outputs) == null ? void 0 : _a2[origin_slot]) == null ? void 0 : _b.type;
-    const options22 = ["Add Node", "Add Reroute", null, "Delete", null];
-    const menu = new LiteGraph.ContextMenu(options22, {
+    const fromType = (_b = (_a = node_left == null ? void 0 : node_left.outputs) == null ? void 0 : _a[origin_slot]) == null ? void 0 : _b.type;
+    const options2 = ["Add Node", "Add Reroute", null, "Delete", null];
+    const menu = new LiteGraph.ContextMenu(options2, {
       event: e2,
       title,
       callback: inner_clicked.bind(this)
     });
     return false;
-    function inner_clicked(v2, options222, e22) {
+    function inner_clicked(v2, options22, e22) {
       if (!graph) throw new NullGraphError();
       switch (v2) {
         case "Add Node":
           _LGraphCanvas.onMenuAdd(null, null, e22, menu, (node2) => {
-            var _a3, _b2;
-            if (!((_a3 = node2 == null ? void 0 : node2.inputs) == null ? void 0 : _a3.length) || !((_b2 = node2 == null ? void 0 : node2.outputs) == null ? void 0 : _b2.length) || origin_slot == null) return;
+            var _a2, _b2;
+            if (!((_a2 = node2 == null ? void 0 : node2.inputs) == null ? void 0 : _a2.length) || !((_b2 = node2 == null ? void 0 : node2.outputs) == null ? void 0 : _b2.length) || origin_slot == null) return;
             const options3 = { afterRerouteId: segment.parentId };
             if (node_left == null ? void 0 : node_left.connectByType(origin_slot, node2, fromType != null ? fromType : "*", options3)) {
               node2.pos[0] -= node2.size[0] * 0.5;
@@ -11464,37 +9902,37 @@ var _LGraphCanvas = class _LGraphCanvas {
         console.warn("Cant get slot information", slotX);
         return;
     }
-    const options22 = ["Add Node", "Add Reroute", null];
+    const options2 = ["Add Node", "Add Reroute", null];
     if (opts.allow_searchbox) {
-      options22.push("Search", null);
+      options2.push("Search", null);
     }
     const fromSlotType = slotX.type == LiteGraph.EVENT ? "_event_" : slotX.type;
     const slotTypesDefault = isFrom ? LiteGraph.slot_types_default_out : LiteGraph.slot_types_default_in;
     if (slotTypesDefault == null ? void 0 : slotTypesDefault[fromSlotType]) {
       if (typeof slotTypesDefault[fromSlotType] == "object") {
         for (const typeX in slotTypesDefault[fromSlotType]) {
-          options22.push(slotTypesDefault[fromSlotType][typeX]);
+          options2.push(slotTypesDefault[fromSlotType][typeX]);
         }
       } else {
-        options22.push(slotTypesDefault[fromSlotType]);
+        options2.push(slotTypesDefault[fromSlotType]);
       }
     }
-    const menu = new LiteGraph.ContextMenu(options22, {
+    const menu = new LiteGraph.ContextMenu(options2, {
       event: opts.e,
       extra: slotX,
       title: (slotX && slotX.name != "" ? slotX.name + (fromSlotType ? " | " : "") : "") + (slotX && fromSlotType ? fromSlotType : ""),
       callback: inner_clicked
     });
     const dirty = () => __privateMethod(this, _LGraphCanvas_instances, dirty_fn).call(this);
-    function inner_clicked(v2, options222, e2) {
-      var _a2, _b, _c, _d;
+    function inner_clicked(v2, options22, e2) {
+      var _a, _b, _c, _d;
       switch (v2) {
         case "Add Node":
           _LGraphCanvas.onMenuAdd(null, null, e2, menu, function(node2) {
-            var _a3, _b2;
+            var _a2, _b2;
             if (!node2) return;
             if (isFrom) {
-              (_a3 = opts.nodeFrom) == null ? void 0 : _a3.connectByType(iSlotConn, node2, fromSlotType, { afterRerouteId });
+              (_a2 = opts.nodeFrom) == null ? void 0 : _a2.connectByType(iSlotConn, node2, fromSlotType, { afterRerouteId });
             } else {
               (_b2 = opts.nodeTo) == null ? void 0 : _b2.connectByTypeOutput(iSlotConn, node2, fromSlotType, { afterRerouteId });
             }
@@ -11502,7 +9940,7 @@ var _LGraphCanvas = class _LGraphCanvas {
           break;
         case "Add Reroute": {
           const node2 = isFrom ? opts.nodeFrom : opts.nodeTo;
-          const slot = options222.extra;
+          const slot = options22.extra;
           if (!graph) throw new NullGraphError();
           if (!node2) throw new TypeError("Cannot add reroute: node was null");
           if (!slot) throw new TypeError("Cannot add reroute: slot was null");
@@ -11521,7 +9959,7 @@ var _LGraphCanvas = class _LGraphCanvas {
           break;
         default: {
           const customProps = {
-            position: [(_b = (_a2 = opts.e) == null ? void 0 : _a2.canvasX) != null ? _b : 0, (_d = (_c = opts.e) == null ? void 0 : _c.canvasY) != null ? _d : 0],
+            position: [(_b = (_a = opts.e) == null ? void 0 : _a.canvasX) != null ? _b : 0, (_d = (_c = opts.e) == null ? void 0 : _c.canvasY) != null ? _d : 0],
             nodeType: v2,
             afterRerouteId
           };
@@ -11534,7 +9972,7 @@ var _LGraphCanvas = class _LGraphCanvas {
   }
   // refactor: there are different dialogs, some uses createDialog some dont
   prompt(title, value, callback, event, multiline) {
-    var _a2;
+    var _a;
     const that = this;
     title = title || "";
     const customProperties = {
@@ -11586,7 +10024,7 @@ var _LGraphCanvas = class _LGraphCanvas {
         });
       }
     }
-    (_a2 = this.prompt_box) == null ? void 0 : _a2.close();
+    (_a = this.prompt_box) == null ? void 0 : _a.close();
     this.prompt_box = dialog;
     const name_element = dialog.querySelector(".name");
     if (!name_element) throw new TypeError("name_element was null");
@@ -11633,25 +10071,25 @@ var _LGraphCanvas = class _LGraphCanvas {
       dialog.style.top = `${canvas2.height * 0.5 + offsety}px`;
     }
     setTimeout(function() {
-      var _a3, _b;
+      var _a2, _b;
       input.focus();
       const clickTime = Date.now();
       function handleOutsideClick(e2) {
-        var _a4, _b2;
+        var _a3, _b2;
         if (e2.target === canvas2 && Date.now() - clickTime > 256) {
           dialog.close();
-          (_a4 = canvas2.parentElement) == null ? void 0 : _a4.removeEventListener("click", handleOutsideClick);
+          (_a3 = canvas2.parentElement) == null ? void 0 : _a3.removeEventListener("click", handleOutsideClick);
           (_b2 = canvas2.parentElement) == null ? void 0 : _b2.removeEventListener("touchend", handleOutsideClick);
         }
       }
-      (_a3 = canvas2.parentElement) == null ? void 0 : _a3.addEventListener("click", handleOutsideClick);
+      (_a2 = canvas2.parentElement) == null ? void 0 : _a2.addEventListener("click", handleOutsideClick);
       (_b = canvas2.parentElement) == null ? void 0 : _b.addEventListener("touchend", handleOutsideClick);
     }, 10);
     return dialog;
   }
   showSearchBox(event, searchOptions) {
-    var _a2;
-    const options22 = {
+    var _a;
+    const options2 = {
       slot_from: null,
       node_from: null,
       node_to: null,
@@ -11668,7 +10106,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       show_all_if_empty: true,
       show_all_on_open: LiteGraph.search_show_all_on_open
     };
-    Object.assign(options22, searchOptions);
+    Object.assign(options2, searchOptions);
     const that = this;
     const graphcanvas = _LGraphCanvas.active_canvas;
     const { canvas: canvas2 } = graphcanvas;
@@ -11686,7 +10124,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     });
     dialog.className = "litegraph litesearchbox graphdialog rounded";
     dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/>";
-    if (options22.do_type_filter) {
+    if (options2.do_type_filter) {
       dialog.innerHTML += "<select class='slot_in_type_filter'><option value=''></option></select>";
       dialog.innerHTML += "<select class='slot_out_type_filter'><option value=''></option></select>";
     }
@@ -11701,14 +10139,14 @@ var _LGraphCanvas = class _LGraphCanvas {
     }
     let selIn;
     let selOut;
-    if (options22.do_type_filter) {
+    if (options2.do_type_filter) {
       selIn = dialog.querySelector(".slot_in_type_filter");
       selOut = dialog.querySelector(".slot_out_type_filter");
     }
     if (this.ds.scale > 1) {
       dialog.style.transform = `scale(${this.ds.scale})`;
     }
-    if (options22.hide_on_mouse_leave) {
+    if (options2.hide_on_mouse_leave) {
       let prevent_timeout = false;
       let timeout_close = null;
       LiteGraph.pointerListenerAdd(dialog, "enter", function() {
@@ -11719,11 +10157,11 @@ var _LGraphCanvas = class _LGraphCanvas {
       });
       dialog.addEventListener("pointerleave", function() {
         if (prevent_timeout) return;
-        const hideDelay = options22.hide_on_mouse_leave;
+        const hideDelay = options2.hide_on_mouse_leave;
         const delay = typeof hideDelay === "number" ? hideDelay : 500;
         timeout_close = setTimeout(dialog.close, delay);
       });
-      if (options22.do_type_filter) {
+      if (options2.do_type_filter) {
         if (!selIn) throw new TypeError("selIn was null when showing search box");
         if (!selOut) throw new TypeError("selOut was null when showing search box");
         selIn.addEventListener("click", function() {
@@ -11746,7 +10184,7 @@ var _LGraphCanvas = class _LGraphCanvas {
         });
       }
     }
-    (_a2 = that.search_box) == null ? void 0 : _a2.close();
+    (_a = that.search_box) == null ? void 0 : _a.close();
     that.search_box = dialog;
     let first = null;
     let timeout = null;
@@ -11786,12 +10224,12 @@ var _LGraphCanvas = class _LGraphCanvas {
         return true;
       });
     }
-    if (options22.do_type_filter) {
+    if (options2.do_type_filter) {
       if (selIn) {
         const aSlots = LiteGraph.slot_types_in;
         const nSlots = aSlots.length;
-        if (options22.type_filter_in == LiteGraph.EVENT || options22.type_filter_in == LiteGraph.ACTION) {
-          options22.type_filter_in = "_event_";
+        if (options2.type_filter_in == LiteGraph.EVENT || options2.type_filter_in == LiteGraph.ACTION) {
+          options2.type_filter_in = "_event_";
         }
         for (let iK = 0; iK < nSlots; iK++) {
           const opt = document.createElement("option");
@@ -11800,7 +10238,7 @@ var _LGraphCanvas = class _LGraphCanvas {
           selIn.append(opt);
           if (
             // @ts-expect-error
-            options22.type_filter_in !== false && String(options22.type_filter_in).toLowerCase() == String(aSlots[iK]).toLowerCase()
+            options2.type_filter_in !== false && String(options2.type_filter_in).toLowerCase() == String(aSlots[iK]).toLowerCase()
           ) {
             opt.selected = true;
           }
@@ -11811,15 +10249,15 @@ var _LGraphCanvas = class _LGraphCanvas {
       }
       if (selOut) {
         const aSlots = LiteGraph.slot_types_out;
-        if (options22.type_filter_out == LiteGraph.EVENT || options22.type_filter_out == LiteGraph.ACTION) {
-          options22.type_filter_out = "_event_";
+        if (options2.type_filter_out == LiteGraph.EVENT || options2.type_filter_out == LiteGraph.ACTION) {
+          options2.type_filter_out = "_event_";
         }
         for (const aSlot of aSlots) {
           const opt = document.createElement("option");
           opt.value = aSlot;
           opt.innerHTML = aSlot;
           selOut.append(opt);
-          if (options22.type_filter_out !== false && String(options22.type_filter_out).toLowerCase() == String(aSlot).toLowerCase()) {
+          if (options2.type_filter_out !== false && String(options2.type_filter_out).toLowerCase() == String(aSlot).toLowerCase()) {
             opt.selected = true;
           }
         }
@@ -11839,7 +10277,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     requestAnimationFrame(function() {
       input.focus();
     });
-    if (options22.show_all_on_open) refreshHelper();
+    if (options2.show_all_on_open) refreshHelper();
     function select(name) {
       if (name) {
         if (that.onSearchBoxSelection) {
@@ -11852,51 +10290,51 @@ var _LGraphCanvas = class _LGraphCanvas {
             node2.pos = graphcanvas.convertEventToCanvasOffset(event);
             graphcanvas.graph.add(node2, false);
           }
-          if (options22.node_from) {
+          if (options2.node_from) {
             let iS = false;
-            switch (typeof options22.slot_from) {
+            switch (typeof options2.slot_from) {
               case "string":
-                iS = options22.node_from.findOutputSlot(options22.slot_from);
+                iS = options2.node_from.findOutputSlot(options2.slot_from);
                 break;
               case "object":
-                if (options22.slot_from == null) throw new TypeError("options.slot_from was null when showing search box");
-                iS = options22.slot_from.name ? options22.node_from.findOutputSlot(options22.slot_from.name) : -1;
-                if (iS == -1 && options22.slot_from.slot_index !== void 0) iS = options22.slot_from.slot_index;
+                if (options2.slot_from == null) throw new TypeError("options.slot_from was null when showing search box");
+                iS = options2.slot_from.name ? options2.node_from.findOutputSlot(options2.slot_from.name) : -1;
+                if (iS == -1 && options2.slot_from.slot_index !== void 0) iS = options2.slot_from.slot_index;
                 break;
               case "number":
-                iS = options22.slot_from;
+                iS = options2.slot_from;
                 break;
               default:
                 iS = 0;
             }
-            if (options22.node_from.outputs[iS] !== void 0) {
+            if (options2.node_from.outputs[iS] !== void 0) {
               if (iS !== false && iS > -1) {
                 if (node2 == null) throw new TypeError("options.slot_from was null when showing search box");
-                options22.node_from.connectByType(iS, node2, options22.node_from.outputs[iS].type);
+                options2.node_from.connectByType(iS, node2, options2.node_from.outputs[iS].type);
               }
             }
           }
-          if (options22.node_to) {
+          if (options2.node_to) {
             let iS = false;
-            switch (typeof options22.slot_from) {
+            switch (typeof options2.slot_from) {
               case "string":
-                iS = options22.node_to.findInputSlot(options22.slot_from);
+                iS = options2.node_to.findInputSlot(options2.slot_from);
                 break;
               case "object":
-                if (options22.slot_from == null) throw new TypeError("options.slot_from was null when showing search box");
-                iS = options22.slot_from.name ? options22.node_to.findInputSlot(options22.slot_from.name) : -1;
-                if (iS == -1 && options22.slot_from.slot_index !== void 0) iS = options22.slot_from.slot_index;
+                if (options2.slot_from == null) throw new TypeError("options.slot_from was null when showing search box");
+                iS = options2.slot_from.name ? options2.node_to.findInputSlot(options2.slot_from.name) : -1;
+                if (iS == -1 && options2.slot_from.slot_index !== void 0) iS = options2.slot_from.slot_index;
                 break;
               case "number":
-                iS = options22.slot_from;
+                iS = options2.slot_from;
                 break;
               default:
                 iS = 0;
             }
-            if (options22.node_to.inputs[iS] !== void 0) {
+            if (options2.node_to.inputs[iS] !== void 0) {
               if (iS !== false && iS > -1) {
                 if (node2 == null) throw new TypeError("options.slot_from was null when showing search box");
-                options22.node_to.connectByTypeOutput(iS, node2, options22.node_to.inputs[iS].type);
+                options2.node_to.connectByTypeOutput(iS, node2, options2.node_to.inputs[iS].type);
               }
             }
           }
@@ -11924,17 +10362,17 @@ var _LGraphCanvas = class _LGraphCanvas {
       let str = input.value;
       first = null;
       helper.innerHTML = "";
-      if (!str && !options22.show_all_if_empty) return;
+      if (!str && !options2.show_all_if_empty) return;
       if (that.onSearchBox) {
-        const list2 = that.onSearchBox(helper, str, graphcanvas);
-        if (list2) {
-          for (const item of list2) {
+        const list = that.onSearchBox(helper, str, graphcanvas);
+        if (list) {
+          for (const item of list) {
             addResult(item);
           }
         }
       } else {
         let inner_test_filter = function(type, optsIn) {
-          var _a3, _b;
+          var _a2, _b;
           optsIn = optsIn || {};
           const optsDef = {
             skipFilter: false,
@@ -11944,13 +10382,13 @@ var _LGraphCanvas = class _LGraphCanvas {
           const opts = Object.assign(optsDef, optsIn);
           const ctor = LiteGraph.registered_node_types[type];
           if (filter && ctor.filter != filter) return false;
-          if ((!options22.show_all_if_empty || str) && !type.toLowerCase().includes(str) && (!ctor.title || !ctor.title.toLowerCase().includes(str))) {
+          if ((!options2.show_all_if_empty || str) && !type.toLowerCase().includes(str) && (!ctor.title || !ctor.title.toLowerCase().includes(str))) {
             return false;
           }
-          if (options22.do_type_filter && !opts.skipFilter) {
+          if (options2.do_type_filter && !opts.skipFilter) {
             const sType = type;
             let sV = opts.inTypeOverride !== false ? opts.inTypeOverride : sIn.value;
-            if (sIn && sV && ((_a3 = LiteGraph.registered_slot_in_types[sV]) == null ? void 0 : _a3.nodes)) {
+            if (sIn && sV && ((_a2 = LiteGraph.registered_slot_in_types[sV]) == null ? void 0 : _a2.nodes)) {
               const doesInc = LiteGraph.registered_slot_in_types[sV].nodes.includes(sType);
               if (doesInc === false) return false;
             }
@@ -11969,7 +10407,7 @@ var _LGraphCanvas = class _LGraphCanvas {
         const filter = graphcanvas.filter || graphcanvas.graph.filter;
         let sIn = false;
         let sOut = false;
-        if (options22.do_type_filter && that.search_box) {
+        if (options2.do_type_filter && that.search_box) {
           sIn = that.search_box.querySelector(".slot_in_type_filter");
           sOut = that.search_box.querySelector(".slot_out_type_filter");
         }
@@ -11980,7 +10418,7 @@ var _LGraphCanvas = class _LGraphCanvas {
           if (_LGraphCanvas.search_limit !== -1 && c++ > _LGraphCanvas.search_limit)
             break;
         }
-        if (options22.show_general_after_typefiltered && (sIn.value || sOut.value)) {
+        if (options2.show_general_after_typefiltered && (sIn.value || sOut.value)) {
           filtered_extra = [];
           for (const i in LiteGraph.registered_node_types) {
             if (inner_test_filter(i, {
@@ -11996,7 +10434,7 @@ var _LGraphCanvas = class _LGraphCanvas {
               break;
           }
         }
-        if ((sIn.value || sOut.value) && helper.childNodes.length == 0 && options22.show_general_if_none_on_typefilter) {
+        if ((sIn.value || sOut.value) && helper.childNodes.length == 0 && options2.show_general_if_none_on_typefilter) {
           filtered_extra = [];
           for (const i in LiteGraph.registered_node_types) {
             if (inner_test_filter(i, { skipFilter: true }))
@@ -12035,9 +10473,9 @@ var _LGraphCanvas = class _LGraphCanvas {
     }
     return dialog;
   }
-  showEditPropertyValue(node2, property, options22) {
+  showEditPropertyValue(node2, property, options2) {
     if (!node2 || node2.properties[property] === void 0) return;
-    options22 = options22 || {};
+    options2 = options2 || {};
     const info = node2.getPropertyInfo(property);
     const { type } = info;
     let input_html = "";
@@ -12060,15 +10498,15 @@ var _LGraphCanvas = class _LGraphCanvas {
     }
     const dialog = this.createDialog(
       `<span class='name'>${info.label || property}</span>${input_html}<button>OK</button>`,
-      options22
+      options2
     );
     let input;
     if ((type == "enum" || type == "combo") && info.values) {
       input = dialog.querySelector("select");
       input == null ? void 0 : input.addEventListener("change", function(e2) {
-        var _a2;
+        var _a;
         dialog.modified();
-        setValue((_a2 = e2.target) == null ? void 0 : _a2.value);
+        setValue((_a = e2.target) == null ? void 0 : _a.value);
       });
     } else if (type == "boolean" || type == "toggle") {
       input = dialog.querySelector("input");
@@ -12110,7 +10548,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     }
     const dirty = () => __privateMethod(this, _LGraphCanvas_instances, dirty_fn).call(this);
     function setValue(value) {
-      var _a2, _b;
+      var _a, _b;
       if ((info == null ? void 0 : info.values) && typeof info.values === "object" && info.values[value] != void 0) {
         value = info.values[value];
       }
@@ -12124,24 +10562,24 @@ var _LGraphCanvas = class _LGraphCanvas {
       if (node2.graph) {
         node2.graph._version++;
       }
-      (_a2 = node2.onPropertyChanged) == null ? void 0 : _a2.call(node2, property, value);
-      (_b = options22.onclose) == null ? void 0 : _b.call(options22);
+      (_a = node2.onPropertyChanged) == null ? void 0 : _a.call(node2, property, value);
+      (_b = options2.onclose) == null ? void 0 : _b.call(options2);
       dialog.close();
       dirty();
     }
     return dialog;
   }
   // TODO refactor, theer are different dialog, some uses createDialog, some dont
-  createDialog(html3, options22) {
+  createDialog(html, options2) {
     const def_options = {
       checkForInput: false,
       closeOnLeave: true,
       closeOnLeave_checkModified: true
     };
-    options22 = Object.assign(def_options, options22 || {});
+    options2 = Object.assign(def_options, options2 || {});
     const customProperties = {
       className: "graphdialog",
-      innerHTML: html3,
+      innerHTML: html,
       is_modified: false,
       modified() {
         this.is_modified = true;
@@ -12159,12 +10597,12 @@ var _LGraphCanvas = class _LGraphCanvas {
       offsetx -= rect.left;
       offsety -= rect.top;
     }
-    if (options22.position) {
-      offsetx += options22.position[0];
-      offsety += options22.position[1];
-    } else if (options22.event) {
-      offsetx += options22.event.clientX;
-      offsety += options22.event.clientY;
+    if (options2.position) {
+      offsetx += options2.position[0];
+      offsety += options2.position[1];
+    } else if (options2.event) {
+      offsetx += options2.event.clientX;
+      offsety += options2.event.clientY;
     } else {
       offsetx += this.canvas.width * 0.5;
       offsety += this.canvas.height * 0.5;
@@ -12173,7 +10611,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     dialog.style.top = `${offsety}px`;
     if (!this.canvas.parentNode) throw new TypeError("Canvas parent element was null.");
     this.canvas.parentNode.append(dialog);
-    if (options22.checkForInput) {
+    if (options2.checkForInput) {
       const aI = dialog.querySelectorAll("input");
       if (aI) {
         for (const iX of aI) {
@@ -12203,7 +10641,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       }
     });
     dialog.addEventListener("mouseenter", function() {
-      if (options22.closeOnLeave || LiteGraph.dialog_close_on_mouse_leave) {
+      if (options2.closeOnLeave || LiteGraph.dialog_close_on_mouse_leave) {
         if (dialogCloseTimer) clearTimeout(dialogCloseTimer);
       }
     });
@@ -12223,18 +10661,18 @@ var _LGraphCanvas = class _LGraphCanvas {
     }
     return dialog;
   }
-  createPanel(title, options22) {
-    options22 = options22 || {};
-    const ref_window = options22.window || window;
+  createPanel(title, options2) {
+    options2 = options2 || {};
+    const ref_window = options2.window || window;
     const root = document.createElement("div");
     root.className = "litegraph dialog";
     root.innerHTML = "<div class='dialog-header'><span class='dialog-title'></span></div><div class='dialog-content'></div><div style='display:none;' class='dialog-alt-content'></div><div class='dialog-footer'></div>";
     root.header = root.querySelector(".dialog-header");
-    if (options22.width)
-      root.style.width = options22.width + (typeof options22.width === "number" ? "px" : "");
-    if (options22.height)
-      root.style.height = options22.height + (typeof options22.height === "number" ? "px" : "");
-    if (options22.closable) {
+    if (options2.width)
+      root.style.width = options2.width + (typeof options2.width === "number" ? "px" : "");
+    if (options2.height)
+      root.style.height = options2.height + (typeof options2.height === "number" ? "px" : "");
+    if (options2.closable) {
       const close = document.createElement("span");
       close.innerHTML = "&#10005;";
       close.classList.add("close");
@@ -12286,10 +10724,10 @@ var _LGraphCanvas = class _LGraphCanvas {
       else root.content.append(elem);
       return elem;
     };
-    root.addButton = function(name, callback, options222) {
+    root.addButton = function(name, callback, options22) {
       const elem = document.createElement("button");
       elem.textContent = name;
-      elem.options = options222;
+      elem.options = options22;
       elem.classList.add("btn");
       elem.addEventListener("click", callback);
       root.footer.append(elem);
@@ -12300,8 +10738,8 @@ var _LGraphCanvas = class _LGraphCanvas {
       elem.className = "separator";
       root.content.append(elem);
     };
-    root.addWidget = function(type, name, value, options222, callback) {
-      options222 = options222 || {};
+    root.addWidget = function(type, name, value, options22, callback) {
+      options22 = options22 || {};
       let str_value = String(value);
       type = type.toLowerCase();
       if (type == "number" && typeof value === "number") str_value = value.toFixed(3);
@@ -12310,13 +10748,13 @@ var _LGraphCanvas = class _LGraphCanvas {
       elem.innerHTML = "<span class='property_name'></span><span class='property_value'></span>";
       const nameSpan = elem.querySelector(".property_name");
       if (!nameSpan) throw new TypeError("Property name element was null.");
-      nameSpan.textContent = options222.label || name;
+      nameSpan.textContent = options22.label || name;
       const value_element = elem.querySelector(".property_value");
       if (!value_element) throw new TypeError("Property name element was null.");
       value_element.textContent = str_value;
       elem.dataset["property"] = name;
-      elem.dataset["type"] = options222.type || type;
-      elem.options = options222;
+      elem.dataset["type"] = options22.type || type;
+      elem.options = options22;
       elem.value = value;
       if (type == "code") {
         elem.addEventListener("click", function() {
@@ -12343,21 +10781,21 @@ var _LGraphCanvas = class _LGraphCanvas {
           }
         });
         value_element.addEventListener("blur", function() {
-          var _a2, _b;
+          var _a, _b;
           let v2 = this.textContent;
-          const propname = (_a2 = this.parentElement) == null ? void 0 : _a2.dataset["property"];
+          const propname = (_a = this.parentElement) == null ? void 0 : _a.dataset["property"];
           const proptype = (_b = this.parentElement) == null ? void 0 : _b.dataset["type"];
           if (proptype == "number") v2 = Number(v2);
           innerChange(propname, v2);
         });
       } else if (type == "enum" || type == "combo") {
-        const str_value2 = _LGraphCanvas.getPropertyPrintableValue(value, options222.values);
+        const str_value2 = _LGraphCanvas.getPropertyPrintableValue(value, options22.values);
         if (!value_element) throw new TypeError("Property name element was null.");
         value_element.textContent = str_value2 != null ? str_value2 : "";
         value_element.addEventListener("click", function(event) {
-          var _a2;
-          const values = options222.values || [];
-          const propname = (_a2 = this.parentElement) == null ? void 0 : _a2.dataset["property"];
+          var _a;
+          const values = options22.values || [];
+          const propname = (_a = this.parentElement) == null ? void 0 : _a.dataset["property"];
           const inner_clicked = (v2) => {
             this.textContent = v2;
             innerChange(propname, v2);
@@ -12377,9 +10815,9 @@ var _LGraphCanvas = class _LGraphCanvas {
       }
       root.content.append(elem);
       function innerChange(name2, value2) {
-        var _a2;
-        (_a2 = options222.callback) == null ? void 0 : _a2.call(options222, name2, value2, options222);
-        callback == null ? void 0 : callback(name2, value2, options222);
+        var _a;
+        (_a = options22.callback) == null ? void 0 : _a.call(options22, name2, value2, options22);
+        callback == null ? void 0 : callback(name2, value2, options22);
       }
       return elem;
     };
@@ -12387,8 +10825,8 @@ var _LGraphCanvas = class _LGraphCanvas {
     return root;
   }
   closePanels() {
-    var _a2, _b, _c, _d;
-    (_b = (_a2 = document.querySelector("#node-panel")) == null ? void 0 : _a2.close) == null ? void 0 : _b.call(_a2);
+    var _a, _b, _c, _d;
+    (_b = (_a = document.querySelector("#node-panel")) == null ? void 0 : _a.close) == null ? void 0 : _b.call(_a);
     (_d = (_c = document.querySelector("#option-panel")) == null ? void 0 : _c.close) == null ? void 0 : _d.call(_c);
   }
   showShowNodePanel(node2) {
@@ -12411,7 +10849,7 @@ var _LGraphCanvas = class _LGraphCanvas {
     panel.node = node2;
     panel.classList.add("settings");
     const inner_refresh = () => {
-      var _a2, _b;
+      var _a, _b;
       panel.content.innerHTML = "";
       panel.addHTML(`<span class='node_type'>${node2.type}</span><span class='node_desc'>${node2.constructor.desc || ""}</span><span class='separator'></span>`);
       panel.addHTML("<h3>Properties</h3>");
@@ -12459,7 +10897,7 @@ var _LGraphCanvas = class _LGraphCanvas {
       for (const pName in node2.properties) {
         const value = node2.properties[pName];
         const info = node2.getPropertyInfo(pName);
-        if ((_a2 = node2.onAddPropertyToPanel) == null ? void 0 : _a2.call(node2, pName, panel)) continue;
+        if ((_a = node2.onAddPropertyToPanel) == null ? void 0 : _a.call(node2, pName, panel)) continue;
         panel.addWidget(info.widget || info.type, pName, value, info, fUpdate);
       }
       panel.addSeparator();
@@ -12518,12 +10956,12 @@ var _LGraphCanvas = class _LGraphCanvas {
     }
   }
   getCanvasMenuOptions() {
-    var _a2;
-    let options22;
+    var _a;
+    let options2;
     if (this.getMenuOptions) {
-      options22 = this.getMenuOptions();
+      options2 = this.getMenuOptions();
     } else {
-      options22 = [
+      options2 = [
         {
           content: "Add Node",
           has_submenu: true,
@@ -12534,24 +10972,24 @@ var _LGraphCanvas = class _LGraphCanvas {
         // {content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
       ];
       if (Object.keys(this.selected_nodes).length > 1) {
-        options22.push({
+        options2.push({
           content: "Align",
           has_submenu: true,
           callback: _LGraphCanvas.onGroupAlign
         });
       }
     }
-    const extra = (_a2 = this.getExtraMenuOptions) == null ? void 0 : _a2.call(this, this, options22);
-    return Array.isArray(extra) ? options22.concat(extra) : options22;
+    const extra = (_a = this.getExtraMenuOptions) == null ? void 0 : _a.call(this, this, options2);
+    return Array.isArray(extra) ? options2.concat(extra) : options2;
   }
   // called by processContextMenu to extract the menu list
   getNodeMenuOptions(node2) {
-    var _a2, _b, _c, _d;
-    let options22;
+    var _a, _b, _c, _d;
+    let options2;
     if (node2.getMenuOptions) {
-      options22 = node2.getMenuOptions(this);
+      options2 = node2.getMenuOptions(this);
     } else {
-      options22 = [
+      options2 = [
         {
           content: "Inputs",
           has_submenu: true,
@@ -12571,7 +11009,7 @@ var _LGraphCanvas = class _LGraphCanvas {
         },
         {
           content: "Properties Panel",
-          callback: function(item, options222, e2, menu, node22) {
+          callback: function(item, options22, e2, menu, node22) {
             _LGraphCanvas.active_canvas.showShowNodePanel(node22);
           }
         },
@@ -12587,24 +11025,24 @@ var _LGraphCanvas = class _LGraphCanvas {
         }
       ];
       if (node2.resizable !== false) {
-        options22.push({
+        options2.push({
           content: "Resize",
           callback: _LGraphCanvas.onMenuResizeNode
         });
       }
       if (node2.collapsible) {
-        options22.push({
+        options2.push({
           content: node2.collapsed ? "Expand" : "Collapse",
           callback: _LGraphCanvas.onMenuNodeCollapse
         });
       }
-      if ((_a2 = node2.widgets) == null ? void 0 : _a2.some((w) => w.advanced)) {
-        options22.push({
+      if ((_a = node2.widgets) == null ? void 0 : _a.some((w) => w.advanced)) {
+        options2.push({
           content: node2.showAdvanced ? "Hide Advanced" : "Show Advanced",
           callback: _LGraphCanvas.onMenuToggleAdvanced
         });
       }
-      options22.push(
+      options2.push(
         {
           content: node2.pinned ? "Unpin" : "Pin",
           callback: () => {
@@ -12628,19 +11066,19 @@ var _LGraphCanvas = class _LGraphCanvas {
         null
       );
     }
-    const extra = (_b = node2.getExtraMenuOptions) == null ? void 0 : _b.call(node2, this, options22);
+    const extra = (_b = node2.getExtraMenuOptions) == null ? void 0 : _b.call(node2, this, options2);
     if (Array.isArray(extra) && extra.length > 0) {
       extra.push(null);
-      options22 = extra.concat(options22);
+      options2 = extra.concat(options2);
     }
     if (node2.clonable !== false) {
-      options22.push({
+      options2.push({
         content: "Clone",
         callback: _LGraphCanvas.onMenuNodeClone
       });
     }
     if (Object.keys(this.selected_nodes).length > 1) {
-      options22.push({
+      options2.push({
         content: "Align Selected To",
         has_submenu: true,
         callback: _LGraphCanvas.onNodeAlign
@@ -12650,13 +11088,13 @@ var _LGraphCanvas = class _LGraphCanvas {
         callback: _LGraphCanvas.createDistributeMenu
       });
     }
-    options22.push(null, {
+    options2.push(null, {
       content: "Remove",
       disabled: !(node2.removable !== false && !node2.block_delete),
       callback: _LGraphCanvas.onMenuNodeRemove
     });
-    (_d = (_c = node2.graph) == null ? void 0 : _c.onGetNodeMenuOptions) == null ? void 0 : _d.call(_c, options22, node2);
-    return options22;
+    (_d = (_c = node2.graph) == null ? void 0 : _c.onGetNodeMenuOptions) == null ? void 0 : _d.call(_c, options2, node2);
+    return options2;
   }
   /** @deprecated */
   getGroupMenuOptions(group) {
@@ -12664,17 +11102,17 @@ var _LGraphCanvas = class _LGraphCanvas {
     return group.getMenuOptions();
   }
   processContextMenu(node2, event) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     const canvas2 = _LGraphCanvas.active_canvas;
     const ref_window = canvas2.getCanvasWindow();
     let menu_info;
-    const options22 = {
+    const options2 = {
       event,
       callback: inner_option_clicked,
       extra: node2
     };
     if (node2) {
-      options22.title = (_a2 = node2.type) != null ? _a2 : void 0;
+      options2.title = (_a = node2.type) != null ? _a : void 0;
       _LGraphCanvas.active_node = node2;
       const slot = node2.getSlotInPosition(event.canvasX, event.canvasY);
       if (slot) {
@@ -12697,11 +11135,11 @@ var _LGraphCanvas = class _LGraphCanvas {
             menu_info.push(...node2.getExtraSlotMenuOptions(slot));
           }
         }
-        options22.title = (slot.input ? slot.input.type : slot.output.type) || "*";
+        options2.title = (slot.input ? slot.input.type : slot.output.type) || "*";
         if (slot.input && slot.input.type == LiteGraph.ACTION)
-          options22.title = "Action";
+          options2.title = "Action";
         if (slot.output && slot.output.type == LiteGraph.EVENT)
-          options22.title = "Event";
+          options2.title = "Event";
       } else {
         menu_info = this.getNodeMenuOptions(node2);
       }
@@ -12737,14 +11175,14 @@ var _LGraphCanvas = class _LGraphCanvas {
       }
     }
     if (!menu_info) return;
-    new LiteGraph.ContextMenu(menu_info, options22, ref_window);
-    const createDialog = (options222) => this.createDialog(
+    new LiteGraph.ContextMenu(menu_info, options2, ref_window);
+    const createDialog = (options22) => this.createDialog(
       "<span class='name'>Name</span><input autofocus type='text'/><button>OK</button>",
-      options222
+      options22
     );
     const setDirty = () => this.setDirty(true);
-    function inner_option_clicked(v2, options222) {
-      var _a3;
+    function inner_option_clicked(v2, options22) {
+      var _a2;
       if (!v2) return;
       if (v2.content == "Remove Slot") {
         if (!(node2 == null ? void 0 : node2.graph)) throw new NullGraphError();
@@ -12775,7 +11213,7 @@ var _LGraphCanvas = class _LGraphCanvas {
         const info = v2.slot;
         if (!info) throw new TypeError("Found-slot info was null when processing context menu.");
         const slot_info = info.input ? node2.getInputInfo(info.slot) : node2.getOutputInfo(info.slot);
-        const dialog = createDialog(options222);
+        const dialog = createDialog(options22);
         const input = dialog.querySelector("input");
         if (input && slot_info) {
           input.value = slot_info.label || "";
@@ -12792,7 +11230,7 @@ var _LGraphCanvas = class _LGraphCanvas {
           dialog.close();
           node2.graph.afterChange();
         };
-        (_a3 = dialog.querySelector("button")) == null ? void 0 : _a3.addEventListener("click", inner);
+        (_a2 = dialog.querySelector("button")) == null ? void 0 : _a2.addEventListener("click", inner);
         if (!input) throw new TypeError("Input element was null when processing context menu.");
         input.addEventListener("keydown", function(e2) {
           dialog.is_modified = true;
@@ -12814,20 +11252,20 @@ var _LGraphCanvas = class _LGraphCanvas {
    * Starts an animation to fit the view around the specified selection of nodes.
    * @param bounds The bounds to animate the view to, defined by a rectangle.
    */
-  animateToBounds(bounds, options22 = {}) {
+  animateToBounds(bounds, options2 = {}) {
     const setDirty = () => this.setDirty(true, true);
-    this.ds.animateToBounds(bounds, setDirty, options22);
+    this.ds.animateToBounds(bounds, setDirty, options2);
   }
   /**
    * Fits the view to the selected nodes with animation.
    * If nothing is selected, the view is fitted around all items in the graph.
    */
-  fitViewToSelectionAnimated(options22 = {}) {
+  fitViewToSelectionAnimated(options2 = {}) {
     const items = this.selectedItems.size ? Array.from(this.selectedItems) : this.positionableItems;
     const bounds = createBounds(items);
     if (!bounds) throw new TypeError("Attempted to fit to view but could not calculate bounds.");
     const setDirty = () => this.setDirty(true, true);
-    this.ds.animateToBounds(bounds, setDirty, options22);
+    this.ds.animateToBounds(bounds, setDirty, options2);
   }
 };
 _temp = new WeakMap();
@@ -12878,7 +11316,7 @@ dirty_fn = function() {
   this.dirty_bgcanvas = true;
 };
 processPrimaryButton_fn = function(e2, node2) {
-  var _a2;
+  var _a;
   const { pointer, graph, linkConnector } = this;
   if (!graph) throw new NullGraphError();
   const x2 = e2.canvasX;
@@ -12891,8 +11329,8 @@ processPrimaryButton_fn = function(e2, node2) {
     dragRect[2] = 1;
     dragRect[3] = 1;
     pointer.onClick = (eUp) => {
-      var _a3;
-      const clickedItem = (_a3 = node2 != null ? node2 : graph.getRerouteOnPos(eUp.canvasX, eUp.canvasY)) != null ? _a3 : graph.getGroupTitlebarOnPos(eUp.canvasX, eUp.canvasY);
+      var _a2;
+      const clickedItem = (_a2 = node2 != null ? node2 : graph.getRerouteOnPos(eUp.canvasX, eUp.canvasY)) != null ? _a2 : graph.getGroupTitlebarOnPos(eUp.canvasX, eUp.canvasY);
       this.processSelect(clickedItem, eUp);
     };
     pointer.onDragStart = () => this.dragging_rectangle = dragRect;
@@ -12906,7 +11344,7 @@ processPrimaryButton_fn = function(e2, node2) {
     return;
   }
   if (LiteGraph.alt_drag_do_clone_nodes && e2.altKey && !e2.ctrlKey && node2 && this.allow_interaction) {
-    const node_data = (_a2 = node2.clone()) == null ? void 0 : _a2.serialize();
+    const node_data = (_a = node2.clone()) == null ? void 0 : _a.serialize();
     if ((node_data == null ? void 0 : node_data.type) != null) {
       const cloned = LiteGraph.createNode(node_data.type);
       if (cloned) {
@@ -13048,7 +11486,7 @@ processPrimaryButton_fn = function(e2, node2) {
  * @param node The node to process a click event for
  */
 processNodeClick_fn = function(e2, ctrlOrMeta, node2) {
-  var _a2, _b, _c, _d;
+  var _a, _b, _c, _d;
   const { pointer, graph, linkConnector } = this;
   if (!graph) throw new NullGraphError();
   const x2 = e2.canvasX;
@@ -13098,7 +11536,7 @@ processNodeClick_fn = function(e2, ctrlOrMeta, node2) {
       for (const [i, output] of outputs.entries()) {
         const link_pos = node2.getOutputPos(i);
         if (isInRectangle(x2, y, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
-          if (e2.shiftKey && (((_a2 = output.links) == null ? void 0 : _a2.length) || ((_b = output._floatingLinks) == null ? void 0 : _b.size))) {
+          if (e2.shiftKey && (((_a = output.links) == null ? void 0 : _a.length) || ((_b = output._floatingLinks) == null ? void 0 : _b.size))) {
             linkConnector.moveOutputLink(graph, output);
             pointer.onDragEnd = (upEvent) => linkConnector.dropLinks(graph, upEvent);
             pointer.finally = () => linkConnector.reset(true);
@@ -13117,12 +11555,12 @@ processNodeClick_fn = function(e2, ctrlOrMeta, node2) {
             }
           }
           pointer.onDoubleClick = () => {
-            var _a3;
-            return (_a3 = node2.onOutputDblClick) == null ? void 0 : _a3.call(node2, i, e2);
+            var _a2;
+            return (_a2 = node2.onOutputDblClick) == null ? void 0 : _a2.call(node2, i, e2);
           };
           pointer.onClick = () => {
-            var _a3;
-            return (_a3 = node2.onOutputClick) == null ? void 0 : _a3.call(node2, i, e2);
+            var _a2;
+            return (_a2 = node2.onOutputClick) == null ? void 0 : _a2.call(node2, i, e2);
           };
           return;
         }
@@ -13133,12 +11571,12 @@ processNodeClick_fn = function(e2, ctrlOrMeta, node2) {
         const link_pos = node2.getInputPos(i);
         if (isInRectangle(x2, y, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
           pointer.onDoubleClick = () => {
-            var _a3;
-            return (_a3 = node2.onInputDblClick) == null ? void 0 : _a3.call(node2, i, e2);
+            var _a2;
+            return (_a2 = node2.onInputDblClick) == null ? void 0 : _a2.call(node2, i, e2);
           };
           pointer.onClick = () => {
-            var _a3;
-            return (_a3 = node2.onInputClick) == null ? void 0 : _a3.call(node2, i, e2);
+            var _a2;
+            return (_a2 = node2.onInputClick) == null ? void 0 : _a2.call(node2, i, e2);
           };
           const shouldBreakLink = LiteGraph.ctrl_alt_click_do_break_link && ctrlOrMeta && e2.altKey && !e2.shiftKey;
           if (input.link !== null || ((_c = input._floatingLinks) == null ? void 0 : _c.size)) {
@@ -13166,9 +11604,9 @@ processNodeClick_fn = function(e2, ctrlOrMeta, node2) {
     this.node_widget = [node2, widget];
   } else {
     pointer.onDoubleClick = () => {
-      var _a3, _b2;
+      var _a2, _b2;
       if (pos[1] < 0 && !inCollapse) {
-        (_a3 = node2.onNodeTitleDblClick) == null ? void 0 : _a3.call(node2, e2, pos, this);
+        (_a2 = node2.onNodeTitleDblClick) == null ? void 0 : _a2.call(node2, e2, pos, this);
       }
       (_b2 = node2.onDblClick) == null ? void 0 : _b2.call(node2, e2, pos, this);
       this.emitEvent({
@@ -13186,7 +11624,7 @@ processNodeClick_fn = function(e2, ctrlOrMeta, node2) {
   this.dirty_canvas = true;
 };
 processWidgetClick_fn = function(e2, node2, widget) {
-  var _a2;
+  var _a;
   const { pointer } = this;
   if (typeof widget.onPointerDown === "function") {
     const handled = widget.onPointerDown(pointer, node2, this);
@@ -13205,8 +11643,8 @@ processWidgetClick_fn = function(e2, node2, widget) {
       canvas: this
     });
     pointer.onDrag = (eMove) => {
-      var _a3;
-      return (_a3 = widgetInstance.onDrag) == null ? void 0 : _a3.call(widgetInstance, {
+      var _a2;
+      return (_a2 = widgetInstance.onDrag) == null ? void 0 : _a2.call(widgetInstance, {
         e: eMove,
         node: node2,
         canvas: this
@@ -13217,7 +11655,7 @@ processWidgetClick_fn = function(e2, node2, widget) {
     if (result != null) this.dirty_canvas = result;
   }
   if (oldValue != widget.value) {
-    (_a2 = node2.onWidgetChanged) == null ? void 0 : _a2.call(node2, widget.name, widget.value, oldValue, widget);
+    (_a = node2.onWidgetChanged) == null ? void 0 : _a.call(node2, widget.name, widget.value, oldValue, widget);
     if (!node2.graph) throw new NullGraphError();
     node2.graph._version++;
   }
@@ -13312,13 +11750,13 @@ processDragZoom_fn = function(e2) {
  * @param sticky If `true`, the item is added to the selection - see {@link processSelect}
  */
 startDraggingItems_fn = function(item, pointer, sticky = false) {
-  var _a2;
+  var _a;
   this.emitBeforeChange();
-  (_a2 = this.graph) == null ? void 0 : _a2.beforeChange();
+  (_a = this.graph) == null ? void 0 : _a.beforeChange();
   pointer.finally = () => {
-    var _a3;
+    var _a2;
     this.isDragging = false;
-    (_a3 = this.graph) == null ? void 0 : _a3.afterChange();
+    (_a2 = this.graph) == null ? void 0 : _a2.afterChange();
     this.emitAfterChange();
   };
   this.processSelect(item, pointer.eDown, sticky);
@@ -13329,16 +11767,16 @@ startDraggingItems_fn = function(item, pointer, sticky = false) {
  * @param e The event that completed the drag, e.g. pointerup, pointermove
  */
 processDraggedItems_fn = function(e2) {
-  var _a2;
+  var _a;
   const { graph } = this;
   if (e2.shiftKey || LiteGraph.alwaysSnapToGrid)
     graph == null ? void 0 : graph.snapToGrid(this.selectedItems);
   this.dirty_canvas = true;
   this.dirty_bgcanvas = true;
-  (_a2 = this.onNodeMoved) == null ? void 0 : _a2.call(this, findFirstNode(this.selectedItems));
+  (_a = this.onNodeMoved) == null ? void 0 : _a.call(this, findFirstNode(this.selectedItems));
 };
 handleMultiSelect_fn = function(e2, dragRect) {
-  var _a2;
+  var _a;
   const { graph, selectedItems } = this;
   if (!graph) throw new NullGraphError();
   const w = Math.abs(dragRect[2]);
@@ -13380,7 +11818,7 @@ handleMultiSelect_fn = function(e2, dragRect) {
     }
     for (const item of notSelected) this.select(item);
   }
-  (_a2 = this.onSelectionChange) == null ? void 0 : _a2.call(this, this.selected_nodes);
+  (_a = this.onSelectionChange) == null ? void 0 : _a.call(this, this.selected_nodes);
 };
 /** @returns If the pointer is over a link centre marker, the link segment it belongs to.  Otherwise, `undefined`.  */
 getLinkCentreOnPos_fn = function(e2) {
@@ -13394,8 +11832,8 @@ getLinkCentreOnPos_fn = function(e2) {
 };
 /** Get the target snap / highlight point in graph space */
 getHighlightPosition_fn = function() {
-  var _a2;
-  return LiteGraph.snaps_for_comfy ? (_a2 = this._highlight_pos) != null ? _a2 : this.graph_mouse : this.graph_mouse;
+  var _a;
+  return LiteGraph.snaps_for_comfy ? (_a = this._highlight_pos) != null ? _a : this.graph_mouse : this.graph_mouse;
 };
 /**
  * Renders indicators showing where a link will connect if released.
@@ -13403,11 +11841,11 @@ getHighlightPosition_fn = function() {
  * @param ctx Canvas 2D context
  */
 renderSnapHighlight_fn = function(ctx, highlightPos) {
-  var _a2, _b, _c;
+  var _a, _b, _c;
   if (!this._highlight_pos) return;
   ctx.fillStyle = "#ffcc00";
   ctx.beginPath();
-  const shape = (_a2 = this._highlight_input) == null ? void 0 : _a2.shape;
+  const shape = (_a = this._highlight_input) == null ? void 0 : _a.shape;
   if (shape === RenderShape.ARROW) {
     ctx.moveTo(highlightPos[0] + 8, highlightPos[1] + 0.5);
     ctx.lineTo(highlightPos[0] - 4, highlightPos[1] + 6 + 0.5);
@@ -13484,39 +11922,39 @@ renderSnapHighlight_fn = function(ctx, highlightPos) {
   ctx.strokeStyle = strokeStyle;
 };
 renderFloatingLinks_fn = function(ctx, graph, visibleReroutes, now) {
-  var _a2, _b;
+  var _a, _b;
   const { globalAlpha } = ctx;
   ctx.globalAlpha = globalAlpha * 0.33;
-  for (const link2 of graph.floatingLinks.values()) {
-    const reroutes = LLink.getReroutes(graph, link2);
+  for (const link of graph.floatingLinks.values()) {
+    const reroutes = LLink.getReroutes(graph, link);
     const firstReroute = reroutes[0];
     const reroute = reroutes.at(-1);
     if (!firstReroute || !(reroute == null ? void 0 : reroute.floating)) continue;
     if (reroute.floating.slotType === "input") {
-      const node2 = graph.getNodeById(link2.target_id);
+      const node2 = graph.getNodeById(link.target_id);
       if (!node2) continue;
       const startPos = firstReroute.pos;
-      const endPos = node2.getInputPos(link2.target_slot);
-      const endDirection = (_a2 = node2.inputs[link2.target_slot]) == null ? void 0 : _a2.dir;
+      const endPos = node2.getInputPos(link.target_slot);
+      const endDirection = (_a = node2.inputs[link.target_slot]) == null ? void 0 : _a.dir;
       firstReroute._dragging = true;
-      __privateMethod(this, _LGraphCanvas_instances, renderAllLinkSegments_fn).call(this, ctx, link2, startPos, endPos, visibleReroutes, now, LinkDirection.CENTER, endDirection, true);
+      __privateMethod(this, _LGraphCanvas_instances, renderAllLinkSegments_fn).call(this, ctx, link, startPos, endPos, visibleReroutes, now, LinkDirection.CENTER, endDirection, true);
     } else {
-      const node2 = graph.getNodeById(link2.origin_id);
+      const node2 = graph.getNodeById(link.origin_id);
       if (!node2) continue;
-      const startPos = node2.getOutputPos(link2.origin_slot);
+      const startPos = node2.getOutputPos(link.origin_slot);
       const endPos = reroute.pos;
-      const startDirection = (_b = node2.outputs[link2.origin_slot]) == null ? void 0 : _b.dir;
-      link2._dragging = true;
-      __privateMethod(this, _LGraphCanvas_instances, renderAllLinkSegments_fn).call(this, ctx, link2, startPos, endPos, visibleReroutes, now, startDirection, LinkDirection.CENTER, true);
+      const startDirection = (_b = node2.outputs[link.origin_slot]) == null ? void 0 : _b.dir;
+      link._dragging = true;
+      __privateMethod(this, _LGraphCanvas_instances, renderAllLinkSegments_fn).call(this, ctx, link, startPos, endPos, visibleReroutes, now, startDirection, LinkDirection.CENTER, true);
     }
   }
   ctx.globalAlpha = globalAlpha;
 };
-renderAllLinkSegments_fn = function(ctx, link2, startPos, endPos, visibleReroutes, now, startDirection, endDirection, disabled = false) {
-  var _a2, _b, _c, _d, _e, _f;
+renderAllLinkSegments_fn = function(ctx, link, startPos, endPos, visibleReroutes, now, startDirection, endDirection, disabled = false) {
+  var _a, _b, _c, _d, _e, _f;
   const { graph, renderedPaths } = this;
   if (!graph) return;
-  const reroutes = LLink.getReroutes(graph, link2);
+  const reroutes = LLink.getReroutes(graph, link);
   const points = [
     startPos,
     ...reroutes.map((x2) => x2.pos),
@@ -13540,16 +11978,16 @@ renderAllLinkSegments_fn = function(ctx, link2, startPos, endPos, visibleReroute
       if (!renderedPaths.has(reroute)) {
         renderedPaths.add(reroute);
         visibleReroutes.push(reroute);
-        reroute._colour = link2.color || _LGraphCanvas.link_type_colors[link2.type] || this.default_link_color;
+        reroute._colour = link.color || _LGraphCanvas.link_type_colors[link.type] || this.default_link_color;
         const prevReroute = graph.getReroute(reroute.parentId);
-        const rerouteStartPos = (_a2 = prevReroute == null ? void 0 : prevReroute.pos) != null ? _a2 : startPos;
+        const rerouteStartPos = (_a = prevReroute == null ? void 0 : prevReroute.pos) != null ? _a : startPos;
         reroute.calculateAngle(this.last_draw_time, graph, rerouteStartPos);
         if (!reroute._dragging) {
           this.renderLink(
             ctx,
             rerouteStartPos,
             reroute.pos,
-            link2,
+            link,
             false,
             0,
             null,
@@ -13572,13 +12010,13 @@ renderAllLinkSegments_fn = function(ctx, link2, startPos, endPos, visibleReroute
         startControl = [dist * reroute.cos, dist * reroute.sin];
       }
     }
-    if (link2._dragging) return;
+    if (link._dragging) return;
     const segmentStartPos = (_f = points.at(-2)) != null ? _f : startPos;
     this.renderLink(
       ctx,
       segmentStartPos,
       endPos,
-      link2,
+      link,
       false,
       0,
       null,
@@ -13586,12 +12024,12 @@ renderAllLinkSegments_fn = function(ctx, link2, startPos, endPos, visibleReroute
       end_dir,
       { startControl, disabled }
     );
-  } else if (!link2._dragging) {
+  } else if (!link._dragging) {
     this.renderLink(
       ctx,
       startPos,
       endPos,
-      link2,
+      link,
       false,
       0,
       null,
@@ -13599,16 +12037,16 @@ renderAllLinkSegments_fn = function(ctx, link2, startPos, endPos, visibleReroute
       end_dir
     );
   }
-  renderedPaths.add(link2);
-  if ((link2 == null ? void 0 : link2._last_time) && now - link2._last_time < 1e3) {
-    const f = 2 - (now - link2._last_time) * 2e-3;
+  renderedPaths.add(link);
+  if ((link == null ? void 0 : link._last_time) && now - link._last_time < 1e3) {
+    const f = 2 - (now - link._last_time) * 2e-3;
     const tmp = ctx.globalAlpha;
     ctx.globalAlpha = tmp * f;
     this.renderLink(
       ctx,
       startPos,
       endPos,
-      link2,
+      link,
       true,
       f,
       "white",
@@ -13836,7 +12274,7 @@ var _LGraph = class _LGraph {
    * Removes all nodes from this graph
    */
   clear() {
-    var _a2;
+    var _a;
     this.stop();
     this.status = _LGraph.STATUS_STOPPED;
     this.id = zeroUuid;
@@ -13850,7 +12288,7 @@ var _LGraph = class _LGraph {
     this._version = -1;
     if (this._nodes) {
       for (const _node of this._nodes) {
-        (_a2 = _node.onRemoved) == null ? void 0 : _a2.call(_node);
+        (_a = _node.onRemoved) == null ? void 0 : _a.call(_node);
       }
     }
     this._nodes = [];
@@ -13890,11 +12328,11 @@ var _LGraph = class _LGraph {
    * Attach Canvas to this graph
    */
   attachCanvas(graphcanvas) {
-    var _a2;
+    var _a;
     if (graphcanvas.constructor != LGraphCanvas)
       throw "attachCanvas expects a LGraphCanvas instance";
     if (graphcanvas.graph != this)
-      (_a2 = graphcanvas.graph) == null ? void 0 : _a2.detachCanvas(graphcanvas);
+      (_a = graphcanvas.graph) == null ? void 0 : _a.detachCanvas(graphcanvas);
     graphcanvas.graph = this;
     this.list_of_graphcanvas || (this.list_of_graphcanvas = []);
     this.list_of_graphcanvas.push(graphcanvas);
@@ -13915,20 +12353,20 @@ var _LGraph = class _LGraph {
    * @param interval amount of milliseconds between executions, if 0 then it renders to the monitor refresh rate
    */
   start(interval) {
-    var _a2;
+    var _a;
     if (this.status == _LGraph.STATUS_RUNNING) return;
     this.status = _LGraph.STATUS_RUNNING;
-    (_a2 = this.onPlayEvent) == null ? void 0 : _a2.call(this);
+    (_a = this.onPlayEvent) == null ? void 0 : _a.call(this);
     this.sendEventToAllNodes("onStart");
     this.starttime = LiteGraph.getTime();
     this.last_update_time = this.starttime;
     interval || (interval = 0);
     if (interval == 0 && typeof window != "undefined" && window.requestAnimationFrame) {
       const on_frame = () => {
-        var _a3, _b;
+        var _a2, _b;
         if (this.execution_timer_id != -1) return;
         window.requestAnimationFrame(on_frame);
-        (_a3 = this.onBeforeStep) == null ? void 0 : _a3.call(this);
+        (_a2 = this.onBeforeStep) == null ? void 0 : _a2.call(this);
         this.runStep(1, !this.catch_errors);
         (_b = this.onAfterStep) == null ? void 0 : _b.call(this);
       };
@@ -13936,8 +12374,8 @@ var _LGraph = class _LGraph {
       on_frame();
     } else {
       this.execution_timer_id = setInterval(() => {
-        var _a3, _b;
-        (_a3 = this.onBeforeStep) == null ? void 0 : _a3.call(this);
+        var _a2, _b;
+        (_a2 = this.onBeforeStep) == null ? void 0 : _a2.call(this);
         this.runStep(1, !this.catch_errors);
         (_b = this.onAfterStep) == null ? void 0 : _b.call(this);
       }, interval);
@@ -13948,10 +12386,10 @@ var _LGraph = class _LGraph {
    * Stops the execution loop of the graph
    */
   stop() {
-    var _a2;
+    var _a;
     if (this.status == _LGraph.STATUS_STOPPED) return;
     this.status = _LGraph.STATUS_STOPPED;
-    (_a2 = this.onStopEvent) == null ? void 0 : _a2.call(this);
+    (_a = this.onStopEvent) == null ? void 0 : _a.call(this);
     if (this.execution_timer_id != null) {
       if (this.execution_timer_id != -1) {
         clearInterval(this.execution_timer_id);
@@ -13967,7 +12405,7 @@ var _LGraph = class _LGraph {
    * @param limit max number of nodes to execute (used to execute from start to a node)
    */
   runStep(num, do_not_catch_errors, limit) {
-    var _a2, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f;
     num = num || 1;
     const start = LiteGraph.getTime();
     this.globaltime = 1e-3 * (start - this.starttime);
@@ -13979,7 +12417,7 @@ var _LGraph = class _LGraph {
         for (let j = 0; j < limit; ++j) {
           const node2 = nodes[j];
           if (node2.mode == LGraphEventMode.ALWAYS && node2.onExecute) {
-            (_a2 = node2.doExecute) == null ? void 0 : _a2.call(node2);
+            (_a = node2.doExecute) == null ? void 0 : _a.call(node2);
           }
         }
         this.fixedtime += this.fixedtime_lapse;
@@ -14034,7 +12472,7 @@ var _LGraph = class _LGraph {
   }
   // This is more internal, it computes the executable nodes in order and returns it
   computeExecutionOrder(only_onExecute, set_level) {
-    var _a2;
+    var _a;
     const L = [];
     const S = [];
     const M = {};
@@ -14071,21 +12509,21 @@ var _LGraph = class _LGraph {
         if ((output == null ? void 0 : output.links) == null || output.links.length == 0)
           continue;
         for (const link_id of output.links) {
-          const link2 = this._links.get(link_id);
-          if (!link2) continue;
-          if (visited_links[link2.id]) continue;
-          const target_node = this.getNodeById(link2.target_id);
+          const link = this._links.get(link_id);
+          if (!link) continue;
+          if (visited_links[link.id]) continue;
+          const target_node = this.getNodeById(link.target_id);
           if (target_node == null) {
-            visited_links[link2.id] = true;
+            visited_links[link.id] = true;
             continue;
           }
           if (set_level) {
-            (_a2 = node2._level) != null ? _a2 : node2._level = 0;
+            (_a = node2._level) != null ? _a : node2._level = 0;
             if (!target_node._level || target_node._level <= node2._level) {
               target_node._level = node2._level + 1;
             }
           }
-          visited_links[link2.id] = true;
+          visited_links[link.id] = true;
           remaining_links[target_node.id] -= 1;
           if (remaining_links[target_node.id] == 0) S.push(target_node);
         }
@@ -14227,11 +12665,11 @@ var _LGraph = class _LGraph {
   }
   /** @deprecated See {@link LGraph.canvasAction} */
   sendActionToCanvas(action, params) {
-    var _a2;
+    var _a;
     const { list_of_graphcanvas } = this;
     if (!list_of_graphcanvas) return;
     for (const c of list_of_graphcanvas) {
-      (_a2 = c[action]) == null ? void 0 : _a2.apply(c, params);
+      (_a = c[action]) == null ? void 0 : _a.apply(c, params);
     }
   }
   /**
@@ -14239,7 +12677,7 @@ var _LGraph = class _LGraph {
    * @param node the instance of the node
    */
   add(node2, skip_compute_order) {
-    var _a2, _b;
+    var _a, _b;
     if (!node2) return;
     const { state } = this;
     if (LiteGraph.alwaysSnapToGrid) {
@@ -14279,7 +12717,7 @@ var _LGraph = class _LGraph {
     this._version++;
     this._nodes.push(node2);
     this._nodes_by_id[node2.id] = node2;
-    (_a2 = node2.onAdded) == null ? void 0 : _a2.call(node2, this);
+    (_a = node2.onAdded) == null ? void 0 : _a.call(node2, this);
     if (this.config.align_to_grid) node2.alignToGrid();
     if (!skip_compute_order) this.updateExecutionOrder();
     (_b = this.onNodeAdded) == null ? void 0 : _b.call(this, node2);
@@ -14292,7 +12730,7 @@ var _LGraph = class _LGraph {
    * @param node the instance of the node
    */
   remove(node2) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     if (node2 instanceof LGraphGroup) {
       const index = this._groups.indexOf(node2);
       if (index != -1) {
@@ -14315,12 +12753,12 @@ var _LGraph = class _LGraph {
     }
     if (outputs) {
       for (const [i, slot] of outputs.entries()) {
-        if ((_a2 = slot.links) == null ? void 0 : _a2.length) node2.disconnectOutput(i);
+        if ((_a = slot.links) == null ? void 0 : _a.length) node2.disconnectOutput(i);
       }
     }
-    for (const link2 of this.floatingLinks.values()) {
-      if (link2.origin_id === node2.id || link2.target_id === node2.id) {
-        this.removeFloatingLink(link2);
+    for (const link of this.floatingLinks.values()) {
+      if (link.origin_id === node2.id || link.target_id === node2.id) {
+        this.removeFloatingLink(link);
       }
     }
     (_b = node2.onRemoved) == null ? void 0 : _b.call(node2);
@@ -14371,13 +12809,13 @@ var _LGraph = class _LGraph {
    * @returns a list with all the nodes of this type
    */
   findNodesByType(type, result) {
-    var _a2;
+    var _a;
     const matchType = type.toLowerCase();
     result = result || [];
     result.length = 0;
     const { _nodes } = this;
     for (const node2 of _nodes) {
-      if (((_a2 = node2.type) == null ? void 0 : _a2.toLowerCase()) == matchType)
+      if (((_a = node2.type) == null ? void 0 : _a.toLowerCase()) == matchType)
         result.push(node2);
     }
     return result;
@@ -14505,8 +12943,8 @@ var _LGraph = class _LGraph {
   }
   // ********** GLOBALS *****************
   trigger(action, param) {
-    var _a2;
-    (_a2 = this.onTrigger) == null ? void 0 : _a2.call(this, action, param);
+    var _a;
+    (_a = this.onTrigger) == null ? void 0 : _a.call(this, action, param);
   }
   /** @todo Clean up - never implemented. */
   triggerInput(name, value) {
@@ -14524,30 +12962,30 @@ var _LGraph = class _LGraph {
   }
   // used for undo, called before any change is made to the graph
   beforeChange(info) {
-    var _a2;
-    (_a2 = this.onBeforeChange) == null ? void 0 : _a2.call(this, this, info);
+    var _a;
+    (_a = this.onBeforeChange) == null ? void 0 : _a.call(this, this, info);
     this.canvasAction((c) => {
-      var _a3;
-      return (_a3 = c.onBeforeChange) == null ? void 0 : _a3.call(c, this);
+      var _a2;
+      return (_a2 = c.onBeforeChange) == null ? void 0 : _a2.call(c, this);
     });
   }
   // used to resend actions, called after any change is made to the graph
   afterChange(info) {
-    var _a2;
-    (_a2 = this.onAfterChange) == null ? void 0 : _a2.call(this, this, info);
+    var _a;
+    (_a = this.onAfterChange) == null ? void 0 : _a.call(this, this, info);
     this.canvasAction((c) => {
-      var _a3;
-      return (_a3 = c.onAfterChange) == null ? void 0 : _a3.call(c, this);
+      var _a2;
+      return (_a2 = c.onAfterChange) == null ? void 0 : _a2.call(c, this);
     });
   }
   connectionChange(node2) {
-    var _a2;
+    var _a;
     this.updateExecutionOrder();
-    (_a2 = this.onConnectionChange) == null ? void 0 : _a2.call(this, node2);
+    (_a = this.onConnectionChange) == null ? void 0 : _a.call(this, node2);
     this._version++;
     this.canvasAction((c) => {
-      var _a3;
-      return (_a3 = c.onConnectionChange) == null ? void 0 : _a3.call(c);
+      var _a2;
+      return (_a2 = c.onConnectionChange) == null ? void 0 : _a2.call(c);
     });
   }
   /**
@@ -14561,45 +12999,45 @@ var _LGraph = class _LGraph {
   }
   /* Called when something visually changed (not the graph!) */
   change() {
-    var _a2;
+    var _a;
     if (LiteGraph.debug) {
       console.log("Graph changed");
     }
     this.canvasAction((c) => c.setDirty(true, true));
-    (_a2 = this.on_change) == null ? void 0 : _a2.call(this, this);
+    (_a = this.on_change) == null ? void 0 : _a.call(this, this);
   }
   setDirtyCanvas(fg, bg) {
     this.canvasAction((c) => c.setDirty(fg, bg));
   }
-  addFloatingLink(link2) {
-    var _a2, _b, _c, _d, _e;
-    if (link2.id === -1) {
-      link2.id = ++__privateWrapper(this, _lastFloatingLinkId)._;
+  addFloatingLink(link) {
+    var _a, _b, _c, _d, _e;
+    if (link.id === -1) {
+      link.id = ++__privateWrapper(this, _lastFloatingLinkId)._;
     }
-    __privateGet(this, _floatingLinks).set(link2.id, link2);
-    const slot = link2.target_id !== -1 ? (_b = (_a2 = this.getNodeById(link2.target_id)) == null ? void 0 : _a2.inputs) == null ? void 0 : _b[link2.target_slot] : (_d = (_c = this.getNodeById(link2.origin_id)) == null ? void 0 : _c.outputs) == null ? void 0 : _d[link2.origin_slot];
+    __privateGet(this, _floatingLinks).set(link.id, link);
+    const slot = link.target_id !== -1 ? (_b = (_a = this.getNodeById(link.target_id)) == null ? void 0 : _a.inputs) == null ? void 0 : _b[link.target_slot] : (_d = (_c = this.getNodeById(link.origin_id)) == null ? void 0 : _c.outputs) == null ? void 0 : _d[link.origin_slot];
     if (slot) {
       (_e = slot._floatingLinks) != null ? _e : slot._floatingLinks = /* @__PURE__ */ new Set();
-      slot._floatingLinks.add(link2);
+      slot._floatingLinks.add(link);
     } else {
-      console.warn(`Adding invalid floating link: target/slot: [${link2.target_id}/${link2.target_slot}] origin/slot: [${link2.origin_id}/${link2.origin_slot}]`);
+      console.warn(`Adding invalid floating link: target/slot: [${link.target_id}/${link.target_slot}] origin/slot: [${link.origin_id}/${link.origin_slot}]`);
     }
-    const reroutes = LLink.getReroutes(this, link2);
+    const reroutes = LLink.getReroutes(this, link);
     for (const reroute of reroutes) {
-      reroute.floatingLinkIds.add(link2.id);
+      reroute.floatingLinkIds.add(link.id);
     }
-    return link2;
+    return link;
   }
-  removeFloatingLink(link2) {
-    var _a2, _b, _c, _d, _e;
-    __privateGet(this, _floatingLinks).delete(link2.id);
-    const slot = link2.target_id !== -1 ? (_b = (_a2 = this.getNodeById(link2.target_id)) == null ? void 0 : _a2.inputs) == null ? void 0 : _b[link2.target_slot] : (_d = (_c = this.getNodeById(link2.origin_id)) == null ? void 0 : _c.outputs) == null ? void 0 : _d[link2.origin_slot];
+  removeFloatingLink(link) {
+    var _a, _b, _c, _d, _e;
+    __privateGet(this, _floatingLinks).delete(link.id);
+    const slot = link.target_id !== -1 ? (_b = (_a = this.getNodeById(link.target_id)) == null ? void 0 : _a.inputs) == null ? void 0 : _b[link.target_slot] : (_d = (_c = this.getNodeById(link.origin_id)) == null ? void 0 : _c.outputs) == null ? void 0 : _d[link.origin_slot];
     if (slot) {
-      (_e = slot._floatingLinks) == null ? void 0 : _e.delete(link2);
+      (_e = slot._floatingLinks) == null ? void 0 : _e.delete(link);
     }
-    const reroutes = LLink.getReroutes(this, link2);
+    const reroutes = LLink.getReroutes(this, link);
     for (const reroute of reroutes) {
-      reroute.floatingLinkIds.delete(link2.id);
+      reroute.floatingLinkIds.delete(link.id);
       if (reroute.floatingLinkIds.size === 0) {
         delete reroute.floating;
       }
@@ -14615,10 +13053,10 @@ var _LGraph = class _LGraph {
    * @param serialisedReroute See {@link SerialisableReroute}
    */
   setReroute({ id, parentId, pos, linkIds, floating }) {
-    var _a2;
+    var _a;
     id != null ? id : id = ++this.state.lastRerouteId;
     if (id > this.state.lastRerouteId) this.state.lastRerouteId = id;
-    const reroute = (_a2 = this.reroutes.get(id)) != null ? _a2 : new Reroute(id, this);
+    const reroute = (_a = this.reroutes.get(id)) != null ? _a : new Reroute(id, this);
     reroute.update(parentId, pos, linkIds, floating);
     this.reroutes.set(id, reroute);
     return reroute;
@@ -14637,19 +13075,19 @@ var _LGraph = class _LGraph {
     const reroute = new Reroute(rerouteId, this, pos, before.parentId, linkIds, floatingLinkIds);
     this.reroutes.set(rerouteId, reroute);
     for (const linkId of linkIds) {
-      const link2 = this._links.get(linkId);
-      if (!link2) continue;
-      if (link2.parentId === before.parentId) link2.parentId = rerouteId;
-      const reroutes = LLink.getReroutes(this, link2);
+      const link = this._links.get(linkId);
+      if (!link) continue;
+      if (link.parentId === before.parentId) link.parentId = rerouteId;
+      const reroutes = LLink.getReroutes(this, link);
       for (const x2 of reroutes.filter((x22) => x22.parentId === before.parentId)) {
         x2.parentId = rerouteId;
       }
     }
     for (const linkId of floatingLinkIds) {
-      const link2 = this.floatingLinks.get(linkId);
-      if (!link2) continue;
-      if (link2.parentId === before.parentId) link2.parentId = rerouteId;
-      const reroutes = LLink.getReroutes(this, link2);
+      const link = this.floatingLinks.get(linkId);
+      if (!link) continue;
+      if (link.parentId === before.parentId) link.parentId = rerouteId;
+      const reroutes = LLink.getReroutes(this, link);
       for (const x2 of reroutes.filter((x22) => x22.parentId === before.parentId)) {
         x2.parentId = rerouteId;
       }
@@ -14669,24 +13107,24 @@ var _LGraph = class _LGraph {
       if (reroute2.parentId === id) reroute2.parentId = parentId;
     }
     for (const linkId of linkIds) {
-      const link2 = this._links.get(linkId);
-      if (link2 && link2.parentId === id) link2.parentId = parentId;
+      const link = this._links.get(linkId);
+      if (link && link.parentId === id) link.parentId = parentId;
     }
     for (const linkId of floatingLinkIds) {
-      const link2 = this.floatingLinks.get(linkId);
-      if (!link2) {
+      const link = this.floatingLinks.get(linkId);
+      if (!link) {
         console.warn(`Removed reroute had floating link ID that did not exist [${linkId}]`);
         continue;
       }
-      const floatingReroutes = LLink.getReroutes(this, link2);
+      const floatingReroutes = LLink.getReroutes(this, link);
       const lastReroute = floatingReroutes.at(-1);
       const secondLastReroute = floatingReroutes.at(-2);
       if (reroute !== lastReroute) {
         continue;
       } else if ((secondLastReroute == null ? void 0 : secondLastReroute.totalLinks) !== 1) {
-        this.removeFloatingLink(link2);
-      } else if (link2.parentId === id) {
-        link2.parentId = parentId;
+        this.removeFloatingLink(link);
+      } else if (link.parentId === id) {
+        link.parentId = parentId;
         secondLastReroute.floating = reroute.floating;
       }
     }
@@ -14697,11 +13135,11 @@ var _LGraph = class _LGraph {
    * Destroys a link
    */
   removeLink(link_id) {
-    const link2 = this._links.get(link_id);
-    if (!link2) return;
-    const node2 = this.getNodeById(link2.target_id);
-    node2 == null ? void 0 : node2.disconnectInput(link2.target_slot, false);
-    link2.disconnect(this);
+    const link = this._links.get(link_id);
+    if (!link) return;
+    const node2 = this.getNodeById(link.target_id);
+    node2 == null ? void 0 : node2.disconnectInput(link.target_slot, false);
+    link.disconnect(this);
   }
   /**
    * Creates a Object containing all the info about this graph, it can be serialized
@@ -14738,10 +13176,10 @@ var _LGraph = class _LGraph {
    * Mutating the properties of the return object may result in changes to your graph.
    * It is intended for use with {@link structuredClone} or {@link JSON.stringify}.
    */
-  asSerialisable(options22) {
-    var _a2;
+  asSerialisable(options2) {
+    var _a;
     const { id, revision, config, state, extra } = this;
-    const nodeList = !LiteGraph.use_uuids && (options22 == null ? void 0 : options22.sortNodes) ? [...this._nodes].sort((a, b) => a.id - b.id) : this._nodes;
+    const nodeList = !LiteGraph.use_uuids && (options2 == null ? void 0 : options2.sortNodes) ? [...this._nodes].sort((a, b) => a.id - b.id) : this._nodes;
     const nodes = nodeList.map((node2) => node2.serialize());
     const groups = this._groups.map((x2) => x2.serialize());
     const links = this._links.size ? [...this._links.values()].map((x2) => x2.asSerialisable()) : void 0;
@@ -14760,7 +13198,7 @@ var _LGraph = class _LGraph {
       reroutes,
       extra
     };
-    (_a2 = this.onSerialize) == null ? void 0 : _a2.call(this, data);
+    (_a = this.onSerialize) == null ? void 0 : _a.call(this, data);
     return data;
   }
   /**
@@ -14770,7 +13208,7 @@ var _LGraph = class _LGraph {
    * adding the configuration.
    */
   configure(data, keep_old) {
-    var _a2;
+    var _a;
     if (!data) return;
     if (!keep_old) this.clear();
     if (data.id) this.id = data.id;
@@ -14780,14 +13218,14 @@ var _LGraph = class _LGraph {
       const { extra } = data;
       if (Array.isArray(data.links)) {
         for (const linkData of data.links) {
-          const link2 = LLink.createFromArray(linkData);
-          this._links.set(link2.id, link2);
+          const link = LLink.createFromArray(linkData);
+          this._links.set(link.id, link);
         }
       }
       if (Array.isArray(extra == null ? void 0 : extra.linkExtensions)) {
         for (const linkEx of extra.linkExtensions) {
-          const link2 = this._links.get(linkEx.id);
-          if (link2) link2.parentId = linkEx.parentId;
+          const link = this._links.get(linkEx.id);
+          if (link) link.parentId = linkEx.parentId;
         }
       }
       reroutes = extra == null ? void 0 : extra.reroutes;
@@ -14801,8 +13239,8 @@ var _LGraph = class _LGraph {
       }
       if (Array.isArray(data.links)) {
         for (const linkData of data.links) {
-          const link2 = LLink.create(linkData);
-          this._links.set(link2.id, link2);
+          const link = LLink.create(linkData);
+          this._links.set(link.id, link);
         }
       }
       reroutes = data.reroutes;
@@ -14862,7 +13300,7 @@ var _LGraph = class _LGraph {
     }
     this.updateExecutionOrder();
     this.extra = data.extra || {};
-    (_a2 = this.onConfigure) == null ? void 0 : _a2.call(this, data);
+    (_a = this.onConfigure) == null ? void 0 : _a.call(this, data);
     this._version++;
     this.setDirtyCanvas(true, true);
     return error;
@@ -14872,8 +13310,8 @@ var _LGraph = class _LGraph {
     if (url instanceof Blob || url instanceof File) {
       const reader = new FileReader();
       reader.addEventListener("load", function(event) {
-        var _a2;
-        const result = stringOrEmpty((_a2 = event.target) == null ? void 0 : _a2.result);
+        var _a;
+        const result = stringOrEmpty((_a = event.target) == null ? void 0 : _a.result);
         const data = JSON.parse(result);
         that.configure(data);
         callback == null ? void 0 : callback();
@@ -15126,7 +13564,7 @@ var LiteGraphGlobal = class {
    * @param base_class class containing the structure of a node
    */
   registerNodeType(type, base_class) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     if (!base_class.prototype)
       throw "Cannot register a simple object, it must be a class with a prototype";
     base_class.type = type;
@@ -15136,7 +13574,7 @@ var LiteGraphGlobal = class {
     base_class.category = type.substring(0, pos);
     base_class.title || (base_class.title = classname);
     for (const i in LGraphNode.prototype) {
-      (_a2 = base_class.prototype)[i] || (_a2[i] = LGraphNode.prototype[i]);
+      (_a = base_class.prototype)[i] || (_a[i] = LGraphNode.prototype[i]);
     }
     const prev = this.registered_node_types[type];
     if (prev) {
@@ -15207,8 +13645,8 @@ var LiteGraphGlobal = class {
    * @param title a name to distinguish from other nodes
    * @param options to set options
    */
-  createNode(type, title, options22) {
-    var _a2;
+  createNode(type, title, options2) {
+    var _a;
     const base_class = this.registered_node_types[type];
     if (!base_class) {
       if (this.debug) console.log(`GraphNode type "${type}" not registered.`);
@@ -15234,12 +13672,12 @@ var LiteGraphGlobal = class {
     node2.size || (node2.size = node2.computeSize());
     node2.pos || (node2.pos = [this.DEFAULT_POSITION[0], this.DEFAULT_POSITION[1]]);
     node2.mode || (node2.mode = LGraphEventMode.ALWAYS);
-    if (options22) {
-      for (const i in options22) {
-        node2[i] = options22[i];
+    if (options2) {
+      for (const i in options2) {
+        node2[i] = options2[i];
       }
     }
-    (_a2 = node2.onNodeCreated) == null ? void 0 : _a2.call(node2);
+    (_a = node2.onNodeCreated) == null ? void 0 : _a.call(node2);
     return node2;
   }
   /**
@@ -15641,13 +14079,13 @@ var _StoryboardBaseNode = class _StoryboardBaseNode extends LGraphNode {
   }
   // Widget management utilities
   removeWidget(widgetOrSlot) {
-    var _a2;
+    var _a;
     if (!this.widgets) return;
     const widget = typeof widgetOrSlot === "number" ? this.widgets[widgetOrSlot] : widgetOrSlot;
     if (widget) {
       const index = this.widgets.indexOf(widget);
       if (index > -1) this.widgets.splice(index, 1);
-      (_a2 = widget.onRemove) == null ? void 0 : _a2.call(widget);
+      (_a = widget.onRemove) == null ? void 0 : _a.call(widget);
     }
   }
   replaceWidget(widgetOrSlot, newWidget) {
@@ -15663,14 +14101,14 @@ var _StoryboardBaseNode = class _StoryboardBaseNode extends LGraphNode {
     this.widgets.splice(index, 0, newWidget);
   }
   onRemoved() {
-    var _a2;
-    (_a2 = super.onRemoved) == null ? void 0 : _a2.call(this);
+    var _a;
+    (_a = super.onRemoved) == null ? void 0 : _a.call(this);
     this.removed = true;
   }
   onConstructed() {
-    var _a2;
+    var _a;
     if (this.__constructed__) return false;
-    this.type = (_a2 = this.type) != null ? _a2 : void 0;
+    this.type = (_a = this.type) != null ? _a : void 0;
     this.serialize_widgets = true;
     this.__constructed__ = true;
     return true;
@@ -15693,3979 +14131,8 @@ _StoryboardBaseNode.category = "storyboard";
 _StoryboardBaseNode._category = "storyboard";
 var StoryboardBaseNode = _StoryboardBaseNode;
 
-// src_web/comfyui/nodes/markdown-renderer/markdown_widget.ts
-import { app } from "/scripts/app.js";
-import { ComfyWidgets } from "/scripts/widgets.js";
-
-// node_modules/dompurify/dist/purify.es.mjs
-var {
-  entries,
-  setPrototypeOf,
-  isFrozen,
-  getPrototypeOf,
-  getOwnPropertyDescriptor
-} = Object;
-var {
-  freeze,
-  seal,
-  create
-} = Object;
-var {
-  apply,
-  construct
-} = typeof Reflect !== "undefined" && Reflect;
-if (!freeze) {
-  freeze = function freeze2(x2) {
-    return x2;
-  };
-}
-if (!seal) {
-  seal = function seal2(x2) {
-    return x2;
-  };
-}
-if (!apply) {
-  apply = function apply2(fun, thisValue, args) {
-    return fun.apply(thisValue, args);
-  };
-}
-if (!construct) {
-  construct = function construct2(Func, args) {
-    return new Func(...args);
-  };
-}
-var arrayForEach = unapply(Array.prototype.forEach);
-var arrayLastIndexOf = unapply(Array.prototype.lastIndexOf);
-var arrayPop = unapply(Array.prototype.pop);
-var arrayPush = unapply(Array.prototype.push);
-var arraySplice = unapply(Array.prototype.splice);
-var stringToLowerCase = unapply(String.prototype.toLowerCase);
-var stringToString = unapply(String.prototype.toString);
-var stringMatch = unapply(String.prototype.match);
-var stringReplace = unapply(String.prototype.replace);
-var stringIndexOf = unapply(String.prototype.indexOf);
-var stringTrim = unapply(String.prototype.trim);
-var objectHasOwnProperty = unapply(Object.prototype.hasOwnProperty);
-var regExpTest = unapply(RegExp.prototype.test);
-var typeErrorCreate = unconstruct(TypeError);
-function unapply(func) {
-  return function(thisArg) {
-    if (thisArg instanceof RegExp) {
-      thisArg.lastIndex = 0;
-    }
-    for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      args[_key - 1] = arguments[_key];
-    }
-    return apply(func, thisArg, args);
-  };
-}
-function unconstruct(func) {
-  return function() {
-    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      args[_key2] = arguments[_key2];
-    }
-    return construct(func, args);
-  };
-}
-function addToSet(set, array) {
-  let transformCaseFunc = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : stringToLowerCase;
-  if (setPrototypeOf) {
-    setPrototypeOf(set, null);
-  }
-  let l = array.length;
-  while (l--) {
-    let element = array[l];
-    if (typeof element === "string") {
-      const lcElement = transformCaseFunc(element);
-      if (lcElement !== element) {
-        if (!isFrozen(array)) {
-          array[l] = lcElement;
-        }
-        element = lcElement;
-      }
-    }
-    set[element] = true;
-  }
-  return set;
-}
-function cleanArray(array) {
-  for (let index = 0; index < array.length; index++) {
-    const isPropertyExist = objectHasOwnProperty(array, index);
-    if (!isPropertyExist) {
-      array[index] = null;
-    }
-  }
-  return array;
-}
-function clone(object) {
-  const newObject = create(null);
-  for (const [property, value] of entries(object)) {
-    const isPropertyExist = objectHasOwnProperty(object, property);
-    if (isPropertyExist) {
-      if (Array.isArray(value)) {
-        newObject[property] = cleanArray(value);
-      } else if (value && typeof value === "object" && value.constructor === Object) {
-        newObject[property] = clone(value);
-      } else {
-        newObject[property] = value;
-      }
-    }
-  }
-  return newObject;
-}
-function lookupGetter(object, prop) {
-  while (object !== null) {
-    const desc = getOwnPropertyDescriptor(object, prop);
-    if (desc) {
-      if (desc.get) {
-        return unapply(desc.get);
-      }
-      if (typeof desc.value === "function") {
-        return unapply(desc.value);
-      }
-    }
-    object = getPrototypeOf(object);
-  }
-  function fallbackValue() {
-    return null;
-  }
-  return fallbackValue;
-}
-var html$1 = freeze(["a", "abbr", "acronym", "address", "area", "article", "aside", "audio", "b", "bdi", "bdo", "big", "blink", "blockquote", "body", "br", "button", "canvas", "caption", "center", "cite", "code", "col", "colgroup", "content", "data", "datalist", "dd", "decorator", "del", "details", "dfn", "dialog", "dir", "div", "dl", "dt", "element", "em", "fieldset", "figcaption", "figure", "font", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hgroup", "hr", "html", "i", "img", "input", "ins", "kbd", "label", "legend", "li", "main", "map", "mark", "marquee", "menu", "menuitem", "meter", "nav", "nobr", "ol", "optgroup", "option", "output", "p", "picture", "pre", "progress", "q", "rp", "rt", "ruby", "s", "samp", "section", "select", "shadow", "small", "source", "spacer", "span", "strike", "strong", "style", "sub", "summary", "sup", "table", "tbody", "td", "template", "textarea", "tfoot", "th", "thead", "time", "tr", "track", "tt", "u", "ul", "var", "video", "wbr"]);
-var svg$1 = freeze(["svg", "a", "altglyph", "altglyphdef", "altglyphitem", "animatecolor", "animatemotion", "animatetransform", "circle", "clippath", "defs", "desc", "ellipse", "filter", "font", "g", "glyph", "glyphref", "hkern", "image", "line", "lineargradient", "marker", "mask", "metadata", "mpath", "path", "pattern", "polygon", "polyline", "radialgradient", "rect", "stop", "style", "switch", "symbol", "text", "textpath", "title", "tref", "tspan", "view", "vkern"]);
-var svgFilters = freeze(["feBlend", "feColorMatrix", "feComponentTransfer", "feComposite", "feConvolveMatrix", "feDiffuseLighting", "feDisplacementMap", "feDistantLight", "feDropShadow", "feFlood", "feFuncA", "feFuncB", "feFuncG", "feFuncR", "feGaussianBlur", "feImage", "feMerge", "feMergeNode", "feMorphology", "feOffset", "fePointLight", "feSpecularLighting", "feSpotLight", "feTile", "feTurbulence"]);
-var svgDisallowed = freeze(["animate", "color-profile", "cursor", "discard", "font-face", "font-face-format", "font-face-name", "font-face-src", "font-face-uri", "foreignobject", "hatch", "hatchpath", "mesh", "meshgradient", "meshpatch", "meshrow", "missing-glyph", "script", "set", "solidcolor", "unknown", "use"]);
-var mathMl$1 = freeze(["math", "menclose", "merror", "mfenced", "mfrac", "mglyph", "mi", "mlabeledtr", "mmultiscripts", "mn", "mo", "mover", "mpadded", "mphantom", "mroot", "mrow", "ms", "mspace", "msqrt", "mstyle", "msub", "msup", "msubsup", "mtable", "mtd", "mtext", "mtr", "munder", "munderover", "mprescripts"]);
-var mathMlDisallowed = freeze(["maction", "maligngroup", "malignmark", "mlongdiv", "mscarries", "mscarry", "msgroup", "mstack", "msline", "msrow", "semantics", "annotation", "annotation-xml", "mprescripts", "none"]);
-var text = freeze(["#text"]);
-var html = freeze(["accept", "action", "align", "alt", "autocapitalize", "autocomplete", "autopictureinpicture", "autoplay", "background", "bgcolor", "border", "capture", "cellpadding", "cellspacing", "checked", "cite", "class", "clear", "color", "cols", "colspan", "controls", "controlslist", "coords", "crossorigin", "datetime", "decoding", "default", "dir", "disabled", "disablepictureinpicture", "disableremoteplayback", "download", "draggable", "enctype", "enterkeyhint", "face", "for", "headers", "height", "hidden", "high", "href", "hreflang", "id", "inputmode", "integrity", "ismap", "kind", "label", "lang", "list", "loading", "loop", "low", "max", "maxlength", "media", "method", "min", "minlength", "multiple", "muted", "name", "nonce", "noshade", "novalidate", "nowrap", "open", "optimum", "pattern", "placeholder", "playsinline", "popover", "popovertarget", "popovertargetaction", "poster", "preload", "pubdate", "radiogroup", "readonly", "rel", "required", "rev", "reversed", "role", "rows", "rowspan", "spellcheck", "scope", "selected", "shape", "size", "sizes", "span", "srclang", "start", "src", "srcset", "step", "style", "summary", "tabindex", "title", "translate", "type", "usemap", "valign", "value", "width", "wrap", "xmlns", "slot"]);
-var svg = freeze(["accent-height", "accumulate", "additive", "alignment-baseline", "amplitude", "ascent", "attributename", "attributetype", "azimuth", "basefrequency", "baseline-shift", "begin", "bias", "by", "class", "clip", "clippathunits", "clip-path", "clip-rule", "color", "color-interpolation", "color-interpolation-filters", "color-profile", "color-rendering", "cx", "cy", "d", "dx", "dy", "diffuseconstant", "direction", "display", "divisor", "dur", "edgemode", "elevation", "end", "exponent", "fill", "fill-opacity", "fill-rule", "filter", "filterunits", "flood-color", "flood-opacity", "font-family", "font-size", "font-size-adjust", "font-stretch", "font-style", "font-variant", "font-weight", "fx", "fy", "g1", "g2", "glyph-name", "glyphref", "gradientunits", "gradienttransform", "height", "href", "id", "image-rendering", "in", "in2", "intercept", "k", "k1", "k2", "k3", "k4", "kerning", "keypoints", "keysplines", "keytimes", "lang", "lengthadjust", "letter-spacing", "kernelmatrix", "kernelunitlength", "lighting-color", "local", "marker-end", "marker-mid", "marker-start", "markerheight", "markerunits", "markerwidth", "maskcontentunits", "maskunits", "max", "mask", "media", "method", "mode", "min", "name", "numoctaves", "offset", "operator", "opacity", "order", "orient", "orientation", "origin", "overflow", "paint-order", "path", "pathlength", "patterncontentunits", "patterntransform", "patternunits", "points", "preservealpha", "preserveaspectratio", "primitiveunits", "r", "rx", "ry", "radius", "refx", "refy", "repeatcount", "repeatdur", "restart", "result", "rotate", "scale", "seed", "shape-rendering", "slope", "specularconstant", "specularexponent", "spreadmethod", "startoffset", "stddeviation", "stitchtiles", "stop-color", "stop-opacity", "stroke-dasharray", "stroke-dashoffset", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-opacity", "stroke", "stroke-width", "style", "surfacescale", "systemlanguage", "tabindex", "tablevalues", "targetx", "targety", "transform", "transform-origin", "text-anchor", "text-decoration", "text-rendering", "textlength", "type", "u1", "u2", "unicode", "values", "viewbox", "visibility", "version", "vert-adv-y", "vert-origin-x", "vert-origin-y", "width", "word-spacing", "wrap", "writing-mode", "xchannelselector", "ychannelselector", "x", "x1", "x2", "xmlns", "y", "y1", "y2", "z", "zoomandpan"]);
-var mathMl = freeze(["accent", "accentunder", "align", "bevelled", "close", "columnsalign", "columnlines", "columnspan", "denomalign", "depth", "dir", "display", "displaystyle", "encoding", "fence", "frame", "height", "href", "id", "largeop", "length", "linethickness", "lspace", "lquote", "mathbackground", "mathcolor", "mathsize", "mathvariant", "maxsize", "minsize", "movablelimits", "notation", "numalign", "open", "rowalign", "rowlines", "rowspacing", "rowspan", "rspace", "rquote", "scriptlevel", "scriptminsize", "scriptsizemultiplier", "selection", "separator", "separators", "stretchy", "subscriptshift", "supscriptshift", "symmetric", "voffset", "width", "xmlns"]);
-var xml = freeze(["xlink:href", "xml:id", "xlink:title", "xml:space", "xmlns:xlink"]);
-var MUSTACHE_EXPR = seal(/\{\{[\w\W]*|[\w\W]*\}\}/gm);
-var ERB_EXPR = seal(/<%[\w\W]*|[\w\W]*%>/gm);
-var TMPLIT_EXPR = seal(/\$\{[\w\W]*/gm);
-var DATA_ATTR = seal(/^data-[\-\w.\u00B7-\uFFFF]+$/);
-var ARIA_ATTR = seal(/^aria-[\-\w]+$/);
-var IS_ALLOWED_URI = seal(
-  /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
-  // eslint-disable-line no-useless-escape
-);
-var IS_SCRIPT_OR_DATA = seal(/^(?:\w+script|data):/i);
-var ATTR_WHITESPACE = seal(
-  /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g
-  // eslint-disable-line no-control-regex
-);
-var DOCTYPE_NAME = seal(/^html$/i);
-var CUSTOM_ELEMENT = seal(/^[a-z][.\w]*(-[.\w]+)+$/i);
-var EXPRESSIONS = /* @__PURE__ */ Object.freeze({
-  __proto__: null,
-  ARIA_ATTR,
-  ATTR_WHITESPACE,
-  CUSTOM_ELEMENT,
-  DATA_ATTR,
-  DOCTYPE_NAME,
-  ERB_EXPR,
-  IS_ALLOWED_URI,
-  IS_SCRIPT_OR_DATA,
-  MUSTACHE_EXPR,
-  TMPLIT_EXPR
-});
-var NODE_TYPE = {
-  element: 1,
-  attribute: 2,
-  text: 3,
-  cdataSection: 4,
-  entityReference: 5,
-  // Deprecated
-  entityNode: 6,
-  // Deprecated
-  progressingInstruction: 7,
-  comment: 8,
-  document: 9,
-  documentType: 10,
-  documentFragment: 11,
-  notation: 12
-  // Deprecated
-};
-var getGlobal = function getGlobal2() {
-  return typeof window === "undefined" ? null : window;
-};
-var _createTrustedTypesPolicy = function _createTrustedTypesPolicy2(trustedTypes, purifyHostElement) {
-  if (typeof trustedTypes !== "object" || typeof trustedTypes.createPolicy !== "function") {
-    return null;
-  }
-  let suffix = null;
-  const ATTR_NAME = "data-tt-policy-suffix";
-  if (purifyHostElement && purifyHostElement.hasAttribute(ATTR_NAME)) {
-    suffix = purifyHostElement.getAttribute(ATTR_NAME);
-  }
-  const policyName = "dompurify" + (suffix ? "#" + suffix : "");
-  try {
-    return trustedTypes.createPolicy(policyName, {
-      createHTML(html3) {
-        return html3;
-      },
-      createScriptURL(scriptUrl) {
-        return scriptUrl;
-      }
-    });
-  } catch (_) {
-    console.warn("TrustedTypes policy " + policyName + " could not be created.");
-    return null;
-  }
-};
-var _createHooksMap = function _createHooksMap2() {
-  return {
-    afterSanitizeAttributes: [],
-    afterSanitizeElements: [],
-    afterSanitizeShadowDOM: [],
-    beforeSanitizeAttributes: [],
-    beforeSanitizeElements: [],
-    beforeSanitizeShadowDOM: [],
-    uponSanitizeAttribute: [],
-    uponSanitizeElement: [],
-    uponSanitizeShadowNode: []
-  };
-};
-function createDOMPurify() {
-  let window2 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
-  const DOMPurify = (root) => createDOMPurify(root);
-  DOMPurify.version = "3.2.6";
-  DOMPurify.removed = [];
-  if (!window2 || !window2.document || window2.document.nodeType !== NODE_TYPE.document || !window2.Element) {
-    DOMPurify.isSupported = false;
-    return DOMPurify;
-  }
-  let {
-    document: document2
-  } = window2;
-  const originalDocument = document2;
-  const currentScript = originalDocument.currentScript;
-  const {
-    DocumentFragment,
-    HTMLTemplateElement,
-    Node,
-    Element: Element2,
-    NodeFilter,
-    NamedNodeMap = window2.NamedNodeMap || window2.MozNamedAttrMap,
-    HTMLFormElement,
-    DOMParser,
-    trustedTypes
-  } = window2;
-  const ElementPrototype = Element2.prototype;
-  const cloneNode = lookupGetter(ElementPrototype, "cloneNode");
-  const remove = lookupGetter(ElementPrototype, "remove");
-  const getNextSibling = lookupGetter(ElementPrototype, "nextSibling");
-  const getChildNodes = lookupGetter(ElementPrototype, "childNodes");
-  const getParentNode = lookupGetter(ElementPrototype, "parentNode");
-  if (typeof HTMLTemplateElement === "function") {
-    const template = document2.createElement("template");
-    if (template.content && template.content.ownerDocument) {
-      document2 = template.content.ownerDocument;
-    }
-  }
-  let trustedTypesPolicy;
-  let emptyHTML = "";
-  const {
-    implementation,
-    createNodeIterator,
-    createDocumentFragment,
-    getElementsByTagName
-  } = document2;
-  const {
-    importNode
-  } = originalDocument;
-  let hooks = _createHooksMap();
-  DOMPurify.isSupported = typeof entries === "function" && typeof getParentNode === "function" && implementation && implementation.createHTMLDocument !== void 0;
-  const {
-    MUSTACHE_EXPR: MUSTACHE_EXPR2,
-    ERB_EXPR: ERB_EXPR2,
-    TMPLIT_EXPR: TMPLIT_EXPR2,
-    DATA_ATTR: DATA_ATTR2,
-    ARIA_ATTR: ARIA_ATTR2,
-    IS_SCRIPT_OR_DATA: IS_SCRIPT_OR_DATA2,
-    ATTR_WHITESPACE: ATTR_WHITESPACE2,
-    CUSTOM_ELEMENT: CUSTOM_ELEMENT2
-  } = EXPRESSIONS;
-  let {
-    IS_ALLOWED_URI: IS_ALLOWED_URI$1
-  } = EXPRESSIONS;
-  let ALLOWED_TAGS2 = null;
-  const DEFAULT_ALLOWED_TAGS = addToSet({}, [...html$1, ...svg$1, ...svgFilters, ...mathMl$1, ...text]);
-  let ALLOWED_ATTR = null;
-  const DEFAULT_ALLOWED_ATTR = addToSet({}, [...html, ...svg, ...mathMl, ...xml]);
-  let CUSTOM_ELEMENT_HANDLING = Object.seal(create(null, {
-    tagNameCheck: {
-      writable: true,
-      configurable: false,
-      enumerable: true,
-      value: null
-    },
-    attributeNameCheck: {
-      writable: true,
-      configurable: false,
-      enumerable: true,
-      value: null
-    },
-    allowCustomizedBuiltInElements: {
-      writable: true,
-      configurable: false,
-      enumerable: true,
-      value: false
-    }
-  }));
-  let FORBID_TAGS = null;
-  let FORBID_ATTR = null;
-  let ALLOW_ARIA_ATTR = true;
-  let ALLOW_DATA_ATTR = true;
-  let ALLOW_UNKNOWN_PROTOCOLS = false;
-  let ALLOW_SELF_CLOSE_IN_ATTR = true;
-  let SAFE_FOR_TEMPLATES = false;
-  let SAFE_FOR_XML = true;
-  let WHOLE_DOCUMENT = false;
-  let SET_CONFIG = false;
-  let FORCE_BODY = false;
-  let RETURN_DOM = false;
-  let RETURN_DOM_FRAGMENT = false;
-  let RETURN_TRUSTED_TYPE = false;
-  let SANITIZE_DOM = true;
-  let SANITIZE_NAMED_PROPS = false;
-  const SANITIZE_NAMED_PROPS_PREFIX = "user-content-";
-  let KEEP_CONTENT = true;
-  let IN_PLACE = false;
-  let USE_PROFILES = {};
-  let FORBID_CONTENTS = null;
-  const DEFAULT_FORBID_CONTENTS = addToSet({}, ["annotation-xml", "audio", "colgroup", "desc", "foreignobject", "head", "iframe", "math", "mi", "mn", "mo", "ms", "mtext", "noembed", "noframes", "noscript", "plaintext", "script", "style", "svg", "template", "thead", "title", "video", "xmp"]);
-  let DATA_URI_TAGS = null;
-  const DEFAULT_DATA_URI_TAGS = addToSet({}, ["audio", "video", "img", "source", "image", "track"]);
-  let URI_SAFE_ATTRIBUTES = null;
-  const DEFAULT_URI_SAFE_ATTRIBUTES = addToSet({}, ["alt", "class", "for", "id", "label", "name", "pattern", "placeholder", "role", "summary", "title", "value", "style", "xmlns"]);
-  const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
-  const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-  const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
-  let NAMESPACE = HTML_NAMESPACE;
-  let IS_EMPTY_INPUT = false;
-  let ALLOWED_NAMESPACES = null;
-  const DEFAULT_ALLOWED_NAMESPACES = addToSet({}, [MATHML_NAMESPACE, SVG_NAMESPACE, HTML_NAMESPACE], stringToString);
-  let MATHML_TEXT_INTEGRATION_POINTS = addToSet({}, ["mi", "mo", "mn", "ms", "mtext"]);
-  let HTML_INTEGRATION_POINTS = addToSet({}, ["annotation-xml"]);
-  const COMMON_SVG_AND_HTML_ELEMENTS = addToSet({}, ["title", "style", "font", "a", "script"]);
-  let PARSER_MEDIA_TYPE = null;
-  const SUPPORTED_PARSER_MEDIA_TYPES = ["application/xhtml+xml", "text/html"];
-  const DEFAULT_PARSER_MEDIA_TYPE = "text/html";
-  let transformCaseFunc = null;
-  let CONFIG = null;
-  const formElement = document2.createElement("form");
-  const isRegexOrFunction = function isRegexOrFunction2(testValue) {
-    return testValue instanceof RegExp || testValue instanceof Function;
-  };
-  const _parseConfig = function _parseConfig2() {
-    let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
-    if (CONFIG && CONFIG === cfg) {
-      return;
-    }
-    if (!cfg || typeof cfg !== "object") {
-      cfg = {};
-    }
-    cfg = clone(cfg);
-    PARSER_MEDIA_TYPE = // eslint-disable-next-line unicorn/prefer-includes
-    SUPPORTED_PARSER_MEDIA_TYPES.indexOf(cfg.PARSER_MEDIA_TYPE) === -1 ? DEFAULT_PARSER_MEDIA_TYPE : cfg.PARSER_MEDIA_TYPE;
-    transformCaseFunc = PARSER_MEDIA_TYPE === "application/xhtml+xml" ? stringToString : stringToLowerCase;
-    ALLOWED_TAGS2 = objectHasOwnProperty(cfg, "ALLOWED_TAGS") ? addToSet({}, cfg.ALLOWED_TAGS, transformCaseFunc) : DEFAULT_ALLOWED_TAGS;
-    ALLOWED_ATTR = objectHasOwnProperty(cfg, "ALLOWED_ATTR") ? addToSet({}, cfg.ALLOWED_ATTR, transformCaseFunc) : DEFAULT_ALLOWED_ATTR;
-    ALLOWED_NAMESPACES = objectHasOwnProperty(cfg, "ALLOWED_NAMESPACES") ? addToSet({}, cfg.ALLOWED_NAMESPACES, stringToString) : DEFAULT_ALLOWED_NAMESPACES;
-    URI_SAFE_ATTRIBUTES = objectHasOwnProperty(cfg, "ADD_URI_SAFE_ATTR") ? addToSet(clone(DEFAULT_URI_SAFE_ATTRIBUTES), cfg.ADD_URI_SAFE_ATTR, transformCaseFunc) : DEFAULT_URI_SAFE_ATTRIBUTES;
-    DATA_URI_TAGS = objectHasOwnProperty(cfg, "ADD_DATA_URI_TAGS") ? addToSet(clone(DEFAULT_DATA_URI_TAGS), cfg.ADD_DATA_URI_TAGS, transformCaseFunc) : DEFAULT_DATA_URI_TAGS;
-    FORBID_CONTENTS = objectHasOwnProperty(cfg, "FORBID_CONTENTS") ? addToSet({}, cfg.FORBID_CONTENTS, transformCaseFunc) : DEFAULT_FORBID_CONTENTS;
-    FORBID_TAGS = objectHasOwnProperty(cfg, "FORBID_TAGS") ? addToSet({}, cfg.FORBID_TAGS, transformCaseFunc) : clone({});
-    FORBID_ATTR = objectHasOwnProperty(cfg, "FORBID_ATTR") ? addToSet({}, cfg.FORBID_ATTR, transformCaseFunc) : clone({});
-    USE_PROFILES = objectHasOwnProperty(cfg, "USE_PROFILES") ? cfg.USE_PROFILES : false;
-    ALLOW_ARIA_ATTR = cfg.ALLOW_ARIA_ATTR !== false;
-    ALLOW_DATA_ATTR = cfg.ALLOW_DATA_ATTR !== false;
-    ALLOW_UNKNOWN_PROTOCOLS = cfg.ALLOW_UNKNOWN_PROTOCOLS || false;
-    ALLOW_SELF_CLOSE_IN_ATTR = cfg.ALLOW_SELF_CLOSE_IN_ATTR !== false;
-    SAFE_FOR_TEMPLATES = cfg.SAFE_FOR_TEMPLATES || false;
-    SAFE_FOR_XML = cfg.SAFE_FOR_XML !== false;
-    WHOLE_DOCUMENT = cfg.WHOLE_DOCUMENT || false;
-    RETURN_DOM = cfg.RETURN_DOM || false;
-    RETURN_DOM_FRAGMENT = cfg.RETURN_DOM_FRAGMENT || false;
-    RETURN_TRUSTED_TYPE = cfg.RETURN_TRUSTED_TYPE || false;
-    FORCE_BODY = cfg.FORCE_BODY || false;
-    SANITIZE_DOM = cfg.SANITIZE_DOM !== false;
-    SANITIZE_NAMED_PROPS = cfg.SANITIZE_NAMED_PROPS || false;
-    KEEP_CONTENT = cfg.KEEP_CONTENT !== false;
-    IN_PLACE = cfg.IN_PLACE || false;
-    IS_ALLOWED_URI$1 = cfg.ALLOWED_URI_REGEXP || IS_ALLOWED_URI;
-    NAMESPACE = cfg.NAMESPACE || HTML_NAMESPACE;
-    MATHML_TEXT_INTEGRATION_POINTS = cfg.MATHML_TEXT_INTEGRATION_POINTS || MATHML_TEXT_INTEGRATION_POINTS;
-    HTML_INTEGRATION_POINTS = cfg.HTML_INTEGRATION_POINTS || HTML_INTEGRATION_POINTS;
-    CUSTOM_ELEMENT_HANDLING = cfg.CUSTOM_ELEMENT_HANDLING || {};
-    if (cfg.CUSTOM_ELEMENT_HANDLING && isRegexOrFunction(cfg.CUSTOM_ELEMENT_HANDLING.tagNameCheck)) {
-      CUSTOM_ELEMENT_HANDLING.tagNameCheck = cfg.CUSTOM_ELEMENT_HANDLING.tagNameCheck;
-    }
-    if (cfg.CUSTOM_ELEMENT_HANDLING && isRegexOrFunction(cfg.CUSTOM_ELEMENT_HANDLING.attributeNameCheck)) {
-      CUSTOM_ELEMENT_HANDLING.attributeNameCheck = cfg.CUSTOM_ELEMENT_HANDLING.attributeNameCheck;
-    }
-    if (cfg.CUSTOM_ELEMENT_HANDLING && typeof cfg.CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements === "boolean") {
-      CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements = cfg.CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements;
-    }
-    if (SAFE_FOR_TEMPLATES) {
-      ALLOW_DATA_ATTR = false;
-    }
-    if (RETURN_DOM_FRAGMENT) {
-      RETURN_DOM = true;
-    }
-    if (USE_PROFILES) {
-      ALLOWED_TAGS2 = addToSet({}, text);
-      ALLOWED_ATTR = [];
-      if (USE_PROFILES.html === true) {
-        addToSet(ALLOWED_TAGS2, html$1);
-        addToSet(ALLOWED_ATTR, html);
-      }
-      if (USE_PROFILES.svg === true) {
-        addToSet(ALLOWED_TAGS2, svg$1);
-        addToSet(ALLOWED_ATTR, svg);
-        addToSet(ALLOWED_ATTR, xml);
-      }
-      if (USE_PROFILES.svgFilters === true) {
-        addToSet(ALLOWED_TAGS2, svgFilters);
-        addToSet(ALLOWED_ATTR, svg);
-        addToSet(ALLOWED_ATTR, xml);
-      }
-      if (USE_PROFILES.mathMl === true) {
-        addToSet(ALLOWED_TAGS2, mathMl$1);
-        addToSet(ALLOWED_ATTR, mathMl);
-        addToSet(ALLOWED_ATTR, xml);
-      }
-    }
-    if (cfg.ADD_TAGS) {
-      if (ALLOWED_TAGS2 === DEFAULT_ALLOWED_TAGS) {
-        ALLOWED_TAGS2 = clone(ALLOWED_TAGS2);
-      }
-      addToSet(ALLOWED_TAGS2, cfg.ADD_TAGS, transformCaseFunc);
-    }
-    if (cfg.ADD_ATTR) {
-      if (ALLOWED_ATTR === DEFAULT_ALLOWED_ATTR) {
-        ALLOWED_ATTR = clone(ALLOWED_ATTR);
-      }
-      addToSet(ALLOWED_ATTR, cfg.ADD_ATTR, transformCaseFunc);
-    }
-    if (cfg.ADD_URI_SAFE_ATTR) {
-      addToSet(URI_SAFE_ATTRIBUTES, cfg.ADD_URI_SAFE_ATTR, transformCaseFunc);
-    }
-    if (cfg.FORBID_CONTENTS) {
-      if (FORBID_CONTENTS === DEFAULT_FORBID_CONTENTS) {
-        FORBID_CONTENTS = clone(FORBID_CONTENTS);
-      }
-      addToSet(FORBID_CONTENTS, cfg.FORBID_CONTENTS, transformCaseFunc);
-    }
-    if (KEEP_CONTENT) {
-      ALLOWED_TAGS2["#text"] = true;
-    }
-    if (WHOLE_DOCUMENT) {
-      addToSet(ALLOWED_TAGS2, ["html", "head", "body"]);
-    }
-    if (ALLOWED_TAGS2.table) {
-      addToSet(ALLOWED_TAGS2, ["tbody"]);
-      delete FORBID_TAGS.tbody;
-    }
-    if (cfg.TRUSTED_TYPES_POLICY) {
-      if (typeof cfg.TRUSTED_TYPES_POLICY.createHTML !== "function") {
-        throw typeErrorCreate('TRUSTED_TYPES_POLICY configuration option must provide a "createHTML" hook.');
-      }
-      if (typeof cfg.TRUSTED_TYPES_POLICY.createScriptURL !== "function") {
-        throw typeErrorCreate('TRUSTED_TYPES_POLICY configuration option must provide a "createScriptURL" hook.');
-      }
-      trustedTypesPolicy = cfg.TRUSTED_TYPES_POLICY;
-      emptyHTML = trustedTypesPolicy.createHTML("");
-    } else {
-      if (trustedTypesPolicy === void 0) {
-        trustedTypesPolicy = _createTrustedTypesPolicy(trustedTypes, currentScript);
-      }
-      if (trustedTypesPolicy !== null && typeof emptyHTML === "string") {
-        emptyHTML = trustedTypesPolicy.createHTML("");
-      }
-    }
-    if (freeze) {
-      freeze(cfg);
-    }
-    CONFIG = cfg;
-  };
-  const ALL_SVG_TAGS = addToSet({}, [...svg$1, ...svgFilters, ...svgDisallowed]);
-  const ALL_MATHML_TAGS = addToSet({}, [...mathMl$1, ...mathMlDisallowed]);
-  const _checkValidNamespace = function _checkValidNamespace2(element) {
-    let parent = getParentNode(element);
-    if (!parent || !parent.tagName) {
-      parent = {
-        namespaceURI: NAMESPACE,
-        tagName: "template"
-      };
-    }
-    const tagName = stringToLowerCase(element.tagName);
-    const parentTagName = stringToLowerCase(parent.tagName);
-    if (!ALLOWED_NAMESPACES[element.namespaceURI]) {
-      return false;
-    }
-    if (element.namespaceURI === SVG_NAMESPACE) {
-      if (parent.namespaceURI === HTML_NAMESPACE) {
-        return tagName === "svg";
-      }
-      if (parent.namespaceURI === MATHML_NAMESPACE) {
-        return tagName === "svg" && (parentTagName === "annotation-xml" || MATHML_TEXT_INTEGRATION_POINTS[parentTagName]);
-      }
-      return Boolean(ALL_SVG_TAGS[tagName]);
-    }
-    if (element.namespaceURI === MATHML_NAMESPACE) {
-      if (parent.namespaceURI === HTML_NAMESPACE) {
-        return tagName === "math";
-      }
-      if (parent.namespaceURI === SVG_NAMESPACE) {
-        return tagName === "math" && HTML_INTEGRATION_POINTS[parentTagName];
-      }
-      return Boolean(ALL_MATHML_TAGS[tagName]);
-    }
-    if (element.namespaceURI === HTML_NAMESPACE) {
-      if (parent.namespaceURI === SVG_NAMESPACE && !HTML_INTEGRATION_POINTS[parentTagName]) {
-        return false;
-      }
-      if (parent.namespaceURI === MATHML_NAMESPACE && !MATHML_TEXT_INTEGRATION_POINTS[parentTagName]) {
-        return false;
-      }
-      return !ALL_MATHML_TAGS[tagName] && (COMMON_SVG_AND_HTML_ELEMENTS[tagName] || !ALL_SVG_TAGS[tagName]);
-    }
-    if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && ALLOWED_NAMESPACES[element.namespaceURI]) {
-      return true;
-    }
-    return false;
-  };
-  const _forceRemove = function _forceRemove2(node2) {
-    arrayPush(DOMPurify.removed, {
-      element: node2
-    });
-    try {
-      getParentNode(node2).removeChild(node2);
-    } catch (_) {
-      remove(node2);
-    }
-  };
-  const _removeAttribute = function _removeAttribute2(name, element) {
-    try {
-      arrayPush(DOMPurify.removed, {
-        attribute: element.getAttributeNode(name),
-        from: element
-      });
-    } catch (_) {
-      arrayPush(DOMPurify.removed, {
-        attribute: null,
-        from: element
-      });
-    }
-    element.removeAttribute(name);
-    if (name === "is") {
-      if (RETURN_DOM || RETURN_DOM_FRAGMENT) {
-        try {
-          _forceRemove(element);
-        } catch (_) {
-        }
-      } else {
-        try {
-          element.setAttribute(name, "");
-        } catch (_) {
-        }
-      }
-    }
-  };
-  const _initDocument = function _initDocument2(dirty) {
-    let doc = null;
-    let leadingWhitespace = null;
-    if (FORCE_BODY) {
-      dirty = "<remove></remove>" + dirty;
-    } else {
-      const matches = stringMatch(dirty, /^[\r\n\t ]+/);
-      leadingWhitespace = matches && matches[0];
-    }
-    if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && NAMESPACE === HTML_NAMESPACE) {
-      dirty = '<html xmlns="http://www.w3.org/1999/xhtml"><head></head><body>' + dirty + "</body></html>";
-    }
-    const dirtyPayload = trustedTypesPolicy ? trustedTypesPolicy.createHTML(dirty) : dirty;
-    if (NAMESPACE === HTML_NAMESPACE) {
-      try {
-        doc = new DOMParser().parseFromString(dirtyPayload, PARSER_MEDIA_TYPE);
-      } catch (_) {
-      }
-    }
-    if (!doc || !doc.documentElement) {
-      doc = implementation.createDocument(NAMESPACE, "template", null);
-      try {
-        doc.documentElement.innerHTML = IS_EMPTY_INPUT ? emptyHTML : dirtyPayload;
-      } catch (_) {
-      }
-    }
-    const body = doc.body || doc.documentElement;
-    if (dirty && leadingWhitespace) {
-      body.insertBefore(document2.createTextNode(leadingWhitespace), body.childNodes[0] || null);
-    }
-    if (NAMESPACE === HTML_NAMESPACE) {
-      return getElementsByTagName.call(doc, WHOLE_DOCUMENT ? "html" : "body")[0];
-    }
-    return WHOLE_DOCUMENT ? doc.documentElement : body;
-  };
-  const _createNodeIterator = function _createNodeIterator2(root) {
-    return createNodeIterator.call(
-      root.ownerDocument || root,
-      root,
-      // eslint-disable-next-line no-bitwise
-      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION,
-      null
-    );
-  };
-  const _isClobbered = function _isClobbered2(element) {
-    return element instanceof HTMLFormElement && (typeof element.nodeName !== "string" || typeof element.textContent !== "string" || typeof element.removeChild !== "function" || !(element.attributes instanceof NamedNodeMap) || typeof element.removeAttribute !== "function" || typeof element.setAttribute !== "function" || typeof element.namespaceURI !== "string" || typeof element.insertBefore !== "function" || typeof element.hasChildNodes !== "function");
-  };
-  const _isNode = function _isNode2(value) {
-    return typeof Node === "function" && value instanceof Node;
-  };
-  function _executeHooks(hooks2, currentNode, data) {
-    arrayForEach(hooks2, (hook) => {
-      hook.call(DOMPurify, currentNode, data, CONFIG);
-    });
-  }
-  const _sanitizeElements = function _sanitizeElements2(currentNode) {
-    let content = null;
-    _executeHooks(hooks.beforeSanitizeElements, currentNode, null);
-    if (_isClobbered(currentNode)) {
-      _forceRemove(currentNode);
-      return true;
-    }
-    const tagName = transformCaseFunc(currentNode.nodeName);
-    _executeHooks(hooks.uponSanitizeElement, currentNode, {
-      tagName,
-      allowedTags: ALLOWED_TAGS2
-    });
-    if (SAFE_FOR_XML && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(/<[/\w!]/g, currentNode.innerHTML) && regExpTest(/<[/\w!]/g, currentNode.textContent)) {
-      _forceRemove(currentNode);
-      return true;
-    }
-    if (currentNode.nodeType === NODE_TYPE.progressingInstruction) {
-      _forceRemove(currentNode);
-      return true;
-    }
-    if (SAFE_FOR_XML && currentNode.nodeType === NODE_TYPE.comment && regExpTest(/<[/\w]/g, currentNode.data)) {
-      _forceRemove(currentNode);
-      return true;
-    }
-    if (!ALLOWED_TAGS2[tagName] || FORBID_TAGS[tagName]) {
-      if (!FORBID_TAGS[tagName] && _isBasicCustomElement(tagName)) {
-        if (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, tagName)) {
-          return false;
-        }
-        if (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(tagName)) {
-          return false;
-        }
-      }
-      if (KEEP_CONTENT && !FORBID_CONTENTS[tagName]) {
-        const parentNode = getParentNode(currentNode) || currentNode.parentNode;
-        const childNodes = getChildNodes(currentNode) || currentNode.childNodes;
-        if (childNodes && parentNode) {
-          const childCount = childNodes.length;
-          for (let i = childCount - 1; i >= 0; --i) {
-            const childClone = cloneNode(childNodes[i], true);
-            childClone.__removalCount = (currentNode.__removalCount || 0) + 1;
-            parentNode.insertBefore(childClone, getNextSibling(currentNode));
-          }
-        }
-      }
-      _forceRemove(currentNode);
-      return true;
-    }
-    if (currentNode instanceof Element2 && !_checkValidNamespace(currentNode)) {
-      _forceRemove(currentNode);
-      return true;
-    }
-    if ((tagName === "noscript" || tagName === "noembed" || tagName === "noframes") && regExpTest(/<\/no(script|embed|frames)/i, currentNode.innerHTML)) {
-      _forceRemove(currentNode);
-      return true;
-    }
-    if (SAFE_FOR_TEMPLATES && currentNode.nodeType === NODE_TYPE.text) {
-      content = currentNode.textContent;
-      arrayForEach([MUSTACHE_EXPR2, ERB_EXPR2, TMPLIT_EXPR2], (expr) => {
-        content = stringReplace(content, expr, " ");
-      });
-      if (currentNode.textContent !== content) {
-        arrayPush(DOMPurify.removed, {
-          element: currentNode.cloneNode()
-        });
-        currentNode.textContent = content;
-      }
-    }
-    _executeHooks(hooks.afterSanitizeElements, currentNode, null);
-    return false;
-  };
-  const _isValidAttribute = function _isValidAttribute2(lcTag, lcName, value) {
-    if (SANITIZE_DOM && (lcName === "id" || lcName === "name") && (value in document2 || value in formElement)) {
-      return false;
-    }
-    if (ALLOW_DATA_ATTR && !FORBID_ATTR[lcName] && regExpTest(DATA_ATTR2, lcName)) ;
-    else if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR2, lcName)) ;
-    else if (!ALLOWED_ATTR[lcName] || FORBID_ATTR[lcName]) {
-      if (
-        // First condition does a very basic check if a) it's basically a valid custom element tagname AND
-        // b) if the tagName passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.tagNameCheck
-        // and c) if the attribute name passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.attributeNameCheck
-        _isBasicCustomElement(lcTag) && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(lcTag)) && (CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName) || CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.attributeNameCheck(lcName)) || // Alternative, second condition checks if it's an `is`-attribute, AND
-        // the value passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.tagNameCheck
-        lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(value))
-      ) ;
-      else {
-        return false;
-      }
-    } else if (URI_SAFE_ATTRIBUTES[lcName]) ;
-    else if (regExpTest(IS_ALLOWED_URI$1, stringReplace(value, ATTR_WHITESPACE2, ""))) ;
-    else if ((lcName === "src" || lcName === "xlink:href" || lcName === "href") && lcTag !== "script" && stringIndexOf(value, "data:") === 0 && DATA_URI_TAGS[lcTag]) ;
-    else if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA2, stringReplace(value, ATTR_WHITESPACE2, ""))) ;
-    else if (value) {
-      return false;
-    } else ;
-    return true;
-  };
-  const _isBasicCustomElement = function _isBasicCustomElement2(tagName) {
-    return tagName !== "annotation-xml" && stringMatch(tagName, CUSTOM_ELEMENT2);
-  };
-  const _sanitizeAttributes = function _sanitizeAttributes2(currentNode) {
-    _executeHooks(hooks.beforeSanitizeAttributes, currentNode, null);
-    const {
-      attributes
-    } = currentNode;
-    if (!attributes || _isClobbered(currentNode)) {
-      return;
-    }
-    const hookEvent = {
-      attrName: "",
-      attrValue: "",
-      keepAttr: true,
-      allowedAttributes: ALLOWED_ATTR,
-      forceKeepAttr: void 0
-    };
-    let l = attributes.length;
-    while (l--) {
-      const attr = attributes[l];
-      const {
-        name,
-        namespaceURI,
-        value: attrValue
-      } = attr;
-      const lcName = transformCaseFunc(name);
-      const initValue = attrValue;
-      let value = name === "value" ? initValue : stringTrim(initValue);
-      hookEvent.attrName = lcName;
-      hookEvent.attrValue = value;
-      hookEvent.keepAttr = true;
-      hookEvent.forceKeepAttr = void 0;
-      _executeHooks(hooks.uponSanitizeAttribute, currentNode, hookEvent);
-      value = hookEvent.attrValue;
-      if (SANITIZE_NAMED_PROPS && (lcName === "id" || lcName === "name")) {
-        _removeAttribute(name, currentNode);
-        value = SANITIZE_NAMED_PROPS_PREFIX + value;
-      }
-      if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|title)/i, value)) {
-        _removeAttribute(name, currentNode);
-        continue;
-      }
-      if (hookEvent.forceKeepAttr) {
-        continue;
-      }
-      if (!hookEvent.keepAttr) {
-        _removeAttribute(name, currentNode);
-        continue;
-      }
-      if (!ALLOW_SELF_CLOSE_IN_ATTR && regExpTest(/\/>/i, value)) {
-        _removeAttribute(name, currentNode);
-        continue;
-      }
-      if (SAFE_FOR_TEMPLATES) {
-        arrayForEach([MUSTACHE_EXPR2, ERB_EXPR2, TMPLIT_EXPR2], (expr) => {
-          value = stringReplace(value, expr, " ");
-        });
-      }
-      const lcTag = transformCaseFunc(currentNode.nodeName);
-      if (!_isValidAttribute(lcTag, lcName, value)) {
-        _removeAttribute(name, currentNode);
-        continue;
-      }
-      if (trustedTypesPolicy && typeof trustedTypes === "object" && typeof trustedTypes.getAttributeType === "function") {
-        if (namespaceURI) ;
-        else {
-          switch (trustedTypes.getAttributeType(lcTag, lcName)) {
-            case "TrustedHTML": {
-              value = trustedTypesPolicy.createHTML(value);
-              break;
-            }
-            case "TrustedScriptURL": {
-              value = trustedTypesPolicy.createScriptURL(value);
-              break;
-            }
-          }
-        }
-      }
-      if (value !== initValue) {
-        try {
-          if (namespaceURI) {
-            currentNode.setAttributeNS(namespaceURI, name, value);
-          } else {
-            currentNode.setAttribute(name, value);
-          }
-          if (_isClobbered(currentNode)) {
-            _forceRemove(currentNode);
-          } else {
-            arrayPop(DOMPurify.removed);
-          }
-        } catch (_) {
-          _removeAttribute(name, currentNode);
-        }
-      }
-    }
-    _executeHooks(hooks.afterSanitizeAttributes, currentNode, null);
-  };
-  const _sanitizeShadowDOM = function _sanitizeShadowDOM2(fragment) {
-    let shadowNode = null;
-    const shadowIterator = _createNodeIterator(fragment);
-    _executeHooks(hooks.beforeSanitizeShadowDOM, fragment, null);
-    while (shadowNode = shadowIterator.nextNode()) {
-      _executeHooks(hooks.uponSanitizeShadowNode, shadowNode, null);
-      _sanitizeElements(shadowNode);
-      _sanitizeAttributes(shadowNode);
-      if (shadowNode.content instanceof DocumentFragment) {
-        _sanitizeShadowDOM2(shadowNode.content);
-      }
-    }
-    _executeHooks(hooks.afterSanitizeShadowDOM, fragment, null);
-  };
-  DOMPurify.sanitize = function(dirty) {
-    let cfg = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
-    let body = null;
-    let importedNode = null;
-    let currentNode = null;
-    let returnNode = null;
-    IS_EMPTY_INPUT = !dirty;
-    if (IS_EMPTY_INPUT) {
-      dirty = "<!-->";
-    }
-    if (typeof dirty !== "string" && !_isNode(dirty)) {
-      if (typeof dirty.toString === "function") {
-        dirty = dirty.toString();
-        if (typeof dirty !== "string") {
-          throw typeErrorCreate("dirty is not a string, aborting");
-        }
-      } else {
-        throw typeErrorCreate("toString is not a function");
-      }
-    }
-    if (!DOMPurify.isSupported) {
-      return dirty;
-    }
-    if (!SET_CONFIG) {
-      _parseConfig(cfg);
-    }
-    DOMPurify.removed = [];
-    if (typeof dirty === "string") {
-      IN_PLACE = false;
-    }
-    if (IN_PLACE) {
-      if (dirty.nodeName) {
-        const tagName = transformCaseFunc(dirty.nodeName);
-        if (!ALLOWED_TAGS2[tagName] || FORBID_TAGS[tagName]) {
-          throw typeErrorCreate("root node is forbidden and cannot be sanitized in-place");
-        }
-      }
-    } else if (dirty instanceof Node) {
-      body = _initDocument("<!---->");
-      importedNode = body.ownerDocument.importNode(dirty, true);
-      if (importedNode.nodeType === NODE_TYPE.element && importedNode.nodeName === "BODY") {
-        body = importedNode;
-      } else if (importedNode.nodeName === "HTML") {
-        body = importedNode;
-      } else {
-        body.appendChild(importedNode);
-      }
-    } else {
-      if (!RETURN_DOM && !SAFE_FOR_TEMPLATES && !WHOLE_DOCUMENT && // eslint-disable-next-line unicorn/prefer-includes
-      dirty.indexOf("<") === -1) {
-        return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? trustedTypesPolicy.createHTML(dirty) : dirty;
-      }
-      body = _initDocument(dirty);
-      if (!body) {
-        return RETURN_DOM ? null : RETURN_TRUSTED_TYPE ? emptyHTML : "";
-      }
-    }
-    if (body && FORCE_BODY) {
-      _forceRemove(body.firstChild);
-    }
-    const nodeIterator = _createNodeIterator(IN_PLACE ? dirty : body);
-    while (currentNode = nodeIterator.nextNode()) {
-      _sanitizeElements(currentNode);
-      _sanitizeAttributes(currentNode);
-      if (currentNode.content instanceof DocumentFragment) {
-        _sanitizeShadowDOM(currentNode.content);
-      }
-    }
-    if (IN_PLACE) {
-      return dirty;
-    }
-    if (RETURN_DOM) {
-      if (RETURN_DOM_FRAGMENT) {
-        returnNode = createDocumentFragment.call(body.ownerDocument);
-        while (body.firstChild) {
-          returnNode.appendChild(body.firstChild);
-        }
-      } else {
-        returnNode = body;
-      }
-      if (ALLOWED_ATTR.shadowroot || ALLOWED_ATTR.shadowrootmode) {
-        returnNode = importNode.call(originalDocument, returnNode, true);
-      }
-      return returnNode;
-    }
-    let serializedHTML = WHOLE_DOCUMENT ? body.outerHTML : body.innerHTML;
-    if (WHOLE_DOCUMENT && ALLOWED_TAGS2["!doctype"] && body.ownerDocument && body.ownerDocument.doctype && body.ownerDocument.doctype.name && regExpTest(DOCTYPE_NAME, body.ownerDocument.doctype.name)) {
-      serializedHTML = "<!DOCTYPE " + body.ownerDocument.doctype.name + ">\n" + serializedHTML;
-    }
-    if (SAFE_FOR_TEMPLATES) {
-      arrayForEach([MUSTACHE_EXPR2, ERB_EXPR2, TMPLIT_EXPR2], (expr) => {
-        serializedHTML = stringReplace(serializedHTML, expr, " ");
-      });
-    }
-    return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? trustedTypesPolicy.createHTML(serializedHTML) : serializedHTML;
-  };
-  DOMPurify.setConfig = function() {
-    let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
-    _parseConfig(cfg);
-    SET_CONFIG = true;
-  };
-  DOMPurify.clearConfig = function() {
-    CONFIG = null;
-    SET_CONFIG = false;
-  };
-  DOMPurify.isValidAttribute = function(tag2, attr, value) {
-    if (!CONFIG) {
-      _parseConfig({});
-    }
-    const lcTag = transformCaseFunc(tag2);
-    const lcName = transformCaseFunc(attr);
-    return _isValidAttribute(lcTag, lcName, value);
-  };
-  DOMPurify.addHook = function(entryPoint, hookFunction) {
-    if (typeof hookFunction !== "function") {
-      return;
-    }
-    arrayPush(hooks[entryPoint], hookFunction);
-  };
-  DOMPurify.removeHook = function(entryPoint, hookFunction) {
-    if (hookFunction !== void 0) {
-      const index = arrayLastIndexOf(hooks[entryPoint], hookFunction);
-      return index === -1 ? void 0 : arraySplice(hooks[entryPoint], index, 1)[0];
-    }
-    return arrayPop(hooks[entryPoint]);
-  };
-  DOMPurify.removeHooks = function(entryPoint) {
-    hooks[entryPoint] = [];
-  };
-  DOMPurify.removeAllHooks = function() {
-    hooks = _createHooksMap();
-  };
-  return DOMPurify;
-}
-var purify = createDOMPurify();
-
-// node_modules/marked/lib/marked.esm.js
-function _getDefaults() {
-  return {
-    async: false,
-    breaks: false,
-    extensions: null,
-    gfm: true,
-    hooks: null,
-    pedantic: false,
-    renderer: null,
-    silent: false,
-    tokenizer: null,
-    walkTokens: null
-  };
-}
-var _defaults = _getDefaults();
-function changeDefaults(newDefaults) {
-  _defaults = newDefaults;
-}
-var noopTest = { exec: () => null };
-function edit(regex, opt = "") {
-  let source = typeof regex === "string" ? regex : regex.source;
-  const obj = {
-    replace: (name, val) => {
-      let valSource = typeof val === "string" ? val : val.source;
-      valSource = valSource.replace(other.caret, "$1");
-      source = source.replace(name, valSource);
-      return obj;
-    },
-    getRegex: () => {
-      return new RegExp(source, opt);
-    }
-  };
-  return obj;
-}
-var other = {
-  codeRemoveIndent: /^(?: {1,4}| {0,3}\t)/gm,
-  outputLinkReplace: /\\([\[\]])/g,
-  indentCodeCompensation: /^(\s+)(?:```)/,
-  beginningSpace: /^\s+/,
-  endingHash: /#$/,
-  startingSpaceChar: /^ /,
-  endingSpaceChar: / $/,
-  nonSpaceChar: /[^ ]/,
-  newLineCharGlobal: /\n/g,
-  tabCharGlobal: /\t/g,
-  multipleSpaceGlobal: /\s+/g,
-  blankLine: /^[ \t]*$/,
-  doubleBlankLine: /\n[ \t]*\n[ \t]*$/,
-  blockquoteStart: /^ {0,3}>/,
-  blockquoteSetextReplace: /\n {0,3}((?:=+|-+) *)(?=\n|$)/g,
-  blockquoteSetextReplace2: /^ {0,3}>[ \t]?/gm,
-  listReplaceTabs: /^\t+/,
-  listReplaceNesting: /^ {1,4}(?=( {4})*[^ ])/g,
-  listIsTask: /^\[[ xX]\] /,
-  listReplaceTask: /^\[[ xX]\] +/,
-  anyLine: /\n.*\n/,
-  hrefBrackets: /^<(.*)>$/,
-  tableDelimiter: /[:|]/,
-  tableAlignChars: /^\||\| *$/g,
-  tableRowBlankLine: /\n[ \t]*$/,
-  tableAlignRight: /^ *-+: *$/,
-  tableAlignCenter: /^ *:-+: *$/,
-  tableAlignLeft: /^ *:-+ *$/,
-  startATag: /^<a /i,
-  endATag: /^<\/a>/i,
-  startPreScriptTag: /^<(pre|code|kbd|script)(\s|>)/i,
-  endPreScriptTag: /^<\/(pre|code|kbd|script)(\s|>)/i,
-  startAngleBracket: /^</,
-  endAngleBracket: />$/,
-  pedanticHrefTitle: /^([^'"]*[^\s])\s+(['"])(.*)\2/,
-  unicodeAlphaNumeric: /[\p{L}\p{N}]/u,
-  escapeTest: /[&<>"']/,
-  escapeReplace: /[&<>"']/g,
-  escapeTestNoEncode: /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/,
-  escapeReplaceNoEncode: /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g,
-  unescapeTest: /&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/ig,
-  caret: /(^|[^\[])\^/g,
-  percentDecode: /%25/g,
-  findPipe: /\|/g,
-  splitPipe: / \|/,
-  slashPipe: /\\\|/g,
-  carriageReturn: /\r\n|\r/g,
-  spaceLine: /^ +$/gm,
-  notSpaceStart: /^\S*/,
-  endingNewline: /\n$/,
-  listItemRegex: (bull) => new RegExp(`^( {0,3}${bull})((?:[	 ][^\\n]*)?(?:\\n|$))`),
-  nextBulletRegex: (indent) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}(?:[*+-]|\\d{1,9}[.)])((?:[ 	][^\\n]*)?(?:\\n|$))`),
-  hrRegex: (indent) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`),
-  fencesBeginRegex: (indent) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}(?:\`\`\`|~~~)`),
-  headingBeginRegex: (indent) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}#`),
-  htmlBeginRegex: (indent) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}<(?:[a-z].*>|!--)`, "i")
-};
-var newline = /^(?:[ \t]*(?:\n|$))+/;
-var blockCode = /^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/;
-var fences = /^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/;
-var hr = /^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/;
-var heading = /^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/;
-var bullet = /(?:[*+-]|\d{1,9}[.)])/;
-var lheadingCore = /^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |blockCode|fences|blockquote|heading|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/;
-var lheading = edit(lheadingCore).replace(/bull/g, bullet).replace(/blockCode/g, /(?: {4}| {0,3}\t)/).replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g, / {0,3}>/).replace(/heading/g, / {0,3}#{1,6}/).replace(/html/g, / {0,3}<[^\n>]+>\n/).replace(/\|table/g, "").getRegex();
-var lheadingGfm = edit(lheadingCore).replace(/bull/g, bullet).replace(/blockCode/g, /(?: {4}| {0,3}\t)/).replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g, / {0,3}>/).replace(/heading/g, / {0,3}#{1,6}/).replace(/html/g, / {0,3}<[^\n>]+>\n/).replace(/table/g, / {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/).getRegex();
-var _paragraph = /^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/;
-var blockText = /^[^\n]+/;
-var _blockLabel = /(?!\s*\])(?:\\.|[^\[\]\\])+/;
-var def = edit(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/).replace("label", _blockLabel).replace("title", /(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/).getRegex();
-var list = edit(/^( {0,3}bull)([ \t][^\n]+?)?(?:\n|$)/).replace(/bull/g, bullet).getRegex();
-var _tag = "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul";
-var _comment = /<!--(?:-?>|[\s\S]*?(?:-->|$))/;
-var html2 = edit(
-  "^ {0,3}(?:<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)|comment[^\\n]*(\\n+|$)|<\\?[\\s\\S]*?(?:\\?>\\n*|$)|<![A-Z][\\s\\S]*?(?:>\\n*|$)|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$))",
-  "i"
-).replace("comment", _comment).replace("tag", _tag).replace("attribute", / +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/).getRegex();
-var paragraph = edit(_paragraph).replace("hr", hr).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("|lheading", "").replace("|table", "").replace("blockquote", " {0,3}>").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", _tag).getRegex();
-var blockquote = edit(/^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/).replace("paragraph", paragraph).getRegex();
-var blockNormal = {
-  blockquote,
-  code: blockCode,
-  def,
-  fences,
-  heading,
-  hr,
-  html: html2,
-  lheading,
-  list,
-  newline,
-  paragraph,
-  table: noopTest,
-  text: blockText
-};
-var gfmTable = edit(
-  "^ *([^\\n ].*)\\n {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)"
-).replace("hr", hr).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("blockquote", " {0,3}>").replace("code", "(?: {4}| {0,3}	)[^\\n]").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", _tag).getRegex();
-var blockGfm = {
-  ...blockNormal,
-  lheading: lheadingGfm,
-  table: gfmTable,
-  paragraph: edit(_paragraph).replace("hr", hr).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("|lheading", "").replace("table", gfmTable).replace("blockquote", " {0,3}>").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", _tag).getRegex()
-};
-var blockPedantic = {
-  ...blockNormal,
-  html: edit(
-    `^ *(?:comment *(?:\\n|\\s*$)|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)|<tag(?:"[^"]*"|'[^']*'|\\s[^'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))`
-  ).replace("comment", _comment).replace(/tag/g, "(?!(?:a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)\\b)\\w+(?!:|[^\\w\\s@]*@)\\b").getRegex(),
-  def: /^ *\[([^\]]+)\]: *<?([^\s>]+)>?(?: +(["(][^\n]+[")]))? *(?:\n+|$)/,
-  heading: /^(#{1,6})(.*)(?:\n+|$)/,
-  fences: noopTest,
-  // fences not supported
-  lheading: /^(.+?)\n {0,3}(=+|-+) *(?:\n+|$)/,
-  paragraph: edit(_paragraph).replace("hr", hr).replace("heading", " *#{1,6} *[^\n]").replace("lheading", lheading).replace("|table", "").replace("blockquote", " {0,3}>").replace("|fences", "").replace("|list", "").replace("|html", "").replace("|tag", "").getRegex()
-};
-var escape2 = /^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/;
-var inlineCode = /^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/;
-var br = /^( {2,}|\\)\n(?!\s*$)/;
-var inlineText = /^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/;
-var _punctuation = /[\p{P}\p{S}]/u;
-var _punctuationOrSpace = /[\s\p{P}\p{S}]/u;
-var _notPunctuationOrSpace = /[^\s\p{P}\p{S}]/u;
-var punctuation = edit(/^((?![*_])punctSpace)/, "u").replace(/punctSpace/g, _punctuationOrSpace).getRegex();
-var _punctuationGfmStrongEm = /(?!~)[\p{P}\p{S}]/u;
-var _punctuationOrSpaceGfmStrongEm = /(?!~)[\s\p{P}\p{S}]/u;
-var _notPunctuationOrSpaceGfmStrongEm = /(?:[^\s\p{P}\p{S}]|~)/u;
-var blockSkip = /\[[^[\]]*?\]\((?:\\.|[^\\\(\)]|\((?:\\.|[^\\\(\)])*\))*\)|`[^`]*?`|<[^<>]*?>/g;
-var emStrongLDelimCore = /^(?:\*+(?:((?!\*)punct)|[^\s*]))|^_+(?:((?!_)punct)|([^\s_]))/;
-var emStrongLDelim = edit(emStrongLDelimCore, "u").replace(/punct/g, _punctuation).getRegex();
-var emStrongLDelimGfm = edit(emStrongLDelimCore, "u").replace(/punct/g, _punctuationGfmStrongEm).getRegex();
-var emStrongRDelimAstCore = "^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|notPunctSpace(\\*+)(?=notPunctSpace)";
-var emStrongRDelimAst = edit(emStrongRDelimAstCore, "gu").replace(/notPunctSpace/g, _notPunctuationOrSpace).replace(/punctSpace/g, _punctuationOrSpace).replace(/punct/g, _punctuation).getRegex();
-var emStrongRDelimAstGfm = edit(emStrongRDelimAstCore, "gu").replace(/notPunctSpace/g, _notPunctuationOrSpaceGfmStrongEm).replace(/punctSpace/g, _punctuationOrSpaceGfmStrongEm).replace(/punct/g, _punctuationGfmStrongEm).getRegex();
-var emStrongRDelimUnd = edit(
-  "^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)punctSpace(_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)",
-  "gu"
-).replace(/notPunctSpace/g, _notPunctuationOrSpace).replace(/punctSpace/g, _punctuationOrSpace).replace(/punct/g, _punctuation).getRegex();
-var anyPunctuation = edit(/\\(punct)/, "gu").replace(/punct/g, _punctuation).getRegex();
-var autolink = edit(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/).replace("scheme", /[a-zA-Z][a-zA-Z0-9+.-]{1,31}/).replace("email", /[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/).getRegex();
-var _inlineComment = edit(_comment).replace("(?:-->|$)", "-->").getRegex();
-var tag = edit(
-  "^comment|^</[a-zA-Z][\\w:-]*\\s*>|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>|^<\\?[\\s\\S]*?\\?>|^<![a-zA-Z]+\\s[\\s\\S]*?>|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>"
-).replace("comment", _inlineComment).replace("attribute", /\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/).getRegex();
-var _inlineLabel = /(?:\[(?:\\.|[^\[\]\\])*\]|\\.|`[^`]*`|[^\[\]\\`])*?/;
-var link = edit(/^!?\[(label)\]\(\s*(href)(?:(?:[ \t]*(?:\n[ \t]*)?)(title))?\s*\)/).replace("label", _inlineLabel).replace("href", /<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]*/).replace("title", /"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/).getRegex();
-var reflink = edit(/^!?\[(label)\]\[(ref)\]/).replace("label", _inlineLabel).replace("ref", _blockLabel).getRegex();
-var nolink = edit(/^!?\[(ref)\](?:\[\])?/).replace("ref", _blockLabel).getRegex();
-var reflinkSearch = edit("reflink|nolink(?!\\()", "g").replace("reflink", reflink).replace("nolink", nolink).getRegex();
-var inlineNormal = {
-  _backpedal: noopTest,
-  // only used for GFM url
-  anyPunctuation,
-  autolink,
-  blockSkip,
-  br,
-  code: inlineCode,
-  del: noopTest,
-  emStrongLDelim,
-  emStrongRDelimAst,
-  emStrongRDelimUnd,
-  escape: escape2,
-  link,
-  nolink,
-  punctuation,
-  reflink,
-  reflinkSearch,
-  tag,
-  text: inlineText,
-  url: noopTest
-};
-var inlinePedantic = {
-  ...inlineNormal,
-  link: edit(/^!?\[(label)\]\((.*?)\)/).replace("label", _inlineLabel).getRegex(),
-  reflink: edit(/^!?\[(label)\]\s*\[([^\]]*)\]/).replace("label", _inlineLabel).getRegex()
-};
-var inlineGfm = {
-  ...inlineNormal,
-  emStrongRDelimAst: emStrongRDelimAstGfm,
-  emStrongLDelim: emStrongLDelimGfm,
-  url: edit(/^((?:ftp|https?):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/, "i").replace("email", /[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/).getRegex(),
-  _backpedal: /(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/,
-  del: /^(~~?)(?=[^\s~])((?:\\.|[^\\])*?(?:\\.|[^\s~\\]))\1(?=[^~]|$)/,
-  text: /^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/
-};
-var inlineBreaks = {
-  ...inlineGfm,
-  br: edit(br).replace("{2,}", "*").getRegex(),
-  text: edit(inlineGfm.text).replace("\\b_", "\\b_| {2,}\\n").replace(/\{2,\}/g, "*").getRegex()
-};
-var block = {
-  normal: blockNormal,
-  gfm: blockGfm,
-  pedantic: blockPedantic
-};
-var inline = {
-  normal: inlineNormal,
-  gfm: inlineGfm,
-  breaks: inlineBreaks,
-  pedantic: inlinePedantic
-};
-var escapeReplacements = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;"
-};
-var getEscapeReplacement = (ch) => escapeReplacements[ch];
-function escape22(html22, encode) {
-  if (encode) {
-    if (other.escapeTest.test(html22)) {
-      return html22.replace(other.escapeReplace, getEscapeReplacement);
-    }
-  } else {
-    if (other.escapeTestNoEncode.test(html22)) {
-      return html22.replace(other.escapeReplaceNoEncode, getEscapeReplacement);
-    }
-  }
-  return html22;
-}
-function cleanUrl(href) {
-  try {
-    href = encodeURI(href).replace(other.percentDecode, "%");
-  } catch {
-    return null;
-  }
-  return href;
-}
-function splitCells(tableRow, count) {
-  var _a2;
-  const row = tableRow.replace(other.findPipe, (match, offset, str) => {
-    let escaped = false;
-    let curr = offset;
-    while (--curr >= 0 && str[curr] === "\\") escaped = !escaped;
-    if (escaped) {
-      return "|";
-    } else {
-      return " |";
-    }
-  }), cells = row.split(other.splitPipe);
-  let i = 0;
-  if (!cells[0].trim()) {
-    cells.shift();
-  }
-  if (cells.length > 0 && !((_a2 = cells.at(-1)) == null ? void 0 : _a2.trim())) {
-    cells.pop();
-  }
-  if (count) {
-    if (cells.length > count) {
-      cells.splice(count);
-    } else {
-      while (cells.length < count) cells.push("");
-    }
-  }
-  for (; i < cells.length; i++) {
-    cells[i] = cells[i].trim().replace(other.slashPipe, "|");
-  }
-  return cells;
-}
-function rtrim(str, c, invert) {
-  const l = str.length;
-  if (l === 0) {
-    return "";
-  }
-  let suffLen = 0;
-  while (suffLen < l) {
-    const currChar = str.charAt(l - suffLen - 1);
-    if (currChar === c && !invert) {
-      suffLen++;
-    } else if (currChar !== c && invert) {
-      suffLen++;
-    } else {
-      break;
-    }
-  }
-  return str.slice(0, l - suffLen);
-}
-function findClosingBracket(str, b) {
-  if (str.indexOf(b[1]) === -1) {
-    return -1;
-  }
-  let level = 0;
-  for (let i = 0; i < str.length; i++) {
-    if (str[i] === "\\") {
-      i++;
-    } else if (str[i] === b[0]) {
-      level++;
-    } else if (str[i] === b[1]) {
-      level--;
-      if (level < 0) {
-        return i;
-      }
-    }
-  }
-  if (level > 0) {
-    return -2;
-  }
-  return -1;
-}
-function outputLink(cap, link2, raw, lexer2, rules) {
-  const href = link2.href;
-  const title = link2.title || null;
-  const text2 = cap[1].replace(rules.other.outputLinkReplace, "$1");
-  lexer2.state.inLink = true;
-  const token = {
-    type: cap[0].charAt(0) === "!" ? "image" : "link",
-    raw,
-    href,
-    title,
-    text: text2,
-    tokens: lexer2.inlineTokens(text2)
-  };
-  lexer2.state.inLink = false;
-  return token;
-}
-function indentCodeCompensation(raw, text2, rules) {
-  const matchIndentToCode = raw.match(rules.other.indentCodeCompensation);
-  if (matchIndentToCode === null) {
-    return text2;
-  }
-  const indentToCode = matchIndentToCode[1];
-  return text2.split("\n").map((node2) => {
-    const matchIndentInNode = node2.match(rules.other.beginningSpace);
-    if (matchIndentInNode === null) {
-      return node2;
-    }
-    const [indentInNode] = matchIndentInNode;
-    if (indentInNode.length >= indentToCode.length) {
-      return node2.slice(indentToCode.length);
-    }
-    return node2;
-  }).join("\n");
-}
-var _Tokenizer = class {
-  // set by the lexer
-  constructor(options22) {
-    __publicField(this, "options");
-    __publicField(this, "rules");
-    // set by the lexer
-    __publicField(this, "lexer");
-    this.options = options22 || _defaults;
-  }
-  space(src) {
-    const cap = this.rules.block.newline.exec(src);
-    if (cap && cap[0].length > 0) {
-      return {
-        type: "space",
-        raw: cap[0]
-      };
-    }
-  }
-  code(src) {
-    const cap = this.rules.block.code.exec(src);
-    if (cap) {
-      const text2 = cap[0].replace(this.rules.other.codeRemoveIndent, "");
-      return {
-        type: "code",
-        raw: cap[0],
-        codeBlockStyle: "indented",
-        text: !this.options.pedantic ? rtrim(text2, "\n") : text2
-      };
-    }
-  }
-  fences(src) {
-    const cap = this.rules.block.fences.exec(src);
-    if (cap) {
-      const raw = cap[0];
-      const text2 = indentCodeCompensation(raw, cap[3] || "", this.rules);
-      return {
-        type: "code",
-        raw,
-        lang: cap[2] ? cap[2].trim().replace(this.rules.inline.anyPunctuation, "$1") : cap[2],
-        text: text2
-      };
-    }
-  }
-  heading(src) {
-    const cap = this.rules.block.heading.exec(src);
-    if (cap) {
-      let text2 = cap[2].trim();
-      if (this.rules.other.endingHash.test(text2)) {
-        const trimmed = rtrim(text2, "#");
-        if (this.options.pedantic) {
-          text2 = trimmed.trim();
-        } else if (!trimmed || this.rules.other.endingSpaceChar.test(trimmed)) {
-          text2 = trimmed.trim();
-        }
-      }
-      return {
-        type: "heading",
-        raw: cap[0],
-        depth: cap[1].length,
-        text: text2,
-        tokens: this.lexer.inline(text2)
-      };
-    }
-  }
-  hr(src) {
-    const cap = this.rules.block.hr.exec(src);
-    if (cap) {
-      return {
-        type: "hr",
-        raw: rtrim(cap[0], "\n")
-      };
-    }
-  }
-  blockquote(src) {
-    const cap = this.rules.block.blockquote.exec(src);
-    if (cap) {
-      let lines = rtrim(cap[0], "\n").split("\n");
-      let raw = "";
-      let text2 = "";
-      const tokens = [];
-      while (lines.length > 0) {
-        let inBlockquote = false;
-        const currentLines = [];
-        let i;
-        for (i = 0; i < lines.length; i++) {
-          if (this.rules.other.blockquoteStart.test(lines[i])) {
-            currentLines.push(lines[i]);
-            inBlockquote = true;
-          } else if (!inBlockquote) {
-            currentLines.push(lines[i]);
-          } else {
-            break;
-          }
-        }
-        lines = lines.slice(i);
-        const currentRaw = currentLines.join("\n");
-        const currentText = currentRaw.replace(this.rules.other.blockquoteSetextReplace, "\n    $1").replace(this.rules.other.blockquoteSetextReplace2, "");
-        raw = raw ? `${raw}
-${currentRaw}` : currentRaw;
-        text2 = text2 ? `${text2}
-${currentText}` : currentText;
-        const top = this.lexer.state.top;
-        this.lexer.state.top = true;
-        this.lexer.blockTokens(currentText, tokens, true);
-        this.lexer.state.top = top;
-        if (lines.length === 0) {
-          break;
-        }
-        const lastToken = tokens.at(-1);
-        if ((lastToken == null ? void 0 : lastToken.type) === "code") {
-          break;
-        } else if ((lastToken == null ? void 0 : lastToken.type) === "blockquote") {
-          const oldToken = lastToken;
-          const newText = oldToken.raw + "\n" + lines.join("\n");
-          const newToken = this.blockquote(newText);
-          tokens[tokens.length - 1] = newToken;
-          raw = raw.substring(0, raw.length - oldToken.raw.length) + newToken.raw;
-          text2 = text2.substring(0, text2.length - oldToken.text.length) + newToken.text;
-          break;
-        } else if ((lastToken == null ? void 0 : lastToken.type) === "list") {
-          const oldToken = lastToken;
-          const newText = oldToken.raw + "\n" + lines.join("\n");
-          const newToken = this.list(newText);
-          tokens[tokens.length - 1] = newToken;
-          raw = raw.substring(0, raw.length - lastToken.raw.length) + newToken.raw;
-          text2 = text2.substring(0, text2.length - oldToken.raw.length) + newToken.raw;
-          lines = newText.substring(tokens.at(-1).raw.length).split("\n");
-          continue;
-        }
-      }
-      return {
-        type: "blockquote",
-        raw,
-        tokens,
-        text: text2
-      };
-    }
-  }
-  list(src) {
-    let cap = this.rules.block.list.exec(src);
-    if (cap) {
-      let bull = cap[1].trim();
-      const isordered = bull.length > 1;
-      const list2 = {
-        type: "list",
-        raw: "",
-        ordered: isordered,
-        start: isordered ? +bull.slice(0, -1) : "",
-        loose: false,
-        items: []
-      };
-      bull = isordered ? `\\d{1,9}\\${bull.slice(-1)}` : `\\${bull}`;
-      if (this.options.pedantic) {
-        bull = isordered ? bull : "[*+-]";
-      }
-      const itemRegex = this.rules.other.listItemRegex(bull);
-      let endsWithBlankLine = false;
-      while (src) {
-        let endEarly = false;
-        let raw = "";
-        let itemContents = "";
-        if (!(cap = itemRegex.exec(src))) {
-          break;
-        }
-        if (this.rules.block.hr.test(src)) {
-          break;
-        }
-        raw = cap[0];
-        src = src.substring(raw.length);
-        let line = cap[2].split("\n", 1)[0].replace(this.rules.other.listReplaceTabs, (t) => " ".repeat(3 * t.length));
-        let nextLine = src.split("\n", 1)[0];
-        let blankLine = !line.trim();
-        let indent = 0;
-        if (this.options.pedantic) {
-          indent = 2;
-          itemContents = line.trimStart();
-        } else if (blankLine) {
-          indent = cap[1].length + 1;
-        } else {
-          indent = cap[2].search(this.rules.other.nonSpaceChar);
-          indent = indent > 4 ? 1 : indent;
-          itemContents = line.slice(indent);
-          indent += cap[1].length;
-        }
-        if (blankLine && this.rules.other.blankLine.test(nextLine)) {
-          raw += nextLine + "\n";
-          src = src.substring(nextLine.length + 1);
-          endEarly = true;
-        }
-        if (!endEarly) {
-          const nextBulletRegex = this.rules.other.nextBulletRegex(indent);
-          const hrRegex = this.rules.other.hrRegex(indent);
-          const fencesBeginRegex = this.rules.other.fencesBeginRegex(indent);
-          const headingBeginRegex = this.rules.other.headingBeginRegex(indent);
-          const htmlBeginRegex = this.rules.other.htmlBeginRegex(indent);
-          while (src) {
-            const rawLine = src.split("\n", 1)[0];
-            let nextLineWithoutTabs;
-            nextLine = rawLine;
-            if (this.options.pedantic) {
-              nextLine = nextLine.replace(this.rules.other.listReplaceNesting, "  ");
-              nextLineWithoutTabs = nextLine;
-            } else {
-              nextLineWithoutTabs = nextLine.replace(this.rules.other.tabCharGlobal, "    ");
-            }
-            if (fencesBeginRegex.test(nextLine)) {
-              break;
-            }
-            if (headingBeginRegex.test(nextLine)) {
-              break;
-            }
-            if (htmlBeginRegex.test(nextLine)) {
-              break;
-            }
-            if (nextBulletRegex.test(nextLine)) {
-              break;
-            }
-            if (hrRegex.test(nextLine)) {
-              break;
-            }
-            if (nextLineWithoutTabs.search(this.rules.other.nonSpaceChar) >= indent || !nextLine.trim()) {
-              itemContents += "\n" + nextLineWithoutTabs.slice(indent);
-            } else {
-              if (blankLine) {
-                break;
-              }
-              if (line.replace(this.rules.other.tabCharGlobal, "    ").search(this.rules.other.nonSpaceChar) >= 4) {
-                break;
-              }
-              if (fencesBeginRegex.test(line)) {
-                break;
-              }
-              if (headingBeginRegex.test(line)) {
-                break;
-              }
-              if (hrRegex.test(line)) {
-                break;
-              }
-              itemContents += "\n" + nextLine;
-            }
-            if (!blankLine && !nextLine.trim()) {
-              blankLine = true;
-            }
-            raw += rawLine + "\n";
-            src = src.substring(rawLine.length + 1);
-            line = nextLineWithoutTabs.slice(indent);
-          }
-        }
-        if (!list2.loose) {
-          if (endsWithBlankLine) {
-            list2.loose = true;
-          } else if (this.rules.other.doubleBlankLine.test(raw)) {
-            endsWithBlankLine = true;
-          }
-        }
-        let istask = null;
-        let ischecked;
-        if (this.options.gfm) {
-          istask = this.rules.other.listIsTask.exec(itemContents);
-          if (istask) {
-            ischecked = istask[0] !== "[ ] ";
-            itemContents = itemContents.replace(this.rules.other.listReplaceTask, "");
-          }
-        }
-        list2.items.push({
-          type: "list_item",
-          raw,
-          task: !!istask,
-          checked: ischecked,
-          loose: false,
-          text: itemContents,
-          tokens: []
-        });
-        list2.raw += raw;
-      }
-      const lastItem = list2.items.at(-1);
-      if (lastItem) {
-        lastItem.raw = lastItem.raw.trimEnd();
-        lastItem.text = lastItem.text.trimEnd();
-      } else {
-        return;
-      }
-      list2.raw = list2.raw.trimEnd();
-      for (let i = 0; i < list2.items.length; i++) {
-        this.lexer.state.top = false;
-        list2.items[i].tokens = this.lexer.blockTokens(list2.items[i].text, []);
-        if (!list2.loose) {
-          const spacers = list2.items[i].tokens.filter((t) => t.type === "space");
-          const hasMultipleLineBreaks = spacers.length > 0 && spacers.some((t) => this.rules.other.anyLine.test(t.raw));
-          list2.loose = hasMultipleLineBreaks;
-        }
-      }
-      if (list2.loose) {
-        for (let i = 0; i < list2.items.length; i++) {
-          list2.items[i].loose = true;
-        }
-      }
-      return list2;
-    }
-  }
-  html(src) {
-    const cap = this.rules.block.html.exec(src);
-    if (cap) {
-      const token = {
-        type: "html",
-        block: true,
-        raw: cap[0],
-        pre: cap[1] === "pre" || cap[1] === "script" || cap[1] === "style",
-        text: cap[0]
-      };
-      return token;
-    }
-  }
-  def(src) {
-    const cap = this.rules.block.def.exec(src);
-    if (cap) {
-      const tag2 = cap[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal, " ");
-      const href = cap[2] ? cap[2].replace(this.rules.other.hrefBrackets, "$1").replace(this.rules.inline.anyPunctuation, "$1") : "";
-      const title = cap[3] ? cap[3].substring(1, cap[3].length - 1).replace(this.rules.inline.anyPunctuation, "$1") : cap[3];
-      return {
-        type: "def",
-        tag: tag2,
-        raw: cap[0],
-        href,
-        title
-      };
-    }
-  }
-  table(src) {
-    var _a2;
-    const cap = this.rules.block.table.exec(src);
-    if (!cap) {
-      return;
-    }
-    if (!this.rules.other.tableDelimiter.test(cap[2])) {
-      return;
-    }
-    const headers = splitCells(cap[1]);
-    const aligns = cap[2].replace(this.rules.other.tableAlignChars, "").split("|");
-    const rows = ((_a2 = cap[3]) == null ? void 0 : _a2.trim()) ? cap[3].replace(this.rules.other.tableRowBlankLine, "").split("\n") : [];
-    const item = {
-      type: "table",
-      raw: cap[0],
-      header: [],
-      align: [],
-      rows: []
-    };
-    if (headers.length !== aligns.length) {
-      return;
-    }
-    for (const align of aligns) {
-      if (this.rules.other.tableAlignRight.test(align)) {
-        item.align.push("right");
-      } else if (this.rules.other.tableAlignCenter.test(align)) {
-        item.align.push("center");
-      } else if (this.rules.other.tableAlignLeft.test(align)) {
-        item.align.push("left");
-      } else {
-        item.align.push(null);
-      }
-    }
-    for (let i = 0; i < headers.length; i++) {
-      item.header.push({
-        text: headers[i],
-        tokens: this.lexer.inline(headers[i]),
-        header: true,
-        align: item.align[i]
-      });
-    }
-    for (const row of rows) {
-      item.rows.push(splitCells(row, item.header.length).map((cell, i) => {
-        return {
-          text: cell,
-          tokens: this.lexer.inline(cell),
-          header: false,
-          align: item.align[i]
-        };
-      }));
-    }
-    return item;
-  }
-  lheading(src) {
-    const cap = this.rules.block.lheading.exec(src);
-    if (cap) {
-      return {
-        type: "heading",
-        raw: cap[0],
-        depth: cap[2].charAt(0) === "=" ? 1 : 2,
-        text: cap[1],
-        tokens: this.lexer.inline(cap[1])
-      };
-    }
-  }
-  paragraph(src) {
-    const cap = this.rules.block.paragraph.exec(src);
-    if (cap) {
-      const text2 = cap[1].charAt(cap[1].length - 1) === "\n" ? cap[1].slice(0, -1) : cap[1];
-      return {
-        type: "paragraph",
-        raw: cap[0],
-        text: text2,
-        tokens: this.lexer.inline(text2)
-      };
-    }
-  }
-  text(src) {
-    const cap = this.rules.block.text.exec(src);
-    if (cap) {
-      return {
-        type: "text",
-        raw: cap[0],
-        text: cap[0],
-        tokens: this.lexer.inline(cap[0])
-      };
-    }
-  }
-  escape(src) {
-    const cap = this.rules.inline.escape.exec(src);
-    if (cap) {
-      return {
-        type: "escape",
-        raw: cap[0],
-        text: cap[1]
-      };
-    }
-  }
-  tag(src) {
-    const cap = this.rules.inline.tag.exec(src);
-    if (cap) {
-      if (!this.lexer.state.inLink && this.rules.other.startATag.test(cap[0])) {
-        this.lexer.state.inLink = true;
-      } else if (this.lexer.state.inLink && this.rules.other.endATag.test(cap[0])) {
-        this.lexer.state.inLink = false;
-      }
-      if (!this.lexer.state.inRawBlock && this.rules.other.startPreScriptTag.test(cap[0])) {
-        this.lexer.state.inRawBlock = true;
-      } else if (this.lexer.state.inRawBlock && this.rules.other.endPreScriptTag.test(cap[0])) {
-        this.lexer.state.inRawBlock = false;
-      }
-      return {
-        type: "html",
-        raw: cap[0],
-        inLink: this.lexer.state.inLink,
-        inRawBlock: this.lexer.state.inRawBlock,
-        block: false,
-        text: cap[0]
-      };
-    }
-  }
-  link(src) {
-    const cap = this.rules.inline.link.exec(src);
-    if (cap) {
-      const trimmedUrl = cap[2].trim();
-      if (!this.options.pedantic && this.rules.other.startAngleBracket.test(trimmedUrl)) {
-        if (!this.rules.other.endAngleBracket.test(trimmedUrl)) {
-          return;
-        }
-        const rtrimSlash = rtrim(trimmedUrl.slice(0, -1), "\\");
-        if ((trimmedUrl.length - rtrimSlash.length) % 2 === 0) {
-          return;
-        }
-      } else {
-        const lastParenIndex = findClosingBracket(cap[2], "()");
-        if (lastParenIndex === -2) {
-          return;
-        }
-        if (lastParenIndex > -1) {
-          const start = cap[0].indexOf("!") === 0 ? 5 : 4;
-          const linkLen = start + cap[1].length + lastParenIndex;
-          cap[2] = cap[2].substring(0, lastParenIndex);
-          cap[0] = cap[0].substring(0, linkLen).trim();
-          cap[3] = "";
-        }
-      }
-      let href = cap[2];
-      let title = "";
-      if (this.options.pedantic) {
-        const link2 = this.rules.other.pedanticHrefTitle.exec(href);
-        if (link2) {
-          href = link2[1];
-          title = link2[3];
-        }
-      } else {
-        title = cap[3] ? cap[3].slice(1, -1) : "";
-      }
-      href = href.trim();
-      if (this.rules.other.startAngleBracket.test(href)) {
-        if (this.options.pedantic && !this.rules.other.endAngleBracket.test(trimmedUrl)) {
-          href = href.slice(1);
-        } else {
-          href = href.slice(1, -1);
-        }
-      }
-      return outputLink(cap, {
-        href: href ? href.replace(this.rules.inline.anyPunctuation, "$1") : href,
-        title: title ? title.replace(this.rules.inline.anyPunctuation, "$1") : title
-      }, cap[0], this.lexer, this.rules);
-    }
-  }
-  reflink(src, links) {
-    let cap;
-    if ((cap = this.rules.inline.reflink.exec(src)) || (cap = this.rules.inline.nolink.exec(src))) {
-      const linkString = (cap[2] || cap[1]).replace(this.rules.other.multipleSpaceGlobal, " ");
-      const link2 = links[linkString.toLowerCase()];
-      if (!link2) {
-        const text2 = cap[0].charAt(0);
-        return {
-          type: "text",
-          raw: text2,
-          text: text2
-        };
-      }
-      return outputLink(cap, link2, cap[0], this.lexer, this.rules);
-    }
-  }
-  emStrong(src, maskedSrc, prevChar = "") {
-    let match = this.rules.inline.emStrongLDelim.exec(src);
-    if (!match) return;
-    if (match[3] && prevChar.match(this.rules.other.unicodeAlphaNumeric)) return;
-    const nextChar = match[1] || match[2] || "";
-    if (!nextChar || !prevChar || this.rules.inline.punctuation.exec(prevChar)) {
-      const lLength = [...match[0]].length - 1;
-      let rDelim, rLength, delimTotal = lLength, midDelimTotal = 0;
-      const endReg = match[0][0] === "*" ? this.rules.inline.emStrongRDelimAst : this.rules.inline.emStrongRDelimUnd;
-      endReg.lastIndex = 0;
-      maskedSrc = maskedSrc.slice(-1 * src.length + lLength);
-      while ((match = endReg.exec(maskedSrc)) != null) {
-        rDelim = match[1] || match[2] || match[3] || match[4] || match[5] || match[6];
-        if (!rDelim) continue;
-        rLength = [...rDelim].length;
-        if (match[3] || match[4]) {
-          delimTotal += rLength;
-          continue;
-        } else if (match[5] || match[6]) {
-          if (lLength % 3 && !((lLength + rLength) % 3)) {
-            midDelimTotal += rLength;
-            continue;
-          }
-        }
-        delimTotal -= rLength;
-        if (delimTotal > 0) continue;
-        rLength = Math.min(rLength, rLength + delimTotal + midDelimTotal);
-        const lastCharLength = [...match[0]][0].length;
-        const raw = src.slice(0, lLength + match.index + lastCharLength + rLength);
-        if (Math.min(lLength, rLength) % 2) {
-          const text22 = raw.slice(1, -1);
-          return {
-            type: "em",
-            raw,
-            text: text22,
-            tokens: this.lexer.inlineTokens(text22)
-          };
-        }
-        const text2 = raw.slice(2, -2);
-        return {
-          type: "strong",
-          raw,
-          text: text2,
-          tokens: this.lexer.inlineTokens(text2)
-        };
-      }
-    }
-  }
-  codespan(src) {
-    const cap = this.rules.inline.code.exec(src);
-    if (cap) {
-      let text2 = cap[2].replace(this.rules.other.newLineCharGlobal, " ");
-      const hasNonSpaceChars = this.rules.other.nonSpaceChar.test(text2);
-      const hasSpaceCharsOnBothEnds = this.rules.other.startingSpaceChar.test(text2) && this.rules.other.endingSpaceChar.test(text2);
-      if (hasNonSpaceChars && hasSpaceCharsOnBothEnds) {
-        text2 = text2.substring(1, text2.length - 1);
-      }
-      return {
-        type: "codespan",
-        raw: cap[0],
-        text: text2
-      };
-    }
-  }
-  br(src) {
-    const cap = this.rules.inline.br.exec(src);
-    if (cap) {
-      return {
-        type: "br",
-        raw: cap[0]
-      };
-    }
-  }
-  del(src) {
-    const cap = this.rules.inline.del.exec(src);
-    if (cap) {
-      return {
-        type: "del",
-        raw: cap[0],
-        text: cap[2],
-        tokens: this.lexer.inlineTokens(cap[2])
-      };
-    }
-  }
-  autolink(src) {
-    const cap = this.rules.inline.autolink.exec(src);
-    if (cap) {
-      let text2, href;
-      if (cap[2] === "@") {
-        text2 = cap[1];
-        href = "mailto:" + text2;
-      } else {
-        text2 = cap[1];
-        href = text2;
-      }
-      return {
-        type: "link",
-        raw: cap[0],
-        text: text2,
-        href,
-        tokens: [
-          {
-            type: "text",
-            raw: text2,
-            text: text2
-          }
-        ]
-      };
-    }
-  }
-  url(src) {
-    var _a2, _b;
-    let cap;
-    if (cap = this.rules.inline.url.exec(src)) {
-      let text2, href;
-      if (cap[2] === "@") {
-        text2 = cap[0];
-        href = "mailto:" + text2;
-      } else {
-        let prevCapZero;
-        do {
-          prevCapZero = cap[0];
-          cap[0] = (_b = (_a2 = this.rules.inline._backpedal.exec(cap[0])) == null ? void 0 : _a2[0]) != null ? _b : "";
-        } while (prevCapZero !== cap[0]);
-        text2 = cap[0];
-        if (cap[1] === "www.") {
-          href = "http://" + cap[0];
-        } else {
-          href = cap[0];
-        }
-      }
-      return {
-        type: "link",
-        raw: cap[0],
-        text: text2,
-        href,
-        tokens: [
-          {
-            type: "text",
-            raw: text2,
-            text: text2
-          }
-        ]
-      };
-    }
-  }
-  inlineText(src) {
-    const cap = this.rules.inline.text.exec(src);
-    if (cap) {
-      const escaped = this.lexer.state.inRawBlock;
-      return {
-        type: "text",
-        raw: cap[0],
-        text: cap[0],
-        escaped
-      };
-    }
-  }
-};
-var _Lexer = class __Lexer {
-  constructor(options22) {
-    __publicField(this, "tokens");
-    __publicField(this, "options");
-    __publicField(this, "state");
-    __publicField(this, "tokenizer");
-    __publicField(this, "inlineQueue");
-    this.tokens = [];
-    this.tokens.links = /* @__PURE__ */ Object.create(null);
-    this.options = options22 || _defaults;
-    this.options.tokenizer = this.options.tokenizer || new _Tokenizer();
-    this.tokenizer = this.options.tokenizer;
-    this.tokenizer.options = this.options;
-    this.tokenizer.lexer = this;
-    this.inlineQueue = [];
-    this.state = {
-      inLink: false,
-      inRawBlock: false,
-      top: true
-    };
-    const rules = {
-      other,
-      block: block.normal,
-      inline: inline.normal
-    };
-    if (this.options.pedantic) {
-      rules.block = block.pedantic;
-      rules.inline = inline.pedantic;
-    } else if (this.options.gfm) {
-      rules.block = block.gfm;
-      if (this.options.breaks) {
-        rules.inline = inline.breaks;
-      } else {
-        rules.inline = inline.gfm;
-      }
-    }
-    this.tokenizer.rules = rules;
-  }
-  /**
-   * Expose Rules
-   */
-  static get rules() {
-    return {
-      block,
-      inline
-    };
-  }
-  /**
-   * Static Lex Method
-   */
-  static lex(src, options22) {
-    const lexer2 = new __Lexer(options22);
-    return lexer2.lex(src);
-  }
-  /**
-   * Static Lex Inline Method
-   */
-  static lexInline(src, options22) {
-    const lexer2 = new __Lexer(options22);
-    return lexer2.inlineTokens(src);
-  }
-  /**
-   * Preprocessing
-   */
-  lex(src) {
-    src = src.replace(other.carriageReturn, "\n");
-    this.blockTokens(src, this.tokens);
-    for (let i = 0; i < this.inlineQueue.length; i++) {
-      const next = this.inlineQueue[i];
-      this.inlineTokens(next.src, next.tokens);
-    }
-    this.inlineQueue = [];
-    return this.tokens;
-  }
-  blockTokens(src, tokens = [], lastParagraphClipped = false) {
-    var _a2, _b, _c;
-    if (this.options.pedantic) {
-      src = src.replace(other.tabCharGlobal, "    ").replace(other.spaceLine, "");
-    }
-    while (src) {
-      let token;
-      if ((_b = (_a2 = this.options.extensions) == null ? void 0 : _a2.block) == null ? void 0 : _b.some((extTokenizer) => {
-        if (token = extTokenizer.call({ lexer: this }, src, tokens)) {
-          src = src.substring(token.raw.length);
-          tokens.push(token);
-          return true;
-        }
-        return false;
-      })) {
-        continue;
-      }
-      if (token = this.tokenizer.space(src)) {
-        src = src.substring(token.raw.length);
-        const lastToken = tokens.at(-1);
-        if (token.raw.length === 1 && lastToken !== void 0) {
-          lastToken.raw += "\n";
-        } else {
-          tokens.push(token);
-        }
-        continue;
-      }
-      if (token = this.tokenizer.code(src)) {
-        src = src.substring(token.raw.length);
-        const lastToken = tokens.at(-1);
-        if ((lastToken == null ? void 0 : lastToken.type) === "paragraph" || (lastToken == null ? void 0 : lastToken.type) === "text") {
-          lastToken.raw += "\n" + token.raw;
-          lastToken.text += "\n" + token.text;
-          this.inlineQueue.at(-1).src = lastToken.text;
-        } else {
-          tokens.push(token);
-        }
-        continue;
-      }
-      if (token = this.tokenizer.fences(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.heading(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.hr(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.blockquote(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.list(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.html(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.def(src)) {
-        src = src.substring(token.raw.length);
-        const lastToken = tokens.at(-1);
-        if ((lastToken == null ? void 0 : lastToken.type) === "paragraph" || (lastToken == null ? void 0 : lastToken.type) === "text") {
-          lastToken.raw += "\n" + token.raw;
-          lastToken.text += "\n" + token.raw;
-          this.inlineQueue.at(-1).src = lastToken.text;
-        } else if (!this.tokens.links[token.tag]) {
-          this.tokens.links[token.tag] = {
-            href: token.href,
-            title: token.title
-          };
-        }
-        continue;
-      }
-      if (token = this.tokenizer.table(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.lheading(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      let cutSrc = src;
-      if ((_c = this.options.extensions) == null ? void 0 : _c.startBlock) {
-        let startIndex = Infinity;
-        const tempSrc = src.slice(1);
-        let tempStart;
-        this.options.extensions.startBlock.forEach((getStartIndex) => {
-          tempStart = getStartIndex.call({ lexer: this }, tempSrc);
-          if (typeof tempStart === "number" && tempStart >= 0) {
-            startIndex = Math.min(startIndex, tempStart);
-          }
-        });
-        if (startIndex < Infinity && startIndex >= 0) {
-          cutSrc = src.substring(0, startIndex + 1);
-        }
-      }
-      if (this.state.top && (token = this.tokenizer.paragraph(cutSrc))) {
-        const lastToken = tokens.at(-1);
-        if (lastParagraphClipped && (lastToken == null ? void 0 : lastToken.type) === "paragraph") {
-          lastToken.raw += "\n" + token.raw;
-          lastToken.text += "\n" + token.text;
-          this.inlineQueue.pop();
-          this.inlineQueue.at(-1).src = lastToken.text;
-        } else {
-          tokens.push(token);
-        }
-        lastParagraphClipped = cutSrc.length !== src.length;
-        src = src.substring(token.raw.length);
-        continue;
-      }
-      if (token = this.tokenizer.text(src)) {
-        src = src.substring(token.raw.length);
-        const lastToken = tokens.at(-1);
-        if ((lastToken == null ? void 0 : lastToken.type) === "text") {
-          lastToken.raw += "\n" + token.raw;
-          lastToken.text += "\n" + token.text;
-          this.inlineQueue.pop();
-          this.inlineQueue.at(-1).src = lastToken.text;
-        } else {
-          tokens.push(token);
-        }
-        continue;
-      }
-      if (src) {
-        const errMsg = "Infinite loop on byte: " + src.charCodeAt(0);
-        if (this.options.silent) {
-          console.error(errMsg);
-          break;
-        } else {
-          throw new Error(errMsg);
-        }
-      }
-    }
-    this.state.top = true;
-    return tokens;
-  }
-  inline(src, tokens = []) {
-    this.inlineQueue.push({ src, tokens });
-    return tokens;
-  }
-  /**
-   * Lexing/Compiling
-   */
-  inlineTokens(src, tokens = []) {
-    var _a2, _b, _c;
-    let maskedSrc = src;
-    let match = null;
-    if (this.tokens.links) {
-      const links = Object.keys(this.tokens.links);
-      if (links.length > 0) {
-        while ((match = this.tokenizer.rules.inline.reflinkSearch.exec(maskedSrc)) != null) {
-          if (links.includes(match[0].slice(match[0].lastIndexOf("[") + 1, -1))) {
-            maskedSrc = maskedSrc.slice(0, match.index) + "[" + "a".repeat(match[0].length - 2) + "]" + maskedSrc.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex);
-          }
-        }
-      }
-    }
-    while ((match = this.tokenizer.rules.inline.anyPunctuation.exec(maskedSrc)) != null) {
-      maskedSrc = maskedSrc.slice(0, match.index) + "++" + maskedSrc.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);
-    }
-    while ((match = this.tokenizer.rules.inline.blockSkip.exec(maskedSrc)) != null) {
-      maskedSrc = maskedSrc.slice(0, match.index) + "[" + "a".repeat(match[0].length - 2) + "]" + maskedSrc.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);
-    }
-    let keepPrevChar = false;
-    let prevChar = "";
-    while (src) {
-      if (!keepPrevChar) {
-        prevChar = "";
-      }
-      keepPrevChar = false;
-      let token;
-      if ((_b = (_a2 = this.options.extensions) == null ? void 0 : _a2.inline) == null ? void 0 : _b.some((extTokenizer) => {
-        if (token = extTokenizer.call({ lexer: this }, src, tokens)) {
-          src = src.substring(token.raw.length);
-          tokens.push(token);
-          return true;
-        }
-        return false;
-      })) {
-        continue;
-      }
-      if (token = this.tokenizer.escape(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.tag(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.link(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.reflink(src, this.tokens.links)) {
-        src = src.substring(token.raw.length);
-        const lastToken = tokens.at(-1);
-        if (token.type === "text" && (lastToken == null ? void 0 : lastToken.type) === "text") {
-          lastToken.raw += token.raw;
-          lastToken.text += token.text;
-        } else {
-          tokens.push(token);
-        }
-        continue;
-      }
-      if (token = this.tokenizer.emStrong(src, maskedSrc, prevChar)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.codespan(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.br(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.del(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (token = this.tokenizer.autolink(src)) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      if (!this.state.inLink && (token = this.tokenizer.url(src))) {
-        src = src.substring(token.raw.length);
-        tokens.push(token);
-        continue;
-      }
-      let cutSrc = src;
-      if ((_c = this.options.extensions) == null ? void 0 : _c.startInline) {
-        let startIndex = Infinity;
-        const tempSrc = src.slice(1);
-        let tempStart;
-        this.options.extensions.startInline.forEach((getStartIndex) => {
-          tempStart = getStartIndex.call({ lexer: this }, tempSrc);
-          if (typeof tempStart === "number" && tempStart >= 0) {
-            startIndex = Math.min(startIndex, tempStart);
-          }
-        });
-        if (startIndex < Infinity && startIndex >= 0) {
-          cutSrc = src.substring(0, startIndex + 1);
-        }
-      }
-      if (token = this.tokenizer.inlineText(cutSrc)) {
-        src = src.substring(token.raw.length);
-        if (token.raw.slice(-1) !== "_") {
-          prevChar = token.raw.slice(-1);
-        }
-        keepPrevChar = true;
-        const lastToken = tokens.at(-1);
-        if ((lastToken == null ? void 0 : lastToken.type) === "text") {
-          lastToken.raw += token.raw;
-          lastToken.text += token.text;
-        } else {
-          tokens.push(token);
-        }
-        continue;
-      }
-      if (src) {
-        const errMsg = "Infinite loop on byte: " + src.charCodeAt(0);
-        if (this.options.silent) {
-          console.error(errMsg);
-          break;
-        } else {
-          throw new Error(errMsg);
-        }
-      }
-    }
-    return tokens;
-  }
-};
-var _Renderer = class {
-  // set by the parser
-  constructor(options22) {
-    __publicField(this, "options");
-    __publicField(this, "parser");
-    this.options = options22 || _defaults;
-  }
-  space(token) {
-    return "";
-  }
-  code({ text: text2, lang, escaped }) {
-    var _a2;
-    const langString = (_a2 = (lang || "").match(other.notSpaceStart)) == null ? void 0 : _a2[0];
-    const code = text2.replace(other.endingNewline, "") + "\n";
-    if (!langString) {
-      return "<pre><code>" + (escaped ? code : escape22(code, true)) + "</code></pre>\n";
-    }
-    return '<pre><code class="language-' + escape22(langString) + '">' + (escaped ? code : escape22(code, true)) + "</code></pre>\n";
-  }
-  blockquote({ tokens }) {
-    const body = this.parser.parse(tokens);
-    return `<blockquote>
-${body}</blockquote>
-`;
-  }
-  html({ text: text2 }) {
-    return text2;
-  }
-  heading({ tokens, depth }) {
-    return `<h${depth}>${this.parser.parseInline(tokens)}</h${depth}>
-`;
-  }
-  hr(token) {
-    return "<hr>\n";
-  }
-  list(token) {
-    const ordered = token.ordered;
-    const start = token.start;
-    let body = "";
-    for (let j = 0; j < token.items.length; j++) {
-      const item = token.items[j];
-      body += this.listitem(item);
-    }
-    const type = ordered ? "ol" : "ul";
-    const startAttr = ordered && start !== 1 ? ' start="' + start + '"' : "";
-    return "<" + type + startAttr + ">\n" + body + "</" + type + ">\n";
-  }
-  listitem(item) {
-    var _a2;
-    let itemBody = "";
-    if (item.task) {
-      const checkbox = this.checkbox({ checked: !!item.checked });
-      if (item.loose) {
-        if (((_a2 = item.tokens[0]) == null ? void 0 : _a2.type) === "paragraph") {
-          item.tokens[0].text = checkbox + " " + item.tokens[0].text;
-          if (item.tokens[0].tokens && item.tokens[0].tokens.length > 0 && item.tokens[0].tokens[0].type === "text") {
-            item.tokens[0].tokens[0].text = checkbox + " " + escape22(item.tokens[0].tokens[0].text);
-            item.tokens[0].tokens[0].escaped = true;
-          }
-        } else {
-          item.tokens.unshift({
-            type: "text",
-            raw: checkbox + " ",
-            text: checkbox + " ",
-            escaped: true
-          });
-        }
-      } else {
-        itemBody += checkbox + " ";
-      }
-    }
-    itemBody += this.parser.parse(item.tokens, !!item.loose);
-    return `<li>${itemBody}</li>
-`;
-  }
-  checkbox({ checked }) {
-    return "<input " + (checked ? 'checked="" ' : "") + 'disabled="" type="checkbox">';
-  }
-  paragraph({ tokens }) {
-    return `<p>${this.parser.parseInline(tokens)}</p>
-`;
-  }
-  table(token) {
-    let header = "";
-    let cell = "";
-    for (let j = 0; j < token.header.length; j++) {
-      cell += this.tablecell(token.header[j]);
-    }
-    header += this.tablerow({ text: cell });
-    let body = "";
-    for (let j = 0; j < token.rows.length; j++) {
-      const row = token.rows[j];
-      cell = "";
-      for (let k = 0; k < row.length; k++) {
-        cell += this.tablecell(row[k]);
-      }
-      body += this.tablerow({ text: cell });
-    }
-    if (body) body = `<tbody>${body}</tbody>`;
-    return "<table>\n<thead>\n" + header + "</thead>\n" + body + "</table>\n";
-  }
-  tablerow({ text: text2 }) {
-    return `<tr>
-${text2}</tr>
-`;
-  }
-  tablecell(token) {
-    const content = this.parser.parseInline(token.tokens);
-    const type = token.header ? "th" : "td";
-    const tag2 = token.align ? `<${type} align="${token.align}">` : `<${type}>`;
-    return tag2 + content + `</${type}>
-`;
-  }
-  /**
-   * span level renderer
-   */
-  strong({ tokens }) {
-    return `<strong>${this.parser.parseInline(tokens)}</strong>`;
-  }
-  em({ tokens }) {
-    return `<em>${this.parser.parseInline(tokens)}</em>`;
-  }
-  codespan({ text: text2 }) {
-    return `<code>${escape22(text2, true)}</code>`;
-  }
-  br(token) {
-    return "<br>";
-  }
-  del({ tokens }) {
-    return `<del>${this.parser.parseInline(tokens)}</del>`;
-  }
-  link({ href, title, tokens }) {
-    const text2 = this.parser.parseInline(tokens);
-    const cleanHref = cleanUrl(href);
-    if (cleanHref === null) {
-      return text2;
-    }
-    href = cleanHref;
-    let out = '<a href="' + href + '"';
-    if (title) {
-      out += ' title="' + escape22(title) + '"';
-    }
-    out += ">" + text2 + "</a>";
-    return out;
-  }
-  image({ href, title, text: text2, tokens }) {
-    if (tokens) {
-      text2 = this.parser.parseInline(tokens, this.parser.textRenderer);
-    }
-    const cleanHref = cleanUrl(href);
-    if (cleanHref === null) {
-      return escape22(text2);
-    }
-    href = cleanHref;
-    let out = `<img src="${href}" alt="${text2}"`;
-    if (title) {
-      out += ` title="${escape22(title)}"`;
-    }
-    out += ">";
-    return out;
-  }
-  text(token) {
-    return "tokens" in token && token.tokens ? this.parser.parseInline(token.tokens) : "escaped" in token && token.escaped ? token.text : escape22(token.text);
-  }
-};
-var _TextRenderer = class {
-  // no need for block level renderers
-  strong({ text: text2 }) {
-    return text2;
-  }
-  em({ text: text2 }) {
-    return text2;
-  }
-  codespan({ text: text2 }) {
-    return text2;
-  }
-  del({ text: text2 }) {
-    return text2;
-  }
-  html({ text: text2 }) {
-    return text2;
-  }
-  text({ text: text2 }) {
-    return text2;
-  }
-  link({ text: text2 }) {
-    return "" + text2;
-  }
-  image({ text: text2 }) {
-    return "" + text2;
-  }
-  br() {
-    return "";
-  }
-};
-var _Parser = class __Parser {
-  constructor(options22) {
-    __publicField(this, "options");
-    __publicField(this, "renderer");
-    __publicField(this, "textRenderer");
-    this.options = options22 || _defaults;
-    this.options.renderer = this.options.renderer || new _Renderer();
-    this.renderer = this.options.renderer;
-    this.renderer.options = this.options;
-    this.renderer.parser = this;
-    this.textRenderer = new _TextRenderer();
-  }
-  /**
-   * Static Parse Method
-   */
-  static parse(tokens, options22) {
-    const parser2 = new __Parser(options22);
-    return parser2.parse(tokens);
-  }
-  /**
-   * Static Parse Inline Method
-   */
-  static parseInline(tokens, options22) {
-    const parser2 = new __Parser(options22);
-    return parser2.parseInline(tokens);
-  }
-  /**
-   * Parse Loop
-   */
-  parse(tokens, top = true) {
-    var _a2, _b;
-    let out = "";
-    for (let i = 0; i < tokens.length; i++) {
-      const anyToken = tokens[i];
-      if ((_b = (_a2 = this.options.extensions) == null ? void 0 : _a2.renderers) == null ? void 0 : _b[anyToken.type]) {
-        const genericToken = anyToken;
-        const ret = this.options.extensions.renderers[genericToken.type].call({ parser: this }, genericToken);
-        if (ret !== false || !["space", "hr", "heading", "code", "table", "blockquote", "list", "html", "paragraph", "text"].includes(genericToken.type)) {
-          out += ret || "";
-          continue;
-        }
-      }
-      const token = anyToken;
-      switch (token.type) {
-        case "space": {
-          out += this.renderer.space(token);
-          continue;
-        }
-        case "hr": {
-          out += this.renderer.hr(token);
-          continue;
-        }
-        case "heading": {
-          out += this.renderer.heading(token);
-          continue;
-        }
-        case "code": {
-          out += this.renderer.code(token);
-          continue;
-        }
-        case "table": {
-          out += this.renderer.table(token);
-          continue;
-        }
-        case "blockquote": {
-          out += this.renderer.blockquote(token);
-          continue;
-        }
-        case "list": {
-          out += this.renderer.list(token);
-          continue;
-        }
-        case "html": {
-          out += this.renderer.html(token);
-          continue;
-        }
-        case "paragraph": {
-          out += this.renderer.paragraph(token);
-          continue;
-        }
-        case "text": {
-          let textToken = token;
-          let body = this.renderer.text(textToken);
-          while (i + 1 < tokens.length && tokens[i + 1].type === "text") {
-            textToken = tokens[++i];
-            body += "\n" + this.renderer.text(textToken);
-          }
-          if (top) {
-            out += this.renderer.paragraph({
-              type: "paragraph",
-              raw: body,
-              text: body,
-              tokens: [{ type: "text", raw: body, text: body, escaped: true }]
-            });
-          } else {
-            out += body;
-          }
-          continue;
-        }
-        default: {
-          const errMsg = 'Token with "' + token.type + '" type was not found.';
-          if (this.options.silent) {
-            console.error(errMsg);
-            return "";
-          } else {
-            throw new Error(errMsg);
-          }
-        }
-      }
-    }
-    return out;
-  }
-  /**
-   * Parse Inline Tokens
-   */
-  parseInline(tokens, renderer = this.renderer) {
-    var _a2, _b;
-    let out = "";
-    for (let i = 0; i < tokens.length; i++) {
-      const anyToken = tokens[i];
-      if ((_b = (_a2 = this.options.extensions) == null ? void 0 : _a2.renderers) == null ? void 0 : _b[anyToken.type]) {
-        const ret = this.options.extensions.renderers[anyToken.type].call({ parser: this }, anyToken);
-        if (ret !== false || !["escape", "html", "link", "image", "strong", "em", "codespan", "br", "del", "text"].includes(anyToken.type)) {
-          out += ret || "";
-          continue;
-        }
-      }
-      const token = anyToken;
-      switch (token.type) {
-        case "escape": {
-          out += renderer.text(token);
-          break;
-        }
-        case "html": {
-          out += renderer.html(token);
-          break;
-        }
-        case "link": {
-          out += renderer.link(token);
-          break;
-        }
-        case "image": {
-          out += renderer.image(token);
-          break;
-        }
-        case "strong": {
-          out += renderer.strong(token);
-          break;
-        }
-        case "em": {
-          out += renderer.em(token);
-          break;
-        }
-        case "codespan": {
-          out += renderer.codespan(token);
-          break;
-        }
-        case "br": {
-          out += renderer.br(token);
-          break;
-        }
-        case "del": {
-          out += renderer.del(token);
-          break;
-        }
-        case "text": {
-          out += renderer.text(token);
-          break;
-        }
-        default: {
-          const errMsg = 'Token with "' + token.type + '" type was not found.';
-          if (this.options.silent) {
-            console.error(errMsg);
-            return "";
-          } else {
-            throw new Error(errMsg);
-          }
-        }
-      }
-    }
-    return out;
-  }
-};
-var _a;
-var _Hooks = (_a = class {
-  constructor(options22) {
-    __publicField(this, "options");
-    __publicField(this, "block");
-    this.options = options22 || _defaults;
-  }
-  /**
-   * Process markdown before marked
-   */
-  preprocess(markdown2) {
-    return markdown2;
-  }
-  /**
-   * Process HTML after marked is finished
-   */
-  postprocess(html22) {
-    return html22;
-  }
-  /**
-   * Process all tokens before walk tokens
-   */
-  processAllTokens(tokens) {
-    return tokens;
-  }
-  /**
-   * Provide function to tokenize markdown
-   */
-  provideLexer() {
-    return this.block ? _Lexer.lex : _Lexer.lexInline;
-  }
-  /**
-   * Provide function to parse tokens
-   */
-  provideParser() {
-    return this.block ? _Parser.parse : _Parser.parseInline;
-  }
-}, __publicField(_a, "passThroughHooks", /* @__PURE__ */ new Set([
-  "preprocess",
-  "postprocess",
-  "processAllTokens"
-])), _a);
-var Marked = class {
-  constructor(...args) {
-    __publicField(this, "defaults", _getDefaults());
-    __publicField(this, "options", this.setOptions);
-    __publicField(this, "parse", this.parseMarkdown(true));
-    __publicField(this, "parseInline", this.parseMarkdown(false));
-    __publicField(this, "Parser", _Parser);
-    __publicField(this, "Renderer", _Renderer);
-    __publicField(this, "TextRenderer", _TextRenderer);
-    __publicField(this, "Lexer", _Lexer);
-    __publicField(this, "Tokenizer", _Tokenizer);
-    __publicField(this, "Hooks", _Hooks);
-    this.use(...args);
-  }
-  /**
-   * Run callback for every token
-   */
-  walkTokens(tokens, callback) {
-    var _a2, _b;
-    let values = [];
-    for (const token of tokens) {
-      values = values.concat(callback.call(this, token));
-      switch (token.type) {
-        case "table": {
-          const tableToken = token;
-          for (const cell of tableToken.header) {
-            values = values.concat(this.walkTokens(cell.tokens, callback));
-          }
-          for (const row of tableToken.rows) {
-            for (const cell of row) {
-              values = values.concat(this.walkTokens(cell.tokens, callback));
-            }
-          }
-          break;
-        }
-        case "list": {
-          const listToken = token;
-          values = values.concat(this.walkTokens(listToken.items, callback));
-          break;
-        }
-        default: {
-          const genericToken = token;
-          if ((_b = (_a2 = this.defaults.extensions) == null ? void 0 : _a2.childTokens) == null ? void 0 : _b[genericToken.type]) {
-            this.defaults.extensions.childTokens[genericToken.type].forEach((childTokens) => {
-              const tokens2 = genericToken[childTokens].flat(Infinity);
-              values = values.concat(this.walkTokens(tokens2, callback));
-            });
-          } else if (genericToken.tokens) {
-            values = values.concat(this.walkTokens(genericToken.tokens, callback));
-          }
-        }
-      }
-    }
-    return values;
-  }
-  use(...args) {
-    const extensions = this.defaults.extensions || { renderers: {}, childTokens: {} };
-    args.forEach((pack) => {
-      const opts = { ...pack };
-      opts.async = this.defaults.async || opts.async || false;
-      if (pack.extensions) {
-        pack.extensions.forEach((ext) => {
-          if (!ext.name) {
-            throw new Error("extension name required");
-          }
-          if ("renderer" in ext) {
-            const prevRenderer = extensions.renderers[ext.name];
-            if (prevRenderer) {
-              extensions.renderers[ext.name] = function(...args2) {
-                let ret = ext.renderer.apply(this, args2);
-                if (ret === false) {
-                  ret = prevRenderer.apply(this, args2);
-                }
-                return ret;
-              };
-            } else {
-              extensions.renderers[ext.name] = ext.renderer;
-            }
-          }
-          if ("tokenizer" in ext) {
-            if (!ext.level || ext.level !== "block" && ext.level !== "inline") {
-              throw new Error("extension level must be 'block' or 'inline'");
-            }
-            const extLevel = extensions[ext.level];
-            if (extLevel) {
-              extLevel.unshift(ext.tokenizer);
-            } else {
-              extensions[ext.level] = [ext.tokenizer];
-            }
-            if (ext.start) {
-              if (ext.level === "block") {
-                if (extensions.startBlock) {
-                  extensions.startBlock.push(ext.start);
-                } else {
-                  extensions.startBlock = [ext.start];
-                }
-              } else if (ext.level === "inline") {
-                if (extensions.startInline) {
-                  extensions.startInline.push(ext.start);
-                } else {
-                  extensions.startInline = [ext.start];
-                }
-              }
-            }
-          }
-          if ("childTokens" in ext && ext.childTokens) {
-            extensions.childTokens[ext.name] = ext.childTokens;
-          }
-        });
-        opts.extensions = extensions;
-      }
-      if (pack.renderer) {
-        const renderer = this.defaults.renderer || new _Renderer(this.defaults);
-        for (const prop in pack.renderer) {
-          if (!(prop in renderer)) {
-            throw new Error(`renderer '${prop}' does not exist`);
-          }
-          if (["options", "parser"].includes(prop)) {
-            continue;
-          }
-          const rendererProp = prop;
-          const rendererFunc = pack.renderer[rendererProp];
-          const prevRenderer = renderer[rendererProp];
-          renderer[rendererProp] = (...args2) => {
-            let ret = rendererFunc.apply(renderer, args2);
-            if (ret === false) {
-              ret = prevRenderer.apply(renderer, args2);
-            }
-            return ret || "";
-          };
-        }
-        opts.renderer = renderer;
-      }
-      if (pack.tokenizer) {
-        const tokenizer = this.defaults.tokenizer || new _Tokenizer(this.defaults);
-        for (const prop in pack.tokenizer) {
-          if (!(prop in tokenizer)) {
-            throw new Error(`tokenizer '${prop}' does not exist`);
-          }
-          if (["options", "rules", "lexer"].includes(prop)) {
-            continue;
-          }
-          const tokenizerProp = prop;
-          const tokenizerFunc = pack.tokenizer[tokenizerProp];
-          const prevTokenizer = tokenizer[tokenizerProp];
-          tokenizer[tokenizerProp] = (...args2) => {
-            let ret = tokenizerFunc.apply(tokenizer, args2);
-            if (ret === false) {
-              ret = prevTokenizer.apply(tokenizer, args2);
-            }
-            return ret;
-          };
-        }
-        opts.tokenizer = tokenizer;
-      }
-      if (pack.hooks) {
-        const hooks = this.defaults.hooks || new _Hooks();
-        for (const prop in pack.hooks) {
-          if (!(prop in hooks)) {
-            throw new Error(`hook '${prop}' does not exist`);
-          }
-          if (["options", "block"].includes(prop)) {
-            continue;
-          }
-          const hooksProp = prop;
-          const hooksFunc = pack.hooks[hooksProp];
-          const prevHook = hooks[hooksProp];
-          if (_Hooks.passThroughHooks.has(prop)) {
-            hooks[hooksProp] = (arg) => {
-              if (this.defaults.async) {
-                return Promise.resolve(hooksFunc.call(hooks, arg)).then((ret2) => {
-                  return prevHook.call(hooks, ret2);
-                });
-              }
-              const ret = hooksFunc.call(hooks, arg);
-              return prevHook.call(hooks, ret);
-            };
-          } else {
-            hooks[hooksProp] = (...args2) => {
-              let ret = hooksFunc.apply(hooks, args2);
-              if (ret === false) {
-                ret = prevHook.apply(hooks, args2);
-              }
-              return ret;
-            };
-          }
-        }
-        opts.hooks = hooks;
-      }
-      if (pack.walkTokens) {
-        const walkTokens2 = this.defaults.walkTokens;
-        const packWalktokens = pack.walkTokens;
-        opts.walkTokens = function(token) {
-          let values = [];
-          values.push(packWalktokens.call(this, token));
-          if (walkTokens2) {
-            values = values.concat(walkTokens2.call(this, token));
-          }
-          return values;
-        };
-      }
-      this.defaults = { ...this.defaults, ...opts };
-    });
-    return this;
-  }
-  setOptions(opt) {
-    this.defaults = { ...this.defaults, ...opt };
-    return this;
-  }
-  lexer(src, options22) {
-    return _Lexer.lex(src, options22 != null ? options22 : this.defaults);
-  }
-  parser(tokens, options22) {
-    return _Parser.parse(tokens, options22 != null ? options22 : this.defaults);
-  }
-  parseMarkdown(blockType) {
-    const parse2 = (src, options22) => {
-      const origOpt = { ...options22 };
-      const opt = { ...this.defaults, ...origOpt };
-      const throwError = this.onError(!!opt.silent, !!opt.async);
-      if (this.defaults.async === true && origOpt.async === false) {
-        return throwError(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));
-      }
-      if (typeof src === "undefined" || src === null) {
-        return throwError(new Error("marked(): input parameter is undefined or null"));
-      }
-      if (typeof src !== "string") {
-        return throwError(new Error("marked(): input parameter is of type " + Object.prototype.toString.call(src) + ", string expected"));
-      }
-      if (opt.hooks) {
-        opt.hooks.options = opt;
-        opt.hooks.block = blockType;
-      }
-      const lexer2 = opt.hooks ? opt.hooks.provideLexer() : blockType ? _Lexer.lex : _Lexer.lexInline;
-      const parser2 = opt.hooks ? opt.hooks.provideParser() : blockType ? _Parser.parse : _Parser.parseInline;
-      if (opt.async) {
-        return Promise.resolve(opt.hooks ? opt.hooks.preprocess(src) : src).then((src2) => lexer2(src2, opt)).then((tokens) => opt.hooks ? opt.hooks.processAllTokens(tokens) : tokens).then((tokens) => opt.walkTokens ? Promise.all(this.walkTokens(tokens, opt.walkTokens)).then(() => tokens) : tokens).then((tokens) => parser2(tokens, opt)).then((html22) => opt.hooks ? opt.hooks.postprocess(html22) : html22).catch(throwError);
-      }
-      try {
-        if (opt.hooks) {
-          src = opt.hooks.preprocess(src);
-        }
-        let tokens = lexer2(src, opt);
-        if (opt.hooks) {
-          tokens = opt.hooks.processAllTokens(tokens);
-        }
-        if (opt.walkTokens) {
-          this.walkTokens(tokens, opt.walkTokens);
-        }
-        let html22 = parser2(tokens, opt);
-        if (opt.hooks) {
-          html22 = opt.hooks.postprocess(html22);
-        }
-        return html22;
-      } catch (e2) {
-        return throwError(e2);
-      }
-    };
-    return parse2;
-  }
-  onError(silent, async) {
-    return (e2) => {
-      e2.message += "\nPlease report this to https://github.com/markedjs/marked.";
-      if (silent) {
-        const msg = "<p>An error occurred:</p><pre>" + escape22(e2.message + "", true) + "</pre>";
-        if (async) {
-          return Promise.resolve(msg);
-        }
-        return msg;
-      }
-      if (async) {
-        return Promise.reject(e2);
-      }
-      throw e2;
-    };
-  }
-};
-var markedInstance = new Marked();
-function marked(src, opt) {
-  return markedInstance.parse(src, opt);
-}
-marked.options = marked.setOptions = function(options22) {
-  markedInstance.setOptions(options22);
-  marked.defaults = markedInstance.defaults;
-  changeDefaults(marked.defaults);
-  return marked;
-};
-marked.getDefaults = _getDefaults;
-marked.defaults = _defaults;
-marked.use = function(...args) {
-  markedInstance.use(...args);
-  marked.defaults = markedInstance.defaults;
-  changeDefaults(marked.defaults);
-  return marked;
-};
-marked.walkTokens = function(tokens, callback) {
-  return markedInstance.walkTokens(tokens, callback);
-};
-marked.parseInline = markedInstance.parseInline;
-marked.Parser = _Parser;
-marked.parser = _Parser.parse;
-marked.Renderer = _Renderer;
-marked.TextRenderer = _TextRenderer;
-marked.Lexer = _Lexer;
-marked.lexer = _Lexer.lex;
-marked.Tokenizer = _Tokenizer;
-marked.Hooks = _Hooks;
-marked.parse = marked;
-var options2 = marked.options;
-var setOptions = marked.setOptions;
-var use = marked.use;
-var walkTokens = marked.walkTokens;
-var parseInline = marked.parseInline;
-var parser = _Parser.parse;
-var lexer = _Lexer.lex;
-
-// node_modules/marked-highlight/src/index.js
-function markedHighlight(options3) {
-  if (typeof options3 === "function") {
-    options3 = {
-      highlight: options3
-    };
-  }
-  if (!options3 || typeof options3.highlight !== "function") {
-    throw new Error("Must provide highlight function");
-  }
-  if (typeof options3.langPrefix !== "string") {
-    options3.langPrefix = "language-";
-  }
-  if (typeof options3.emptyLangClass !== "string") {
-    options3.emptyLangClass = "";
-  }
-  return {
-    async: !!options3.async,
-    walkTokens(token) {
-      if (token.type !== "code") {
-        return;
-      }
-      const lang = getLang(token.lang);
-      if (options3.async) {
-        return Promise.resolve(options3.highlight(token.text, lang, token.lang || "")).then(updateToken(token));
-      }
-      const code = options3.highlight(token.text, lang, token.lang || "");
-      if (code instanceof Promise) {
-        throw new Error("markedHighlight is not set to async but the highlight function is async. Set the async option to true on markedHighlight to await the async highlight function.");
-      }
-      updateToken(token)(code);
-    },
-    useNewRenderer: true,
-    renderer: {
-      code(code, infoString, escaped) {
-        if (typeof code === "object") {
-          escaped = code.escaped;
-          infoString = code.lang;
-          code = code.text;
-        }
-        const lang = getLang(infoString);
-        const classValue = lang ? options3.langPrefix + escape3(lang) : options3.emptyLangClass;
-        const classAttr = classValue ? ` class="${classValue}"` : "";
-        code = code.replace(/\n$/, "");
-        return `<pre><code${classAttr}>${escaped ? code : escape3(code, true)}
-</code></pre>`;
-      }
-    }
-  };
-}
-function getLang(lang) {
-  return (lang || "").match(/\S*/)[0];
-}
-function updateToken(token) {
-  return (code) => {
-    if (typeof code === "string" && code !== token.text) {
-      token.escaped = true;
-      token.text = code;
-    }
-  };
-}
-var escapeTest = /[&<>"']/;
-var escapeReplace = new RegExp(escapeTest.source, "g");
-var escapeTestNoEncode = /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/;
-var escapeReplaceNoEncode = new RegExp(escapeTestNoEncode.source, "g");
-var escapeReplacements2 = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;"
-};
-var getEscapeReplacement2 = (ch) => escapeReplacements2[ch];
-function escape3(html3, encode) {
-  if (encode) {
-    if (escapeTest.test(html3)) {
-      return html3.replace(escapeReplace, getEscapeReplacement2);
-    }
-  } else {
-    if (escapeTestNoEncode.test(html3)) {
-      return html3.replace(escapeReplaceNoEncode, getEscapeReplacement2);
-    }
-  }
-  return html3;
-}
-
-// node_modules/highlight.js/es/core.js
-var import_core = __toESM(require_core(), 1);
-var core_default = import_core.default;
-
-// node_modules/highlight.js/es/languages/json.js
-function json(hljs) {
-  const ATTRIBUTE = {
-    className: "attr",
-    begin: /"(\\.|[^\\"\r\n])*"(?=\s*:)/,
-    relevance: 1.01
-  };
-  const PUNCTUATION = {
-    match: /[{}[\],:]/,
-    className: "punctuation",
-    relevance: 0
-  };
-  const LITERALS = [
-    "true",
-    "false",
-    "null"
-  ];
-  const LITERALS_MODE = {
-    scope: "literal",
-    beginKeywords: LITERALS.join(" ")
-  };
-  return {
-    name: "JSON",
-    aliases: ["jsonc"],
-    keywords: {
-      literal: LITERALS
-    },
-    contains: [
-      ATTRIBUTE,
-      PUNCTUATION,
-      hljs.QUOTE_STRING_MODE,
-      LITERALS_MODE,
-      hljs.C_NUMBER_MODE,
-      hljs.C_LINE_COMMENT_MODE,
-      hljs.C_BLOCK_COMMENT_MODE
-    ],
-    illegal: "\\S"
-  };
-}
-
-// node_modules/highlight.js/es/languages/python.js
-function python(hljs) {
-  const regex = hljs.regex;
-  const IDENT_RE = /[\p{XID_Start}_]\p{XID_Continue}*/u;
-  const RESERVED_WORDS = [
-    "and",
-    "as",
-    "assert",
-    "async",
-    "await",
-    "break",
-    "case",
-    "class",
-    "continue",
-    "def",
-    "del",
-    "elif",
-    "else",
-    "except",
-    "finally",
-    "for",
-    "from",
-    "global",
-    "if",
-    "import",
-    "in",
-    "is",
-    "lambda",
-    "match",
-    "nonlocal|10",
-    "not",
-    "or",
-    "pass",
-    "raise",
-    "return",
-    "try",
-    "while",
-    "with",
-    "yield"
-  ];
-  const BUILT_INS = [
-    "__import__",
-    "abs",
-    "all",
-    "any",
-    "ascii",
-    "bin",
-    "bool",
-    "breakpoint",
-    "bytearray",
-    "bytes",
-    "callable",
-    "chr",
-    "classmethod",
-    "compile",
-    "complex",
-    "delattr",
-    "dict",
-    "dir",
-    "divmod",
-    "enumerate",
-    "eval",
-    "exec",
-    "filter",
-    "float",
-    "format",
-    "frozenset",
-    "getattr",
-    "globals",
-    "hasattr",
-    "hash",
-    "help",
-    "hex",
-    "id",
-    "input",
-    "int",
-    "isinstance",
-    "issubclass",
-    "iter",
-    "len",
-    "list",
-    "locals",
-    "map",
-    "max",
-    "memoryview",
-    "min",
-    "next",
-    "object",
-    "oct",
-    "open",
-    "ord",
-    "pow",
-    "print",
-    "property",
-    "range",
-    "repr",
-    "reversed",
-    "round",
-    "set",
-    "setattr",
-    "slice",
-    "sorted",
-    "staticmethod",
-    "str",
-    "sum",
-    "super",
-    "tuple",
-    "type",
-    "vars",
-    "zip"
-  ];
-  const LITERALS = [
-    "__debug__",
-    "Ellipsis",
-    "False",
-    "None",
-    "NotImplemented",
-    "True"
-  ];
-  const TYPES = [
-    "Any",
-    "Callable",
-    "Coroutine",
-    "Dict",
-    "List",
-    "Literal",
-    "Generic",
-    "Optional",
-    "Sequence",
-    "Set",
-    "Tuple",
-    "Type",
-    "Union"
-  ];
-  const KEYWORDS = {
-    $pattern: /[A-Za-z]\w+|__\w+__/,
-    keyword: RESERVED_WORDS,
-    built_in: BUILT_INS,
-    literal: LITERALS,
-    type: TYPES
-  };
-  const PROMPT = {
-    className: "meta",
-    begin: /^(>>>|\.\.\.) /
-  };
-  const SUBST = {
-    className: "subst",
-    begin: /\{/,
-    end: /\}/,
-    keywords: KEYWORDS,
-    illegal: /#/
-  };
-  const LITERAL_BRACKET = {
-    begin: /\{\{/,
-    relevance: 0
-  };
-  const STRING = {
-    className: "string",
-    contains: [hljs.BACKSLASH_ESCAPE],
-    variants: [
-      {
-        begin: /([uU]|[bB]|[rR]|[bB][rR]|[rR][bB])?'''/,
-        end: /'''/,
-        contains: [
-          hljs.BACKSLASH_ESCAPE,
-          PROMPT
-        ],
-        relevance: 10
-      },
-      {
-        begin: /([uU]|[bB]|[rR]|[bB][rR]|[rR][bB])?"""/,
-        end: /"""/,
-        contains: [
-          hljs.BACKSLASH_ESCAPE,
-          PROMPT
-        ],
-        relevance: 10
-      },
-      {
-        begin: /([fF][rR]|[rR][fF]|[fF])'''/,
-        end: /'''/,
-        contains: [
-          hljs.BACKSLASH_ESCAPE,
-          PROMPT,
-          LITERAL_BRACKET,
-          SUBST
-        ]
-      },
-      {
-        begin: /([fF][rR]|[rR][fF]|[fF])"""/,
-        end: /"""/,
-        contains: [
-          hljs.BACKSLASH_ESCAPE,
-          PROMPT,
-          LITERAL_BRACKET,
-          SUBST
-        ]
-      },
-      {
-        begin: /([uU]|[rR])'/,
-        end: /'/,
-        relevance: 10
-      },
-      {
-        begin: /([uU]|[rR])"/,
-        end: /"/,
-        relevance: 10
-      },
-      {
-        begin: /([bB]|[bB][rR]|[rR][bB])'/,
-        end: /'/
-      },
-      {
-        begin: /([bB]|[bB][rR]|[rR][bB])"/,
-        end: /"/
-      },
-      {
-        begin: /([fF][rR]|[rR][fF]|[fF])'/,
-        end: /'/,
-        contains: [
-          hljs.BACKSLASH_ESCAPE,
-          LITERAL_BRACKET,
-          SUBST
-        ]
-      },
-      {
-        begin: /([fF][rR]|[rR][fF]|[fF])"/,
-        end: /"/,
-        contains: [
-          hljs.BACKSLASH_ESCAPE,
-          LITERAL_BRACKET,
-          SUBST
-        ]
-      },
-      hljs.APOS_STRING_MODE,
-      hljs.QUOTE_STRING_MODE
-    ]
-  };
-  const digitpart = "[0-9](_?[0-9])*";
-  const pointfloat = `(\\b(${digitpart}))?\\.(${digitpart})|\\b(${digitpart})\\.`;
-  const lookahead = `\\b|${RESERVED_WORDS.join("|")}`;
-  const NUMBER = {
-    className: "number",
-    relevance: 0,
-    variants: [
-      // exponentfloat, pointfloat
-      // https://docs.python.org/3.9/reference/lexical_analysis.html#floating-point-literals
-      // optionally imaginary
-      // https://docs.python.org/3.9/reference/lexical_analysis.html#imaginary-literals
-      // Note: no leading \b because floats can start with a decimal point
-      // and we don't want to mishandle e.g. `fn(.5)`,
-      // no trailing \b for pointfloat because it can end with a decimal point
-      // and we don't want to mishandle e.g. `0..hex()`; this should be safe
-      // because both MUST contain a decimal point and so cannot be confused with
-      // the interior part of an identifier
-      {
-        begin: `(\\b(${digitpart})|(${pointfloat}))[eE][+-]?(${digitpart})[jJ]?(?=${lookahead})`
-      },
-      {
-        begin: `(${pointfloat})[jJ]?`
-      },
-      // decinteger, bininteger, octinteger, hexinteger
-      // https://docs.python.org/3.9/reference/lexical_analysis.html#integer-literals
-      // optionally "long" in Python 2
-      // https://docs.python.org/2.7/reference/lexical_analysis.html#integer-and-long-integer-literals
-      // decinteger is optionally imaginary
-      // https://docs.python.org/3.9/reference/lexical_analysis.html#imaginary-literals
-      {
-        begin: `\\b([1-9](_?[0-9])*|0+(_?0)*)[lLjJ]?(?=${lookahead})`
-      },
-      {
-        begin: `\\b0[bB](_?[01])+[lL]?(?=${lookahead})`
-      },
-      {
-        begin: `\\b0[oO](_?[0-7])+[lL]?(?=${lookahead})`
-      },
-      {
-        begin: `\\b0[xX](_?[0-9a-fA-F])+[lL]?(?=${lookahead})`
-      },
-      // imagnumber (digitpart-based)
-      // https://docs.python.org/3.9/reference/lexical_analysis.html#imaginary-literals
-      {
-        begin: `\\b(${digitpart})[jJ](?=${lookahead})`
-      }
-    ]
-  };
-  const COMMENT_TYPE = {
-    className: "comment",
-    begin: regex.lookahead(/# type:/),
-    end: /$/,
-    keywords: KEYWORDS,
-    contains: [
-      {
-        // prevent keywords from coloring `type`
-        begin: /# type:/
-      },
-      // comment within a datatype comment includes no keywords
-      {
-        begin: /#/,
-        end: /\b\B/,
-        endsWithParent: true
-      }
-    ]
-  };
-  const PARAMS = {
-    className: "params",
-    variants: [
-      // Exclude params in functions without params
-      {
-        className: "",
-        begin: /\(\s*\)/,
-        skip: true
-      },
-      {
-        begin: /\(/,
-        end: /\)/,
-        excludeBegin: true,
-        excludeEnd: true,
-        keywords: KEYWORDS,
-        contains: [
-          "self",
-          PROMPT,
-          NUMBER,
-          STRING,
-          hljs.HASH_COMMENT_MODE
-        ]
-      }
-    ]
-  };
-  SUBST.contains = [
-    STRING,
-    NUMBER,
-    PROMPT
-  ];
-  return {
-    name: "Python",
-    aliases: [
-      "py",
-      "gyp",
-      "ipython"
-    ],
-    unicodeRegex: true,
-    keywords: KEYWORDS,
-    illegal: /(<\/|\?)|=>/,
-    contains: [
-      PROMPT,
-      NUMBER,
-      {
-        // very common convention
-        scope: "variable.language",
-        match: /\bself\b/
-      },
-      {
-        // eat "if" prior to string so that it won't accidentally be
-        // labeled as an f-string
-        beginKeywords: "if",
-        relevance: 0
-      },
-      { match: /\bor\b/, scope: "keyword" },
-      STRING,
-      COMMENT_TYPE,
-      hljs.HASH_COMMENT_MODE,
-      {
-        match: [
-          /\bdef/,
-          /\s+/,
-          IDENT_RE
-        ],
-        scope: {
-          1: "keyword",
-          3: "title.function"
-        },
-        contains: [PARAMS]
-      },
-      {
-        variants: [
-          {
-            match: [
-              /\bclass/,
-              /\s+/,
-              IDENT_RE,
-              /\s*/,
-              /\(\s*/,
-              IDENT_RE,
-              /\s*\)/
-            ]
-          },
-          {
-            match: [
-              /\bclass/,
-              /\s+/,
-              IDENT_RE
-            ]
-          }
-        ],
-        scope: {
-          1: "keyword",
-          3: "title.class",
-          6: "title.class.inherited"
-        }
-      },
-      {
-        className: "meta",
-        begin: /^[\t ]*@/,
-        end: /(?=#)|$/,
-        contains: [
-          NUMBER,
-          PARAMS,
-          STRING
-        ]
-      }
-    ]
-  };
-}
-
-// node_modules/highlight.js/es/languages/plaintext.js
-function plaintext(hljs) {
-  return {
-    name: "Plain text",
-    aliases: [
-      "text",
-      "txt"
-    ],
-    disableAutodetect: true
-  };
-}
-
-// node_modules/highlight.js/es/languages/markdown.js
-function markdown(hljs) {
-  const regex = hljs.regex;
-  const INLINE_HTML = {
-    begin: /<\/?[A-Za-z_]/,
-    end: ">",
-    subLanguage: "xml",
-    relevance: 0
-  };
-  const HORIZONTAL_RULE = {
-    begin: "^[-\\*]{3,}",
-    end: "$"
-  };
-  const CODE = {
-    className: "code",
-    variants: [
-      // TODO: fix to allow these to work with sublanguage also
-      { begin: "(`{3,})[^`](.|\\n)*?\\1`*[ ]*" },
-      { begin: "(~{3,})[^~](.|\\n)*?\\1~*[ ]*" },
-      // needed to allow markdown as a sublanguage to work
-      {
-        begin: "```",
-        end: "```+[ ]*$"
-      },
-      {
-        begin: "~~~",
-        end: "~~~+[ ]*$"
-      },
-      { begin: "`.+?`" },
-      {
-        begin: "(?=^( {4}|\\t))",
-        // use contains to gobble up multiple lines to allow the block to be whatever size
-        // but only have a single open/close tag vs one per line
-        contains: [
-          {
-            begin: "^( {4}|\\t)",
-            end: "(\\n)$"
-          }
-        ],
-        relevance: 0
-      }
-    ]
-  };
-  const LIST = {
-    className: "bullet",
-    begin: "^[ 	]*([*+-]|(\\d+\\.))(?=\\s+)",
-    end: "\\s+",
-    excludeEnd: true
-  };
-  const LINK_REFERENCE = {
-    begin: /^\[[^\n]+\]:/,
-    returnBegin: true,
-    contains: [
-      {
-        className: "symbol",
-        begin: /\[/,
-        end: /\]/,
-        excludeBegin: true,
-        excludeEnd: true
-      },
-      {
-        className: "link",
-        begin: /:\s*/,
-        end: /$/,
-        excludeBegin: true
-      }
-    ]
-  };
-  const URL_SCHEME = /[A-Za-z][A-Za-z0-9+.-]*/;
-  const LINK = {
-    variants: [
-      // too much like nested array access in so many languages
-      // to have any real relevance
-      {
-        begin: /\[.+?\]\[.*?\]/,
-        relevance: 0
-      },
-      // popular internet URLs
-      {
-        begin: /\[.+?\]\(((data|javascript|mailto):|(?:http|ftp)s?:\/\/).*?\)/,
-        relevance: 2
-      },
-      {
-        begin: regex.concat(/\[.+?\]\(/, URL_SCHEME, /:\/\/.*?\)/),
-        relevance: 2
-      },
-      // relative urls
-      {
-        begin: /\[.+?\]\([./?&#].*?\)/,
-        relevance: 1
-      },
-      // whatever else, lower relevance (might not be a link at all)
-      {
-        begin: /\[.*?\]\(.*?\)/,
-        relevance: 0
-      }
-    ],
-    returnBegin: true,
-    contains: [
-      {
-        // empty strings for alt or link text
-        match: /\[(?=\])/
-      },
-      {
-        className: "string",
-        relevance: 0,
-        begin: "\\[",
-        end: "\\]",
-        excludeBegin: true,
-        returnEnd: true
-      },
-      {
-        className: "link",
-        relevance: 0,
-        begin: "\\]\\(",
-        end: "\\)",
-        excludeBegin: true,
-        excludeEnd: true
-      },
-      {
-        className: "symbol",
-        relevance: 0,
-        begin: "\\]\\[",
-        end: "\\]",
-        excludeBegin: true,
-        excludeEnd: true
-      }
-    ]
-  };
-  const BOLD = {
-    className: "strong",
-    contains: [],
-    // defined later
-    variants: [
-      {
-        begin: /_{2}(?!\s)/,
-        end: /_{2}/
-      },
-      {
-        begin: /\*{2}(?!\s)/,
-        end: /\*{2}/
-      }
-    ]
-  };
-  const ITALIC = {
-    className: "emphasis",
-    contains: [],
-    // defined later
-    variants: [
-      {
-        begin: /\*(?![*\s])/,
-        end: /\*/
-      },
-      {
-        begin: /_(?![_\s])/,
-        end: /_/,
-        relevance: 0
-      }
-    ]
-  };
-  const BOLD_WITHOUT_ITALIC = hljs.inherit(BOLD, { contains: [] });
-  const ITALIC_WITHOUT_BOLD = hljs.inherit(ITALIC, { contains: [] });
-  BOLD.contains.push(ITALIC_WITHOUT_BOLD);
-  ITALIC.contains.push(BOLD_WITHOUT_ITALIC);
-  let CONTAINABLE = [
-    INLINE_HTML,
-    LINK
-  ];
-  [
-    BOLD,
-    ITALIC,
-    BOLD_WITHOUT_ITALIC,
-    ITALIC_WITHOUT_BOLD
-  ].forEach((m) => {
-    m.contains = m.contains.concat(CONTAINABLE);
-  });
-  CONTAINABLE = CONTAINABLE.concat(BOLD, ITALIC);
-  const HEADER = {
-    className: "section",
-    variants: [
-      {
-        begin: "^#{1,6}",
-        end: "$",
-        contains: CONTAINABLE
-      },
-      {
-        begin: "(?=^.+?\\n[=-]{2,}$)",
-        contains: [
-          { begin: "^[=-]*$" },
-          {
-            begin: "^",
-            end: "\\n",
-            contains: CONTAINABLE
-          }
-        ]
-      }
-    ]
-  };
-  const BLOCKQUOTE = {
-    className: "quote",
-    begin: "^>\\s+",
-    contains: CONTAINABLE,
-    end: "$"
-  };
-  const ENTITY = {
-    //https://spec.commonmark.org/0.31.2/#entity-references
-    scope: "literal",
-    match: /&([a-zA-Z0-9]+|#[0-9]{1,7}|#[Xx][0-9a-fA-F]{1,6});/
-  };
-  return {
-    name: "Markdown",
-    aliases: [
-      "md",
-      "mkdown",
-      "mkd"
-    ],
-    contains: [
-      HEADER,
-      INLINE_HTML,
-      LIST,
-      BOLD,
-      ITALIC,
-      BLOCKQUOTE,
-      CODE,
-      HORIZONTAL_RULE,
-      LINK,
-      LINK_REFERENCE,
-      ENTITY
-    ]
-  };
-}
-
 // src_web/common/constants.ts
 var LOG_VERBOSE = true;
-var ALLOWED_TAGS = [
-  "video",
-  "source",
-  // original video/source tags
-  "pre",
-  "code",
-  "span",
-  // code block elements
-  "div",
-  "p",
-  "br",
-  // block elements
-  "strong",
-  "em",
-  "b",
-  "i",
-  // text formatting
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  // headers
-  "ul",
-  "ol",
-  "li",
-  // lists
-  "blockquote",
-  // quotes
-  "a",
-  "img"
-  // links and images
-];
-var ALLOWED_ATTRS = [
-  "controls",
-  "autoplay",
-  "loop",
-  "muted",
-  "preload",
-  "poster",
-  "class",
-  "id",
-  // styling attributes
-  "href",
-  "target",
-  "src",
-  "alt",
-  "title"
-  // link and image attributes
-];
-var MEDIA_SRC_REGEX = /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
 
 // src_web/common/shared_utils.ts
 var log = (prefix, ...args) => {
@@ -19674,467 +14141,59 @@ var log = (prefix, ...args) => {
   }
 };
 
-// src_web/comfyui/nodes/markdown-renderer/markdown_utils.ts
-core_default.registerLanguage("json", json);
-core_default.registerLanguage("python", python);
-core_default.registerLanguage("plaintext", plaintext);
-core_default.registerLanguage("markdown", markdown);
-core_default.configure({
-  languages: ["python", "json", "plaintext", "markdown"]
-});
-function renderMarkdownToHtml(markdown2, baseUrl) {
-  if (!markdown2) {
-    return "";
-  }
-  let markdownStr = Array.isArray(markdown2) ? markdown2.join("") : markdown2;
-  markdownStr = markdownStr.replace(/^'|'$/g, "").replace(/^"|"$/g, "");
-  markdownStr = markdownStr.replace(/```(\w+)(\[|\{)/g, "```$1\n$2");
-  markdownStr = markdownStr.replace(/(\]|\})```/g, "$1\n```");
-  const preview = markdownStr.trim().slice(0, 100);
-  if (preview[0] === "{" || preview[0] === "[") {
-    try {
-      const jsonObj = JSON.parse(markdownStr);
-      const formatted = JSON.stringify(jsonObj, null, 2);
-      markdownStr = "```json\n" + formatted + "\n```";
-      log("highlight", "Wrapped JSON in code block");
-    } catch (e2) {
-      log("highlight", "JSON parse failed:", e2.message);
-    }
-  }
-  const renderer = new _Renderer();
-  const originalImage = renderer.image;
-  renderer.image = ({ href, title, text: text2 }) => {
-    let src = href;
-    if (baseUrl && !/^(?:\/|https?:\/\/)/.test(href)) {
-      src = `${baseUrl.replace(/\/+$/, "")}/${href}`;
-    }
-    const titleAttr = title ? ` title="${title}"` : "";
-    return `<img src="${src}" alt="${text2}"${titleAttr} />`;
-  };
-  const markedInstance2 = new Marked({ renderer });
-  if (typeof window !== "undefined") {
-    window.markedInstance = markedInstance2;
-  }
-  markedInstance2.use(
-    markedHighlight({
-      langPrefix: "hljs language-",
-      highlight(code, lang) {
-        let codeStr = Array.isArray(code) ? code.join("") : code;
-        codeStr = codeStr.replace(/^'|'$/g, "").replace(/^"|"$/g, "");
-        if (lang) {
-          return core_default.highlight(codeStr, { language: lang }).value;
-        }
-        const preview2 = codeStr.trim().slice(0, 100);
-        if (preview2[0] === "{" || preview2[0] === "[") {
-          try {
-            const jsonObj = JSON.parse(codeStr);
-            const formatted = JSON.stringify(jsonObj, null, 2);
-            return core_default.highlight(formatted, { language: "json" }).value;
-          } catch (e2) {
-            log("highlight", "JSON parse failed:", e2.message);
-          }
-        }
-        if (preview2.match(/^(def|class|import|from|if|for|while)\s/)) {
-          return core_default.highlight(codeStr, { language: "python" }).value;
-        }
-        if (preview2.match(/^(#|\*|\-|\d\.)\s/)) {
-          return core_default.highlight(codeStr, { language: "markdown" }).value;
-        }
-        return core_default.highlight(codeStr, { language: "plaintext" }).value;
-      }
-    })
-  );
-  let html3 = markedInstance2.parse(markdownStr);
-  if (baseUrl) {
-    html3 = html3.replace(MEDIA_SRC_REGEX, `$1${baseUrl}$2$3`);
-  }
-  const sanitized = purify.sanitize(html3, {
-    ADD_TAGS: ALLOWED_TAGS,
-    ADD_ATTR: ALLOWED_ATTRS
-  });
-  return sanitized;
-}
-
-// src_web/comfyui/nodes/markdown-renderer/markdown_widget.ts
-function createMarkdownWidget(node2, config) {
-  const {
-    widgetName = "markdown_widget",
-    isEditable = false,
-    initialContent = "",
-    htmlContent = "",
-    sourceText = "",
-    onContentChange = null
-  } = config;
-  let textWidget = ComfyWidgets.STRING(
-    node2,
-    "text",
-    ["STRING", { hidden: true }],
-    app
-  ).widget;
-  textWidget.value = initialContent;
-  textWidget.draw = () => {
-  };
-  textWidget.computeLayoutSize = () => {
-    return {
-      minHeight: 0,
-      maxHeight: 0,
-      minWidth: 0,
-      maxWidth: 0
-    };
-  };
-  const originalCallback = textWidget.callback;
-  textWidget.callback = function(v2) {
-    if (originalCallback) originalCallback.call(this, v2);
-    if (onContentChange) onContentChange(v2);
-    node2._editableContent = v2;
-    if (!node2.properties) node2.properties = {};
-    node2.properties.text = v2;
-    node2.properties.markdown_editor = v2;
-  };
-  const mainContainer = document.createElement("div");
-  mainContainer.classList.add("storyboard-main-container");
-  mainContainer.style.position = "relative";
-  mainContainer.style.width = "100%";
-  mainContainer.style.height = "100%";
-  mainContainer.style.minWidth = "150px";
-  mainContainer.style.minHeight = "60px";
-  mainContainer.style.display = "flex";
-  mainContainer.style.flexDirection = "column";
-  mainContainer.style.boxSizing = "border-box";
-  mainContainer.style.overflow = "hidden";
-  mainContainer.addEventListener("click", (e2) => {
-    e2.stopPropagation();
-  });
-  const toolbar = document.createElement("div");
-  toolbar.className = "markdown-editor-toolbar";
-  const leftGroup = document.createElement("div");
-  leftGroup.className = "toolbar-left";
-  const rightGroup = document.createElement("div");
-  rightGroup.className = "toolbar-right";
-  const toggleGroup = document.createElement("div");
-  toggleGroup.className = "markdown-toggle-group";
-  const markdownButton = document.createElement("button");
-  markdownButton.className = "markdown-editor-button active";
-  markdownButton.textContent = "MD";
-  markdownButton.title = "Show rendered markdown";
-  markdownButton.onclick = (e2) => {
-    e2.stopPropagation();
-    if (isSourceMode) {
-      isSourceMode = false;
-      markdownButton.classList.add("active");
-      textButton.classList.remove("active");
-      container.style.display = "block";
-      textarea.style.display = "none";
-      updateCharCount();
-    }
-  };
-  const textButton = document.createElement("button");
-  textButton.className = "markdown-editor-button";
-  textButton.textContent = "TXT";
-  textButton.title = "Show source text";
-  textButton.onclick = (e2) => {
-    e2.stopPropagation();
-    if (!isSourceMode) {
-      isSourceMode = true;
-      textButton.classList.add("active");
-      markdownButton.classList.remove("active");
-      container.style.display = "none";
-      textarea.style.display = "block";
-      updateCharCount();
-    }
-  };
-  const warningIndicator = document.createElement("div");
-  warningIndicator.className = "markdown-warning-indicator";
-  warningIndicator.style.display = isEditable ? "none" : "block";
-  warningIndicator.textContent = "\u{1F512}";
-  warningIndicator.title = "Editing is disabled while input is connected. Disconnect the input to enable manual editing.";
-  const charCount = document.createElement("div");
-  charCount.className = "markdown-char-count";
-  const copyButton = document.createElement("button");
-  copyButton.className = "markdown-copy-button";
-  copyButton.innerHTML = "\u{1F4CB}";
-  copyButton.title = "Copy to clipboard";
-  copyButton.addEventListener("click", (e2) => {
-    e2.stopPropagation();
-    const textToCopy = isSourceMode ? textarea.value : currentContent;
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      const originalText = copyButton.innerHTML;
-      copyButton.innerHTML = "\u2713";
-      copyButton.style.color = "#4CAF50";
-      setTimeout(() => {
-        copyButton.innerHTML = originalText;
-        copyButton.style.color = "#666";
-      }, 1e3);
-    }).catch((err) => {
-      console.error("Failed to copy text:", err);
-      copyButton.innerHTML = "\u274C";
-      setTimeout(() => {
-        copyButton.innerHTML = "\u{1F4CB}";
-      }, 1e3);
-    });
-  });
-  const container = document.createElement("div");
-  container.className = "markdown-content";
-  container.style.flex = "1 1 0";
-  container.style.height = "100%";
-  container.style.minHeight = "60px";
-  container.style.overflow = "auto";
-  container.innerHTML = htmlContent || renderMarkdownToHtml(initialContent);
-  const textarea = document.createElement("textarea");
-  textarea.className = "markdown-editor-textarea";
-  textarea.style.display = "none";
-  textarea.style.flex = "1 1 0";
-  textarea.style.height = "100%";
-  textarea.style.minHeight = "60px";
-  textarea.style.width = "100%";
-  textarea.readOnly = !isEditable;
-  textarea.placeholder = isEditable ? "Enter your markdown content here..." : "Source markdown from connected input...";
-  textarea.value = sourceText || initialContent;
-  let isSourceMode = false;
-  let currentContent = initialContent;
-  const updateCharCount = () => {
-    const text2 = currentContent || "";
-    charCount.textContent = `${text2.length} chars`;
-  };
-  updateCharCount();
-  function showMarkdown() {
-    container.style.display = "block";
-    textarea.style.display = "none";
-    markdownButton.classList.add("active");
-    textButton.classList.remove("active");
-    isSourceMode = false;
-    if (isEditable) {
-      container.innerHTML = renderMarkdownToHtml(currentContent);
-    }
-    updateCharCount();
-  }
-  function showText() {
-    textarea.style.display = "block";
-    container.style.display = "none";
-    textButton.classList.add("active");
-    markdownButton.classList.remove("active");
-    isSourceMode = true;
-    updateCharCount();
-    setTimeout(() => textarea.focus(), 0);
-  }
-  markdownButton.addEventListener("click", (e2) => {
-    e2.stopPropagation();
-    showMarkdown();
-  });
-  textButton.addEventListener("click", (e2) => {
-    e2.stopPropagation();
-    showText();
-  });
-  if (isEditable) {
-    container.addEventListener("click", (e2) => {
-      if (toolbar.contains(e2.target)) {
-        return;
-      }
-      e2.stopPropagation();
-      if (!isSourceMode) {
-        showText();
-      }
-    });
-    container.style.cursor = "text";
-    textarea.addEventListener("click", (e2) => {
-      e2.stopPropagation();
-    });
-  } else {
-    const tooltipText = "Editing is disabled while input is connected. Disconnect the input to enable manual editing.";
-    container.title = tooltipText;
-    textarea.title = tooltipText;
-  }
-  if (isEditable) {
-    textarea.addEventListener("input", () => {
-      currentContent = textarea.value;
-      updateCharCount();
-      textWidget.value = currentContent;
-      if (onContentChange) onContentChange(currentContent);
-    });
-    const autoSaveAndPreview = () => {
-      if (isSourceMode) {
-        if (textarea.value !== currentContent) {
-          currentContent = textarea.value;
-          textWidget.value = currentContent;
-          if (onContentChange) onContentChange(currentContent);
-        }
-        showMarkdown();
-      }
-    };
-    const originalOnDeselected = node2.onDeselected;
-    node2.onDeselected = function() {
-      autoSaveAndPreview();
-      if (originalOnDeselected) originalOnDeselected.call(this);
-    };
-    const handleDocumentClick = (e2) => {
-      if (!mainContainer.contains(e2.target)) {
-        autoSaveAndPreview();
-      }
-    };
-    document.addEventListener("click", handleDocumentClick);
-  }
-  toggleGroup.append(markdownButton, textButton);
-  rightGroup.append(charCount);
-  if (!isEditable) {
-    rightGroup.append(warningIndicator);
-  }
-  rightGroup.append(copyButton);
-  leftGroup.append(toggleGroup);
-  toolbar.append(leftGroup, rightGroup);
-  mainContainer.append(toolbar, container, textarea);
-  node2._markdownWidgetElement = mainContainer;
-  const widget = node2.addDOMWidget(
-    "markdown_widget",
-    "div",
-    mainContainer,
-    {}
-  );
-  function updateDOMSize() {
-    mainContainer.style.width = "100%";
-    mainContainer.style.height = "100%";
-  }
-  node2.updateDOMSize = updateDOMSize;
-  updateDOMSize();
-  widget.draw = () => {
-  };
-  widget.computeSize = function(width2) {
-    var _a2;
-    if (!node2 || node2.is_collapsed) {
-      return [width2, 0];
-    }
-    const nodeHeight = node2.size[1];
-    const titleHeight = 26;
-    const inputsHeight = (((_a2 = node2.inputs) == null ? void 0 : _a2.length) || 0) * 21;
-    const widgetPadding = 4;
-    const availableHeight = nodeHeight - titleHeight - inputsHeight - widgetPadding;
-    return [width2, Math.max(60, availableHeight)];
-  };
-  widget.onRemove = () => {
-    if (node2._markdownWidgetElement === mainContainer && mainContainer.parentNode) {
-      mainContainer.parentNode.removeChild(mainContainer);
-      node2._markdownWidgetElement = null;
-    }
-  };
-  return widget;
-}
-function showEditor(node2) {
-  var _a2, _b, _c, _d, _e;
-  log(node2.type, "showEditor called, this:", node2);
-  if (!node2._editableContent) {
-    let existingContent = "";
-    if (node2.properties && node2.properties.text && node2.properties.text.trim()) {
-      existingContent = node2.properties.text;
-      log(
-        "Restored content from node properties:",
-        existingContent.substring(0, 50) + "..."
-      );
-    }
-    node2._editableContent = existingContent || `Write your **markdown** content here!
-- Bullet points
-- *Italic text*
-- \`Code snippets\``;
-  }
-  if (node2._hasInputConnection) {
-    log("showEditor", "Showing content as read-only due to input connection");
-    createMarkdownWidget(node2, {
-      widgetName: "markdown_widget",
-      isEditable: false,
-      htmlContent: node2._storedHtml,
-      sourceText: node2._sourceText || "",
-      initialContent: node2._sourceText || ""
-    });
-  } else {
-    log("showEditor", "Showing editable editor");
-    createMarkdownWidget(node2, {
-      widgetName: "markdown_widget",
-      isEditable: true,
-      initialContent: node2._editableContent,
-      onContentChange: (content) => {
-        node2._editableContent = content;
-        if (!node2.properties) node2.properties = {};
-        node2.properties.text = content;
-        node2.properties.markdown_editor = content;
-      }
-    });
-  }
-  try {
-    const overlayElements = (_e = (_d = node2._markdownWidgetElement || ((_c = (_b = (_a2 = node2 == null ? void 0 : node2.widgets) == null ? void 0 : _a2.find) == null ? void 0 : _b.call(_a2, (w) => w.name === "markdown_widget")) == null ? void 0 : _c.element)) == null ? void 0 : _d.querySelectorAll) == null ? void 0 : _e.call(
-      _d,
-      ".markdown-waiting-overlay"
-    );
-    if (overlayElements && overlayElements.length) {
-      overlayElements.forEach((el) => el.remove());
-      log("showEditor", "Removed lingering waiting overlay");
-    }
-  } catch (err) {
-    log("showEditor", "Error while removing waiting overlay", err);
-  }
-}
-function showWaitingForInput(node2) {
-  log("showWaitingForInput called");
-  if (!node2._editableContent) {
-    node2._editableContent = `Write your **markdown** content here!
-- Bullet points
-- *Italic text*
-- \`Code snippets\``;
-  }
-  const initialContent = Array.isArray(node2._editableContent) ? node2._editableContent.join("") : node2._editableContent;
-  const widget = createMarkdownWidget(node2, {
-    widgetName: "markdown_widget",
-    isEditable: false,
-    initialContent,
-    htmlContent: renderMarkdownToHtml(initialContent),
-    sourceText: initialContent
-  });
-  const mainContainer = widget.element;
-  const overlay = document.createElement("div");
-  overlay.className = "markdown-waiting-overlay";
-  overlay.innerHTML = `
-    <div class="markdown-waiting-icon">\u23F3</div>
-    <div class="markdown-waiting-title">Waiting for Input</div>
-    <div class="markdown-waiting-note">Manual content will be overridden</div>
-  `;
-  mainContainer.appendChild(overlay);
-}
-
-// src_web/comfyui/nodes/markdown-renderer/markdown_renderer.ts
-function setupMarkdownRenderer(nodeType, nodeData) {
-}
-function handleMarkdownRendererCreated(node2) {
-}
-var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNode {
-  // Debounce timeout
-  constructor(title = _MarkdownRendererNode.title) {
+// src_web/comfyui/nodes/field-inspector/field_inspector.ts
+var _FieldInspectorNode = class _FieldInspectorNode extends StoryboardBaseNode {
+  constructor(title = _FieldInspectorNode.title) {
     super(title);
-    // Keep category consistent
-    this._hasInputConnection = false;
-    this._editableContent = "";
-    this._storedHtml = "";
-    this._sourceText = "";
-    this._hasReceivedData = false;
-    this._isUpdatingUI = false;
-    // Add flag to prevent concurrent UI updates
-    this._updateUITimeout = null;
+    this._connectedNode = null;
+    this._availableFields = [];
+    this._fieldEntries = [];
+    this._selectedFieldName = "";
+    this._updateInterval = null;
     log(this.type, "Constructor called");
   }
+  // Get the input socket type color from the inspector node itself
+  getInputSocketTypeColor() {
+    var _a, _b;
+    if ((_a = this.inputs) == null ? void 0 : _a[0]) {
+      const inputType = String(this.inputs[0].type);
+      const canvas2 = app.canvas;
+      if (canvas2 == null ? void 0 : canvas2.default_connection_color_byType) {
+        const color = canvas2.default_connection_color_byType[inputType.toUpperCase()];
+        if (color) {
+          return color;
+        }
+      }
+      if ((_b = window.LiteGraph) == null ? void 0 : _b.getConnectionColor) {
+        const color = window.LiteGraph.getConnectionColor(inputType);
+        if (color) {
+          return color;
+        }
+      }
+    }
+    return "#888888";
+  }
   onConstructed() {
-    var _a2, _b;
+    var _a, _b;
     if (this.__constructed__) return false;
     log(this.type, "Node constructed");
-    this._hasInputConnection = false;
-    this._editableContent = "";
-    this._storedHtml = "";
-    this._sourceText = "";
-    this._hasReceivedData = false;
-    this._isUpdatingUI = false;
-    this._updateUITimeout = null;
-    this.type = (_a2 = this.type) != null ? _a2 : void 0;
+    this._connectedNode = null;
+    this._availableFields = [];
+    this._fieldEntries = [];
+    this._selectedFieldName = "";
+    this._updateInterval = null;
+    if (!this.properties) this.properties = {};
+    this.properties["selected_fieldname"] = "";
+    this.properties["field_name_input"] = "";
+    this.properties["selected_value"] = "";
+    this.type = (_a = this.type) != null ? _a : void 0;
     this.__constructed__ = true;
-    (_b = app2.graph) == null ? void 0 : _b.trigger("nodeCreated", this);
+    (_b = app.graph) == null ? void 0 : _b.trigger("nodeCreated", this);
     log(this.type, "Node state initialized");
     return this.__constructed__;
   }
   clone() {
+    var _a, _b, _c;
     log(this.type, "Cloning node");
     const cloned = super.clone();
     if (cloned) {
@@ -20143,262 +14202,454 @@ var _MarkdownRendererNode = class _MarkdownRendererNode extends StoryboardBaseNo
         cloned.properties = structuredClone(cloned.properties);
         log(this.type, "Properties deep cloned");
       }
-      cloned._hasInputConnection = this._hasInputConnection;
-      cloned._editableContent = this._editableContent;
-      cloned._storedHtml = this._storedHtml;
-      cloned._sourceText = this._sourceText;
-      cloned._hasReceivedData = this._hasReceivedData;
-      cloned._isUpdatingUI = false;
-      cloned._updateUITimeout = null;
+      cloned._connectedNode = null;
+      cloned._availableFields = [...this._availableFields];
+      cloned._fieldEntries = [...this._fieldEntries];
+      cloned._selectedFieldName = this._selectedFieldName;
+      cloned._updateInterval = null;
       log(this.type, "State properties copied");
       if (!cloned.properties) cloned.properties = {};
-      cloned.properties["text"] = this._editableContent;
-      cloned.properties["storedHtml"] = this._storedHtml;
-      cloned.properties["sourceText"] = this._sourceText;
+      cloned.properties["selected_fieldname"] = ((_a = this.properties) == null ? void 0 : _a["selected_fieldname"]) || "";
+      cloned.properties["field_name"] = ((_b = this.properties) == null ? void 0 : _b["field_name"]) || "";
+      cloned.properties["selected_value"] = ((_c = this.properties) == null ? void 0 : _c["selected_value"]) || "";
       log(this.type, "Properties copied to cloned node");
-      if (cloned.widgets) {
-        cloned.widgets.length = 0;
-      }
       cloned.onConstructed();
       log(this.type, "Cloned node constructed");
-      cloned.updateUI();
-      log(this.type, "Cloned node UI updated");
     }
     return cloned;
   }
+  findWidgetByName(node2, name) {
+    if (!node2.widgets) return null;
+    const widget = node2.widgets.find((w) => w.name === name);
+    return widget ? {
+      name: widget.name,
+      value: widget.value,
+      type: widget.type
+    } : null;
+  }
+  formatWidgetValue(widget) {
+    if (widget.value === null || widget.value === void 0) {
+      return "";
+    }
+    if (typeof widget.value === "object") {
+      try {
+        return JSON.stringify(widget.value, null, 2);
+      } catch {
+        return String(widget.value);
+      }
+    }
+    return String(widget.value);
+  }
+  getAllFieldEntries(node2) {
+    if (!node2 || !node2.widgets) return [];
+    return node2.widgets.filter((widget) => widget.name && widget.name !== "preview").map((widget) => {
+      const value = widget.value;
+      return {
+        name: widget.name,
+        value: this.formatWidgetValue({ name: widget.name, value, type: widget.type }),
+        rawValue: value,
+        type: widget.type
+      };
+    });
+  }
+  createFieldsDisplayWidget() {
+    if (this.widgets) {
+      const widgetsToRemove = this.widgets.filter(
+        (w) => w.name === "fields_display" || w.name === "truncated_info" || w.name.startsWith("field_")
+      );
+      for (const widget of widgetsToRemove) {
+        if (widget && widget.onRemove) {
+          widget.onRemove();
+        }
+        const index = this.widgets.indexOf(widget);
+        if (index > -1) {
+          this.widgets.splice(index, 1);
+        }
+      }
+    }
+    if (!this._fieldEntries.length) {
+      const message = this._connectedNode ? "No fields found" : "Connect a node to inspect its fields";
+      if (!this.widgets) this.widgets = [];
+      const textWidget = {
+        name: "fields_display",
+        type: "button",
+        // Use button type to avoid text editing
+        value: message,
+        options: { readonly: true },
+        y: 0,
+        serialize: false,
+        draw: function(ctx, node2, widgetWidth, y, widgetHeight) {
+          ctx.fillStyle = "#555";
+          ctx.fillRect(0, y, widgetWidth, widgetHeight);
+          ctx.fillStyle = "#888";
+          ctx.font = "12px Arial";
+          ctx.fillText(this.value, 10, y + 15);
+          return widgetHeight;
+        },
+        computeSize: function(width2) {
+          return [width2, 25];
+        },
+        mouse: function() {
+          return false;
+        }
+      };
+      this.widgets.push(textWidget);
+      return;
+    }
+    if (!this.widgets) this.widgets = [];
+    const self = this;
+    const fieldsToShow = this._fieldEntries.slice(0, 10);
+    fieldsToShow.forEach((entry, index) => {
+      const fieldName = entry.name;
+      const displayValue = entry.value.length > 25 ? entry.value.substring(0, 25) + "..." : entry.value;
+      const typeDisplay = entry.type ? ` (${entry.type})` : "";
+      const fieldDisplayText = `${entry.name}${typeDisplay}: ${displayValue}`;
+      const fieldWidget = {
+        name: `field_${index}`,
+        type: "button",
+        // Use button type to avoid text editing
+        value: fieldDisplayText,
+        options: { readonly: true },
+        y: 0,
+        serialize: false,
+        draw: function(ctx, node2, widgetWidth, y, widgetHeight) {
+          const isSelected = fieldName === self._selectedFieldName;
+          if (isSelected) {
+            ctx.fillStyle = "#4a7dc4";
+          } else {
+            ctx.fillStyle = "#444";
+          }
+          ctx.fillRect(0, y, widgetWidth, widgetHeight);
+          const typeColor = self.getInputSocketTypeColor();
+          ctx.fillStyle = typeColor;
+          ctx.beginPath();
+          ctx.arc(15, y + 10, 4, 0, 2 * Math.PI);
+          ctx.fill();
+          if (isSelected) {
+            ctx.fillStyle = "#ffa500";
+            ctx.beginPath();
+            ctx.arc(15, y + 10, 6, 0, 2 * Math.PI);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+          const nameTypeText = `${entry.name}${typeDisplay}:`;
+          const valueText = ` ${displayValue}`;
+          ctx.font = "12px Arial";
+          ctx.fillStyle = isSelected ? "#fff" : "#fff";
+          ctx.fillText(nameTypeText, 25, y + 15);
+          const nameTypeWidth = ctx.measureText(nameTypeText).width;
+          ctx.fillStyle = isSelected ? "#e0e0e0" : "#aaa";
+          ctx.fillText(valueText, 25 + nameTypeWidth, y + 15);
+          return widgetHeight;
+        },
+        computeSize: function(width2) {
+          return [width2, 20];
+        },
+        mouse: function(event, pos, node2) {
+          console.log("Widget mouse event:", event.type, "for field:", fieldName);
+          if (event.type === "pointerdown" || event.type === "pointerup" || event.type === "click" || event.type === "mousedown" || event.type === "mouseup") {
+            console.log("Processing click for field:", fieldName);
+            log(self.type, `Field widget clicked: ${fieldName} (${entry.type || "unknown"})`);
+            try {
+              self.selectField(fieldName);
+              console.log("selectField called successfully");
+            } catch (e2) {
+              console.error("Error calling selectField:", e2);
+            }
+            if (app.graph) {
+              app.graph.setDirtyCanvas(true, false);
+            }
+            return true;
+          }
+          return false;
+        }
+      };
+      self.widgets.push(fieldWidget);
+    });
+    if (this._fieldEntries.length > 10) {
+      const truncatedWidget = {
+        name: "truncated_info",
+        type: "button",
+        value: `... and ${this._fieldEntries.length - 10} more fields`,
+        options: { readonly: true },
+        y: 0,
+        serialize: false,
+        draw: function(ctx, node2, widgetWidth, y, widgetHeight) {
+          ctx.fillStyle = "#333";
+          ctx.fillRect(0, y, widgetWidth, widgetHeight);
+          ctx.fillStyle = "#888";
+          ctx.font = "italic 11px Arial";
+          ctx.fillText(this.value, 10, y + 15);
+          return widgetHeight;
+        },
+        computeSize: function(width2) {
+          return [width2, 18];
+        },
+        mouse: function() {
+          return false;
+        }
+      };
+      this.widgets.push(truncatedWidget);
+    }
+  }
+  addCustomWidget(custom_widget) {
+    if (!this.widgets) this.widgets = [];
+    this.widgets.push(custom_widget);
+    return custom_widget;
+  }
+  selectField(fieldName) {
+    var _a, _b;
+    this._selectedFieldName = fieldName;
+    const fieldEntry = this._fieldEntries.find((f) => f.name === fieldName);
+    if (!fieldEntry) return;
+    const selectedFieldnameWidget = (_a = this.widgets) == null ? void 0 : _a.find((w) => w.name === "selected_fieldname");
+    const selectedValueWidget = (_b = this.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_value");
+    if (selectedFieldnameWidget) {
+      selectedFieldnameWidget.value = fieldName;
+    }
+    if (selectedValueWidget) {
+      selectedValueWidget.value = fieldEntry.value;
+    }
+    if (!this.properties) this.properties = {};
+    this.properties["selected_fieldname"] = fieldName;
+    this.properties["field_name_input"] = fieldName;
+    this.properties["selected_value"] = fieldEntry.value;
+    if (app.graph) {
+      app.graph.setDirtyCanvas(true, false);
+    }
+  }
+  updateFieldsDisplay() {
+    if (!this._connectedNode) {
+      this._fieldEntries = [];
+      this.createFieldsDisplayWidget();
+      return;
+    }
+    const newFieldEntries = this.getAllFieldEntries(this._connectedNode);
+    this._availableFields = newFieldEntries.map((f) => f.name);
+    const currentEntriesStr = newFieldEntries.map((e2) => `${e2.name}:${e2.value}`).join("|");
+    const previousEntriesStr = this._fieldEntries.map((e2) => `${e2.name}:${e2.value}`).join("|");
+    if (currentEntriesStr !== previousEntriesStr) {
+      this._fieldEntries = newFieldEntries;
+      log(this.type, `Fields updated for '${this._connectedNode.title}' (${this._fieldEntries.length} fields)`);
+      this.createFieldsDisplayWidget();
+      if (!this._selectedFieldName && this._fieldEntries.length > 0 && this._fieldEntries[0]) {
+        this.selectField(this._fieldEntries[0].name);
+      }
+    }
+  }
+  startPeriodicUpdates() {
+    this.stopPeriodicUpdates();
+    this._updateInterval = setInterval(() => {
+      if (this._connectedNode) {
+        const previousEntries = this._fieldEntries.map((e2) => `${e2.name}:${e2.value}`).join("|");
+        const newEntries = this.getAllFieldEntries(this._connectedNode);
+        const currentEntries = newEntries.map((e2) => `${e2.name}:${e2.value}`).join("|");
+        if (currentEntries !== previousEntries) {
+          this._fieldEntries = newEntries;
+          this.createFieldsDisplayWidget();
+          if (this._selectedFieldName) {
+            const currentField = this._fieldEntries.find((f) => f.name === this._selectedFieldName);
+            if (currentField) {
+              this.selectField(this._selectedFieldName);
+            }
+          }
+          if (app.graph) {
+            app.graph.setDirtyCanvas(true, false);
+          }
+        }
+      }
+    }, 500);
+  }
+  stopPeriodicUpdates() {
+    if (this._updateInterval !== null) {
+      clearInterval(this._updateInterval);
+      this._updateInterval = null;
+    }
+  }
+  inspectConnectedNode(connectedNode) {
+    this._connectedNode = connectedNode;
+    if (!connectedNode) {
+      this._availableFields = [];
+      this._fieldEntries = [];
+      this._selectedFieldName = "";
+      this.stopPeriodicUpdates();
+      this.updateFieldsDisplay();
+      return;
+    }
+    this.updateFieldsDisplay();
+    this.startPeriodicUpdates();
+  }
   onConnectionsChange(type, index, connected, linkInfo, inputOrOutput) {
+    var _a, _b;
     if (type === 1 && index === 0) {
-      log(this.type, "Input connection changed:", connected);
-      this._hasInputConnection = connected;
-      if (!connected) {
-        this._hasReceivedData = false;
-      }
-      this.updateUI();
-    }
-  }
-  onExecute() {
-  }
-  onExecuted(result) {
-    log(this.type, "Node executed with result:", result);
-    if (result && result.text) {
-      let textContent = result.text;
-      log(this.type, "DEBUG: result.text:", result.text, "isArray:", Array.isArray(textContent));
-      if (Array.isArray(textContent)) {
-        log(this.type, "DEBUG: array length:", textContent.length, "first item:", textContent[0]);
-        textContent = textContent[0] || "";
-      } else if (typeof textContent !== "string") {
-        log(this.type, "WARNING: result.text is not string or array, coercing", textContent);
-        textContent = String(textContent);
-      }
-      log(this.type, "DEBUG: final textContent:", textContent);
-      this._sourceText = textContent;
-      this._editableContent = this._sourceText;
-      this._storedHtml = renderMarkdownToHtml(this._sourceText);
-      this._hasReceivedData = true;
-      if (!this.properties) this.properties = {};
-      this.properties["storedHtml"] = this._storedHtml;
-      this.properties["sourceText"] = this._sourceText;
-      this.properties["text"] = this._sourceText;
-      log(this.type, "Received data - sourceText length:", this._sourceText.length, "storedHtml length:", this._storedHtml.length);
-      this.updateUI();
-    } else {
-      log(this.type, "No valid data received from backend");
-    }
-  }
-  onConfigure(info) {
-    var _a2, _b;
-    log(this.type, "Configuring node with info:", info);
-    if (this.properties) {
-      const props = this.properties;
-      if (props["storedHtml"]) {
-        log(this.type, "Restoring stored HTML from properties");
-        this._storedHtml = String(props["storedHtml"]);
-        this._sourceText = String(props["sourceText"] || "");
-        this._hasReceivedData = true;
-      }
-      if (props["text"]) {
-        log(this.type, "Restoring text content from properties");
-        this._editableContent = String(props["text"]);
+      if (connected && linkInfo) {
+        const link = app.graph.links[linkInfo.id];
+        if (link) {
+          const connectedNode = app.graph.getNodeById(link.origin_id);
+          if (connectedNode) {
+            this.inspectConnectedNode(connectedNode);
+          }
+        }
+      } else {
+        this.inspectConnectedNode(null);
+        const selectedFieldnameWidget = (_a = this.widgets) == null ? void 0 : _a.find((w) => w.name === "selected_fieldname");
+        const selectedValueWidget = (_b = this.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_value");
+        if (selectedFieldnameWidget) selectedFieldnameWidget.value = "";
+        if (selectedValueWidget) selectedValueWidget.value = "";
       }
     }
-    this.cleanupAllWidgets();
-    const hasConnection = Boolean((_b = (_a2 = this.inputs) == null ? void 0 : _a2[0]) == null ? void 0 : _b.link);
-    log(this.type, "Has input connection:", hasConnection, "Has received data:", this._hasReceivedData);
-    this._hasInputConnection = hasConnection;
-    if (!hasConnection) {
-      this._hasReceivedData = false;
-    }
-    this.updateUI();
   }
   onNodeCreated() {
     log(this.type, "Node created");
-    if (this.inputs && this.inputs[0] && this.inputs[0].link) {
-      log(this.type, "Found existing input connection");
-      this._hasInputConnection = true;
+    this._connectedNode = null;
+    this._availableFields = [];
+    this._fieldEntries = [];
+    this._selectedFieldName = "";
+    if (!this.properties) this.properties = {};
+    this.properties["selected_fieldname"] = "";
+    this.properties["field_name"] = "";
+    this.properties["selected_value"] = "";
+    setTimeout(() => {
+      var _a, _b, _c;
+      log(this.type, "Available widgets:", ((_a = this.widgets) == null ? void 0 : _a.map((w) => w.name)) || []);
+      const selectedFieldnameWidget = (_b = this.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_fieldname");
+      const selectedValueWidget = (_c = this.widgets) == null ? void 0 : _c.find((w) => w.name === "selected_value");
+      if (selectedFieldnameWidget) selectedFieldnameWidget.value = "";
+      if (selectedValueWidget) selectedValueWidget.value = "";
+      log(this.type, "Backend widgets initialized:", {
+        selectedFieldnameWidget: !!selectedFieldnameWidget,
+        selectedValueWidget: !!selectedValueWidget
+      });
+    }, 10);
+    this.updateFieldsDisplay();
+  }
+  onConfigure(info) {
+    var _a, _b, _c, _d;
+    log(this.type, "Configuring node with info:", info);
+    const hasConnection = Boolean((_b = (_a = this.inputs) == null ? void 0 : _a[0]) == null ? void 0 : _b.link);
+    log(this.type, "Has input connection:", hasConnection);
+    if (!hasConnection) {
+      this._connectedNode = null;
+      this._availableFields = [];
+      this._fieldEntries = [];
+      this._selectedFieldName = "";
+      this.stopPeriodicUpdates();
     } else {
-      this._hasInputConnection = false;
-      this._hasReceivedData = false;
+      if ((_c = this.properties) == null ? void 0 : _c["selected_fieldname"]) {
+        this._selectedFieldName = this.properties["selected_fieldname"];
+      } else if ((_d = this.properties) == null ? void 0 : _d["field_name_input"]) {
+        this._selectedFieldName = this.properties["field_name_input"];
+      }
     }
-    this.updateUI();
+    this.updateFieldsDisplay();
   }
-  updateUI() {
-    if (this._updateUITimeout !== null) {
-      clearTimeout(this._updateUITimeout);
-      this._updateUITimeout = null;
+  onExecute() {
+    if (!this.properties) this.properties = {};
+    if (!this.properties["field_name_input"]) {
+      this.properties["field_name_input"] = this._selectedFieldName || "";
     }
-    this._updateUITimeout = setTimeout(() => {
-      this._updateUITimeout = null;
-      this.doUpdateUI();
-    }, 25);
-  }
-  doUpdateUI() {
-    if (this._isUpdatingUI) {
-      log(this.type, "UI update already in progress, skipping");
-      return;
-    }
-    this._isUpdatingUI = true;
-    log(this.type, "Updating UI - hasInputConnection:", this._hasInputConnection, "hasReceivedData:", this._hasReceivedData, "hasContent:", Boolean(this._editableContent), "hasStoredHtml:", Boolean(this._storedHtml));
-    try {
-      this.cleanupAllWidgets();
-      if (this._hasInputConnection && !this._hasReceivedData && !this._storedHtml) {
-        log(this.type, "Showing waiting UI - connected but no data received");
-        showWaitingForInput(this);
-      } else {
-        log(this.type, "Showing editor - has content, data, or no connection");
-        showEditor(this);
-      }
-      if (typeof this.computeSize === "function") {
-        this.computeSize();
-      }
-      if (this.graph && typeof this.graph.setDirtyCanvas === "function") {
-        this.graph.setDirtyCanvas(true, true);
-      }
-    } finally {
-      this._isUpdatingUI = false;
-    }
-  }
-  cleanupAllWidgets() {
-    if (!this.widgets) return;
-    log(this.type, "Cleaning up widgets, current count:", this.widgets.length);
-    const widgetsToRemove = [...this.widgets];
-    for (const widget of widgetsToRemove) {
-      if (widget.name === "markdown_widget" || widget.name === "markdown_editor" || widget.name === "text") {
-        log(this.type, "Removing widget:", widget.name);
-        if (typeof widget.onRemove === "function") {
-          widget.onRemove();
-        }
-        if (typeof this.removeWidget === "function") {
-          this.removeWidget(widget);
-        } else {
-          const element = widget.element;
-          if (element && element.parentNode) {
-            element.parentNode.removeChild(element);
-          }
-          const index = this.widgets.indexOf(widget);
-          if (index > -1) {
-            this.widgets.splice(index, 1);
-          }
-        }
-      }
-    }
-    this.widgets = this.widgets.filter(
-      (w) => w.name !== "markdown_widget" && w.name !== "markdown_editor" && w.name !== "text"
-    );
-    log(this.type, "Widgets after cleanup:", this.widgets.length);
   }
   onRemoved() {
-    var _a2;
-    if (this._updateUITimeout !== null) {
-      clearTimeout(this._updateUITimeout);
-      this._updateUITimeout = null;
-    }
-    this.cleanupAllWidgets();
-    (_a2 = super.onRemoved) == null ? void 0 : _a2.call(this);
+    var _a;
+    this.stopPeriodicUpdates();
+    (_a = super.onRemoved) == null ? void 0 : _a.call(this);
   }
   computeSize(out) {
-    const minW = 280;
-    const minH = 240;
-    const curW = Array.isArray(this.size) ? this.size[0] : minW;
-    const curH = Array.isArray(this.size) ? this.size[1] : minH;
-    return [Math.max(curW, minW), Math.max(curH, minH)];
+    var _a, _b;
+    const baseWidth = 320;
+    const baseHeight = 90;
+    const lineHeight = 20;
+    const truncatedInfoHeight = (((_a = this._fieldEntries) == null ? void 0 : _a.length) || 0) > 10 ? 18 : 0;
+    const topPadding = 5;
+    const bottomPadding = 5;
+    const fieldCount = Math.min(((_b = this._fieldEntries) == null ? void 0 : _b.length) || 0, 10);
+    const additionalHeight = Math.max(0, fieldCount * lineHeight + truncatedInfoHeight + topPadding + bottomPadding);
+    return [baseWidth, baseHeight + additionalHeight];
   }
-  // override onResize(size: any): void {
-  //   (this as any).updateDOMSize?.();
-  //   super.onResize?.(size);
-  // }
 };
-_MarkdownRendererNode.title = "Markdown Renderer";
-_MarkdownRendererNode.type = "MarkdownRenderer";
-_MarkdownRendererNode.category = "storyboard/Markdown";
-_MarkdownRendererNode._category = "storyboard/Markdown";
-var MarkdownRendererNode = _MarkdownRendererNode;
-if (!window.__mdRendererRegistered) {
-  window.__mdRendererRegistered = true;
-  app2.registerExtension({
-    name: "comfyui-storyboard.markdown-renderer",
+_FieldInspectorNode.title = "\u{1F50D} Field Inspector";
+_FieldInspectorNode.type = "FieldInspector";
+_FieldInspectorNode.category = "storyboard/Debug";
+_FieldInspectorNode._category = "storyboard/Debug";
+var FieldInspectorNode = _FieldInspectorNode;
+if (!window.__fieldInspectorRegistered) {
+  window.__fieldInspectorRegistered = true;
+  app.registerExtension({
+    name: "comfyui-storyboard.field-inspector",
     async beforeRegisterNodeDef(nodeType, nodeData) {
-      if (nodeData.name === "MarkdownRenderer") {
-        log("MarkdownRenderer", "Registering node type");
-        log("MarkdownRenderer", "Node data:", nodeData);
+      if (nodeData.name === "FieldInspector") {
+        log("FieldInspector", "Registering node type");
+        log("FieldInspector", "Node data:", nodeData);
         const methods = [
           "onConnectionsChange",
           "onExecute",
-          "onExecuted",
           "onConfigure",
           "onNodeCreated",
           "onRemoved",
           "clone",
           "onConstructed",
           "checkAndRunOnConstructed",
-          "updateUI",
-          "doUpdateUI",
-          "cleanupAllWidgets",
+          "inspectConnectedNode",
+          "updateFieldsDisplay",
+          "selectField",
+          "findWidgetByName",
+          "formatWidgetValue",
+          "getAllFieldEntries",
+          "createFieldsDisplayWidget",
+          "startPeriodicUpdates",
+          "stopPeriodicUpdates",
           "computeSize",
-          "onResize"
+          "getInputSocketTypeColor"
         ];
         for (const method of methods) {
-          const prototype = MarkdownRendererNode.prototype;
+          const prototype = FieldInspectorNode.prototype;
           if (prototype[method]) {
             nodeType.prototype[method] = prototype[method];
-            log("MarkdownRenderer", `Copied method: ${method}`);
+            log("FieldInspector", `Copied method: ${method}`);
           }
         }
-        nodeType.title = MarkdownRendererNode.title;
-        nodeType.type = MarkdownRendererNode.type;
-        nodeType.category = MarkdownRendererNode.category;
-        nodeType._category = MarkdownRendererNode._category;
-        log("MarkdownRenderer", "Static properties copied");
-        if (MarkdownRendererNode.type) {
-          log("MarkdownRenderer", "Registering node type with LiteGraph");
-          LiteGraph.registerNodeType(MarkdownRendererNode.type, nodeType);
+        nodeType.title = FieldInspectorNode.title;
+        nodeType.type = FieldInspectorNode.type;
+        nodeType.category = FieldInspectorNode.category;
+        nodeType._category = FieldInspectorNode._category;
+        log("FieldInspector", "Static properties copied");
+        if (FieldInspectorNode.type) {
+          log("FieldInspector", "Registering node type with LiteGraph");
+          LiteGraph.registerNodeType(FieldInspectorNode.type, nodeType);
         }
-        MarkdownRendererNode.setUp();
+        FieldInspectorNode.setUp();
       }
     },
     nodeCreated(node2) {
-      var _a2;
-      if (node2.comfyClass === "MarkdownRenderer") {
-        log("MarkdownRenderer", "Node instance created");
-        log("MarkdownRenderer", "Node properties:", node2.properties);
-        node2._hasInputConnection = false;
-        node2._editableContent = "";
-        node2._storedHtml = "";
-        node2._sourceText = "";
-        node2._hasReceivedData = false;
-        log("MarkdownRenderer", "Node state initialized");
-        (_a2 = node2.onConstructed) == null ? void 0 : _a2.call(node2);
-        log("MarkdownRenderer", "Node constructed");
+      var _a;
+      if (node2.comfyClass === "FieldInspector") {
+        log("FieldInspector", "Node instance created");
+        log("FieldInspector", "Node properties:", node2.properties);
+        node2._connectedNode = null;
+        node2._availableFields = [];
+        node2._fieldEntries = [];
+        node2._selectedFieldName = "";
+        node2._updateInterval = null;
+        if (!node2.properties) node2.properties = {};
+        node2.properties["selected_fieldname"] = "";
+        node2.properties["field_name_input"] = "";
+        node2.properties["selected_value"] = "";
+        log("FieldInspector", "Node state initialized");
+        setTimeout(() => {
+          var _a2, _b, _c;
+          log("FieldInspector", "Available widgets:", ((_a2 = node2.widgets) == null ? void 0 : _a2.map((w) => w.name)) || []);
+          const selectedFieldnameWidget = (_b = node2.widgets) == null ? void 0 : _b.find((w) => w.name === "selected_fieldname");
+          const selectedValueWidget = (_c = node2.widgets) == null ? void 0 : _c.find((w) => w.name === "selected_value");
+          if (selectedFieldnameWidget) selectedFieldnameWidget.value = "";
+          if (selectedValueWidget) selectedValueWidget.value = "";
+          log("FieldInspector", "Backend widgets initialized in nodeCreated");
+        }, 10);
+        (_a = node2.onConstructed) == null ? void 0 : _a.call(node2);
+        log("FieldInspector", "Node constructed");
       }
     }
   });
 }
 export {
-  MarkdownRendererNode,
-  handleMarkdownRendererCreated,
-  setupMarkdownRenderer
+  FieldInspectorNode
 };
-/*! Bundled license information:
-
-dompurify/dist/purify.es.mjs:
-  (*! @license DOMPurify 3.2.6 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.2.6/LICENSE *)
-*/

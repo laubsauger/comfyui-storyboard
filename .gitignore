@@ -50,3 +50,4 @@ web/comfyui/tests/
 .style.yapf
 README.md
 config.json
+__scratchpad__/

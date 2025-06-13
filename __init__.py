@@ -9,6 +9,7 @@ import os
 import shutil
 from .py.log import log
 from .py.nodes.markdown_renderer import MarkdownRenderer
+from .py.nodes.field_inspector import FieldInspector
 from .py.nodes.llm_api import (
     OpenAIChatGPT,
     OpenAIAdvancedConfiguration,
@@ -19,6 +20,7 @@ import random
 
 NODE_CLASS_MAPPINGS = {
     MarkdownRenderer.NAME: MarkdownRenderer,
+    FieldInspector.NAME: FieldInspector,
     OpenAIChatGPT.NAME: OpenAIChatGPT,
     OpenAIAdvancedConfiguration.NAME: OpenAIAdvancedConfiguration,
     OpenAIAPIKeyManager.NAME: OpenAIAPIKeyManager,
@@ -26,6 +28,7 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     MarkdownRenderer.NAME: MarkdownRenderer.DISPLAY_NAME,
+    FieldInspector.NAME: FieldInspector.DISPLAY_NAME,
     OpenAIChatGPT.NAME: OpenAIChatGPT.DISPLAY_NAME,
     OpenAIAdvancedConfiguration.NAME: OpenAIAdvancedConfiguration.DISPLAY_NAME,
     OpenAIAPIKeyManager.NAME: OpenAIAPIKeyManager.DISPLAY_NAME,

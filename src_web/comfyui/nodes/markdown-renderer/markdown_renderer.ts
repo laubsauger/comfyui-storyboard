@@ -16,8 +16,8 @@ export function handleMarkdownRendererCreated(node: any) {
 export class MarkdownRendererNode extends StoryboardBaseNode {
   static override title = "Markdown Renderer";
   static override type = "MarkdownRenderer";
-  static override category = "storyboard";
-  static override _category = "storyboard"; // Keep category consistent
+  static override category = "storyboard/Markdown";
+  static override _category = "storyboard/Markdown"; // Keep category consistent
 
   _hasInputConnection = false;
   _editableContent = "";
