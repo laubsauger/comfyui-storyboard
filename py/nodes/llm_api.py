@@ -1,14 +1,20 @@
 import os
 import json
 import openai
+from ..log import log
 
 # Get the directory of the current script
 current_dir = os.path.dirname(os.path.abspath(__file__))
-# Go up one level to the 'comfyui-storyboard' directory
-storyboard_dir = os.path.dirname(current_dir)
+py_dir = os.path.dirname(current_dir)
+storyboard_dir = os.path.dirname(py_dir)
 # Path to the config file
 config_path = os.path.join(storyboard_dir, "config.json")
 
+
+log(current_dir, "current_dir")
+log(py_dir, "py_dir")
+log(storyboard_dir, "storyboard_dir")
+log(config_path, "config_path")
 
 def get_api_key():
     """
