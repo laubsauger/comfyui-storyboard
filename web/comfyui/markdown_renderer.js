@@ -19642,7 +19642,20 @@ function renderMarkdownToHtml(markdown2, baseUrl) {
   if (!markdown2) {
     return "";
   }
-  const markdownStr = Array.isArray(markdown2) ? markdown2.join("") : markdown2;
+  let markdownStr = Array.isArray(markdown2) ? markdown2.join("") : markdown2;
+  markdownStr = markdownStr.replace(/^\[|\]$/g, "").replace(/^'|'$/g, "").replace(/^"|"$/g, "");
+  log("highlight", "Cleaned markdown string:", markdownStr.slice(0, 100));
+  const preview = markdownStr.trim().slice(0, 100);
+  if (preview[0] === "{" || preview[0] === "[") {
+    try {
+      const jsonObj = JSON.parse(markdownStr);
+      const formatted = JSON.stringify(jsonObj, null, 2);
+      markdownStr = "```json\n" + formatted + "\n```";
+      log("highlight", "Wrapped JSON in code block");
+    } catch (e2) {
+      log("highlight", "JSON parse failed:", e2.message);
+    }
+  }
   const renderer = new _Renderer();
   const originalImage = renderer.image;
   renderer.image = ({ href, title, text: text2 }) => {
@@ -19662,11 +19675,15 @@ function renderMarkdownToHtml(markdown2, baseUrl) {
       langPrefix: "hljs language-",
       highlight(code, lang) {
         log("highlight", "Input type:", typeof code, "Is array:", Array.isArray(code), "Length:", Array.isArray(code) ? code.length : code.length);
-        const codeStr = Array.isArray(code) ? code.join("") : code;
-        log("highlight", "Joined string length:", codeStr.length, "First 50 chars:", codeStr.slice(0, 50));
-        const preview = codeStr.trim().slice(0, 100);
-        log("highlight", "Preview:", preview);
-        if (preview[0] === "{" || preview[0] === "[") {
+        let codeStr = Array.isArray(code) ? code.join("") : code;
+        codeStr = codeStr.replace(/^\[|\]$/g, "").replace(/^'|'$/g, "").replace(/^"|"$/g, "");
+        log("highlight", "Cleaned code string:", codeStr.slice(0, 100));
+        if (lang) {
+          return core_default.highlight(codeStr, { language: lang }).value;
+        }
+        const preview2 = codeStr.trim().slice(0, 100);
+        log("highlight", "Preview:", preview2);
+        if (preview2[0] === "{" || preview2[0] === "[") {
           log("highlight", "Detected potential JSON content");
           try {
             const jsonObj = JSON.parse(codeStr);
@@ -19678,11 +19695,11 @@ function renderMarkdownToHtml(markdown2, baseUrl) {
             log("highlight", "JSON parse failed:", e2.message);
           }
         }
-        if (preview.match(/^(def|class|import|from|if|for|while)\s/)) {
+        if (preview2.match(/^(def|class|import|from|if|for|while)\s/)) {
           log("highlight", "Detected Python content");
           return core_default.highlight(codeStr, { language: "python" }).value;
         }
-        if (preview.match(/^(#|\*|\-|\d\.)\s/)) {
+        if (preview2.match(/^(#|\*|\-|\d\.)\s/)) {
           log("highlight", "Detected Markdown content");
           return core_default.highlight(codeStr, { language: "markdown" }).value;
         }
@@ -19866,19 +19883,11 @@ function createMarkdownWidget(node2, config) {
   }
   markdownButton.addEventListener("click", (e2) => {
     e2.stopPropagation();
-    if (isSourceMode) {
-      showMarkdown();
-    } else {
-      showText();
-    }
+    showMarkdown();
   });
   textButton.addEventListener("click", (e2) => {
     e2.stopPropagation();
-    if (isSourceMode) {
-      showMarkdown();
-    } else {
-      showText();
-    }
+    showText();
   });
   if (isEditable) {
     container.addEventListener("click", (e2) => {

@@ -193,20 +193,12 @@ export function createMarkdownWidget(node: any, config: any) {
 
   markdownButton.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (isSourceMode) {
-      showMarkdown();
-    } else {
-      showText();
-    }
+    showMarkdown();
   });
 
   textButton.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (isSourceMode) {
-      showMarkdown();
-    } else {
-      showText();
-    }
+    showText();
   });
 
   if (isEditable) {

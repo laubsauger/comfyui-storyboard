@@ -38,8 +38,26 @@ export function renderMarkdownToHtml(
     return "";
   }
 
-  // Convert array to string if needed
-  const markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
+  // Convert array to string if needed and clean up Python-style string formatting
+  let markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
+
+  // Clean up Python-style string formatting (remove extra quotes and brackets)
+  markdownStr = markdownStr.replace(/^\[|\]$/g, '').replace(/^'|'$/g, '').replace(/^"|"$/g, '');
+
+  log("highlight", "Cleaned markdown string:", markdownStr.slice(0, 100));
+
+  // Check if the content looks like JSON and wrap it in a code block if it is
+  const preview = markdownStr.trim().slice(0, 100);
+  if (preview[0] === '{' || preview[0] === '[') {
+    try {
+      const jsonObj = JSON.parse(markdownStr);
+      const formatted = JSON.stringify(jsonObj, null, 2);
+      markdownStr = "```json\n" + formatted + "\n```";
+      log("highlight", "Wrapped JSON in code block");
+    } catch (e: any) {
+      log("highlight", "JSON parse failed:", e.message);
+    }
+  }
 
   // Create renderer and only override the image method
   const renderer = new Renderer();
@@ -65,9 +83,16 @@ export function renderMarkdownToHtml(
       highlight(code: string | string[], lang: string) {
         log("highlight", "Input type:", typeof code, "Is array:", Array.isArray(code), "Length:", Array.isArray(code) ? code.length : code.length);
 
-        // Handle array input by joining it
-        const codeStr = Array.isArray(code) ? code.join('') : code;
-        log("highlight", "Joined string length:", codeStr.length, "First 50 chars:", codeStr.slice(0, 50));
+        // Handle array input by joining it and cleaning up Python-style formatting
+        let codeStr = Array.isArray(code) ? code.join('') : code;
+        codeStr = codeStr.replace(/^\[|\]$/g, '').replace(/^'|'$/g, '').replace(/^"|"$/g, '');
+
+        log("highlight", "Cleaned code string:", codeStr.slice(0, 100));
+
+        // If we already have a language specified, use it
+        if (lang) {
+          return hljs.highlight(codeStr, { language: lang }).value;
+        }
 
         // Get first 100 chars for quick checks (more than enough for our patterns)
         const preview = codeStr.trim().slice(0, 100);
