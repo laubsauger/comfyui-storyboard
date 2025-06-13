@@ -19619,14 +19619,56 @@ var log = (prefix, ...args) => {
     console.log(`[${prefix}]`, ...args);
   }
 };
-var ALLOWED_TAGS = ["video", "source"];
+var ALLOWED_TAGS = [
+  "video",
+  "source",
+  // original video/source tags
+  "pre",
+  "code",
+  "span",
+  // code block elements
+  "div",
+  "p",
+  "br",
+  // block elements
+  "strong",
+  "em",
+  "b",
+  "i",
+  // text formatting
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  // headers
+  "ul",
+  "ol",
+  "li",
+  // lists
+  "blockquote",
+  // quotes
+  "a",
+  "img"
+  // links and images
+];
 var ALLOWED_ATTRS = [
   "controls",
   "autoplay",
   "loop",
   "muted",
   "preload",
-  "poster"
+  "poster",
+  "class",
+  "id",
+  // styling attributes
+  "href",
+  "target",
+  "src",
+  "alt",
+  "title"
+  // link and image attributes
 ];
 var MEDIA_SRC_REGEX = /(<(?:img|source|video)[^>]*\ssrc=['"])(?!(?:\/|https?:\/\/))([^'"\s>]+)(['"])/gi;
 
@@ -19643,8 +19685,9 @@ function renderMarkdownToHtml(markdown2, baseUrl) {
     return "";
   }
   let markdownStr = Array.isArray(markdown2) ? markdown2.join("") : markdown2;
-  markdownStr = markdownStr.replace(/^\[|\]$/g, "").replace(/^'|'$/g, "").replace(/^"|"$/g, "");
-  log("highlight", "Cleaned markdown string:", markdownStr.slice(0, 100));
+  markdownStr = markdownStr.replace(/^'|'$/g, "").replace(/^"|"$/g, "");
+  markdownStr = markdownStr.replace(/```(\w+)(\[|\{)/g, "```$1\n$2");
+  markdownStr = markdownStr.replace(/(\]|\})```/g, "$1\n```");
   const preview = markdownStr.trim().slice(0, 100);
   if (preview[0] === "{" || preview[0] === "[") {
     try {
@@ -19674,36 +19717,27 @@ function renderMarkdownToHtml(markdown2, baseUrl) {
     markedHighlight({
       langPrefix: "hljs language-",
       highlight(code, lang) {
-        log("highlight", "Input type:", typeof code, "Is array:", Array.isArray(code), "Length:", Array.isArray(code) ? code.length : code.length);
         let codeStr = Array.isArray(code) ? code.join("") : code;
-        codeStr = codeStr.replace(/^\[|\]$/g, "").replace(/^'|'$/g, "").replace(/^"|"$/g, "");
-        log("highlight", "Cleaned code string:", codeStr.slice(0, 100));
+        codeStr = codeStr.replace(/^'|'$/g, "").replace(/^"|"$/g, "");
         if (lang) {
           return core_default.highlight(codeStr, { language: lang }).value;
         }
         const preview2 = codeStr.trim().slice(0, 100);
-        log("highlight", "Preview:", preview2);
         if (preview2[0] === "{" || preview2[0] === "[") {
-          log("highlight", "Detected potential JSON content");
           try {
             const jsonObj = JSON.parse(codeStr);
-            log("highlight", "Successfully parsed JSON");
             const formatted = JSON.stringify(jsonObj, null, 2);
-            log("highlight", "Formatted JSON length:", formatted.length);
             return core_default.highlight(formatted, { language: "json" }).value;
           } catch (e2) {
             log("highlight", "JSON parse failed:", e2.message);
           }
         }
         if (preview2.match(/^(def|class|import|from|if|for|while)\s/)) {
-          log("highlight", "Detected Python content");
           return core_default.highlight(codeStr, { language: "python" }).value;
         }
         if (preview2.match(/^(#|\*|\-|\d\.)\s/)) {
-          log("highlight", "Detected Markdown content");
           return core_default.highlight(codeStr, { language: "markdown" }).value;
         }
-        log("highlight", "No specific format detected, using plaintext");
         return core_default.highlight(codeStr, { language: "plaintext" }).value;
       }
     })

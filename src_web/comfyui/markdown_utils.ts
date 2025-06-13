@@ -40,11 +40,22 @@ export function renderMarkdownToHtml(
 
   // Convert array to string if needed and clean up Python-style string formatting
   let markdownStr = Array.isArray(markdown) ? markdown.join("") : markdown;
+  // log("markdown", "Original input:", markdownStr.slice(0, 200));
 
-  // Clean up Python-style string formatting (remove extra quotes and brackets)
-  markdownStr = markdownStr.replace(/^\[|\]$/g, '').replace(/^'|'$/g, '').replace(/^"|"$/g, '');
+  // Clean up Python-style string formatting (remove extra quotes but preserve square brackets)
+  // Square brackets might be part of JSON content, not formatting artifacts
+  markdownStr = markdownStr.replace(/^'|'$/g, '').replace(/^"|"$/g, '');
+  // log("markdown", "After cleanup:", markdownStr.slice(0, 200));
 
-  log("highlight", "Cleaned markdown string:", markdownStr.slice(0, 100));
+  // Fix code blocks that don't have proper newlines after opening fence
+  // This fixes the issue where ```json[content] doesn't render properly
+  markdownStr = markdownStr.replace(/```(\w+)(\[|\{)/g, '```$1\n$2');
+
+  // Also fix cases where there's no newline before closing fence
+  markdownStr = markdownStr.replace(/(\]|\})```/g, '$1\n```');
+  // log("markdown", "After code block fix:", markdownStr.slice(0, 200));
+
+  // log("highlight", "Cleaned markdown string:", markdownStr.slice(0, 100));
 
   // Check if the content looks like JSON and wrap it in a code block if it is
   const preview = markdownStr.trim().slice(0, 100);
@@ -81,13 +92,16 @@ export function renderMarkdownToHtml(
     markedHighlight({
       langPrefix: "hljs language-",
       highlight(code: string | string[], lang: string) {
-        log("highlight", "Input type:", typeof code, "Is array:", Array.isArray(code), "Length:", Array.isArray(code) ? code.length : code.length);
+        // log("highlight", "Input type:", typeof code, "Is array:", Array.isArray(code), "Length:", Array.isArray(code) ? code.length : code.length);
 
         // Handle array input by joining it and cleaning up Python-style formatting
         let codeStr = Array.isArray(code) ? code.join('') : code;
-        codeStr = codeStr.replace(/^\[|\]$/g, '').replace(/^'|'$/g, '').replace(/^"|"$/g, '');
 
-        log("highlight", "Cleaned code string:", codeStr.slice(0, 100));
+        // Only clean up Python-style string formatting (quotes) but preserve square brackets for JSON
+        // The square brackets might be part of the actual content, not formatting artifacts
+        codeStr = codeStr.replace(/^'|'$/g, '').replace(/^"|"$/g, '');
+
+        // log("highlight", "Cleaned code string:", codeStr.slice(0, 100));
 
         // If we already have a language specified, use it
         if (lang) {
@@ -96,16 +110,16 @@ export function renderMarkdownToHtml(
 
         // Get first 100 chars for quick checks (more than enough for our patterns)
         const preview = codeStr.trim().slice(0, 100);
-        log("highlight", "Preview:", preview);
+        // log("highlight", "Preview:", preview);
 
         // Quick check for JSON-like content (starts with { or [)
         if (preview[0] === '{' || preview[0] === '[') {
-          log("highlight", "Detected potential JSON content");
+          // log("highlight", "Detected potential JSON content");
           try {
             const jsonObj = JSON.parse(codeStr);
-            log("highlight", "Successfully parsed JSON");
+            // log("highlight", "Successfully parsed JSON");
             const formatted = JSON.stringify(jsonObj, null, 2);
-            log("highlight", "Formatted JSON length:", formatted.length);
+            // log("highlight", "Formatted JSON length:", formatted.length);
             return hljs.highlight(formatted, { language: 'json' }).value;
           } catch (e: any) {
             log("highlight", "JSON parse failed:", e.message);
@@ -115,18 +129,18 @@ export function renderMarkdownToHtml(
 
         // Quick check for Python-like content (indentation, def, class, etc)
         if (preview.match(/^(def|class|import|from|if|for|while)\s/)) {
-          log("highlight", "Detected Python content");
+          // log("highlight", "Detected Python content");
           return hljs.highlight(codeStr, { language: 'python' }).value;
         }
 
         // Quick check for markdown-like content (headers, lists, etc)
         if (preview.match(/^(#|\*|\-|\d\.)\s/)) {
-          log("highlight", "Detected Markdown content");
+          // log("highlight", "Detected Markdown content");
           return hljs.highlight(codeStr, { language: 'markdown' }).value;
         }
 
         // Default to plaintext for everything else
-        log("highlight", "No specific format detected, using plaintext");
+        // log("highlight", "No specific format detected, using plaintext");
         return hljs.highlight(codeStr, { language: 'plaintext' }).value;
       },
     })
@@ -134,6 +148,7 @@ export function renderMarkdownToHtml(
 
   // Add debug logging for the markdown parsing
   let html = markedInstance.parse(markdownStr) as string;
+  // log("markdown", "HTML before sanitization:", html.slice(0, 500));
 
   if (baseUrl) {
     html = html.replace(MEDIA_SRC_REGEX, `$1${baseUrl}$2$3`);
@@ -143,5 +158,6 @@ export function renderMarkdownToHtml(
     ADD_TAGS: ALLOWED_TAGS,
     ADD_ATTR: ALLOWED_ATTRS,
   });
+  // log("markdown", "HTML after sanitization:", sanitized.slice(0, 500));
   return sanitized;
 } 
