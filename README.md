@@ -2,13 +2,49 @@
 
 This custom node for ComfyUI provides a markdown renderer to display formatted text and notes within your workflow.
 
+![Node Inspector](https://raw.githubusercontent.com/laubsauger/comfyui-storyboard/refs/heads/main/docs/inspector_full.png)
+
 ## Features
 
-- **Markdown Rendering**: Write and display markdown content directly in your ComfyUI workflow.
-- **Dynamic Inputs**: Connect text from other nodes to dynamically render markdown.
-- **In-graph Editor**: Edit markdown content directly within the node when no input is connected.
+### 📝 Markdown Renderer Node
 
-# TypeScript Development Guide
+- **Universal input acceptance** - Handles strings, lists, dictionaries, and complex objects
+- **Intelligent formatting** - Auto-detects content type and applies appropriate rendering
+- **Code syntax highlighting** - Built-in highlighting with automatic language detection
+- **Smart code block detection** - No triple backticks required for standalone code
+- **Pretty-print formatting** - Enhanced dictionary and object visualization
+- **Deduplication logic** - Automatically removes duplicate content from list inputs
+
+### 🔍 Node Inspector Node
+
+- **Real-time inspection** - Live monitoring of connected node states and values
+- **Multi-level tracking** - Traces values through complex upstream connection chains
+- **Interactive UI** - Hover effects, scrollable interface, and clickable navigation
+- **Connection inheritance** - Visual indicators showing which widgets inherit from inputs
+- **Smart navigation** - Click-to-navigate to parent nodes with smooth viewport animation
+- **Dual output modes** - Provides both structured data (lists/dicts) and passthrough outputs
+- **Type visualization** - Color-coded socket types and connection state indicators
+- **Segmented display** - Separate informational and selectable sections for optimal UX
+
+### 🤖 OpenAI Chat GPT Node
+
+- **Smart caching system** - Automatically caches identical requests to avoid redundant API calls
+- **Visual cache status** - Real-time indicator showing "New", "Cached", or "Error" states  
+- **Multi-model support** - Full GPT-4, GPT-3.5 model family with temperature controls
+- **Advanced configuration** - JSON response formatting, seeded generation, custom parameters
+- **Integrated API key management** - Secure configuration file handling
+- **Error resilience** - Graceful error handling with informative status messages
+
+### 🚀 Workflow Benefits
+
+- **Debug-friendly** - Comprehensive inspection and visualization capabilities
+- **Performance optimized** - Smart caching reduces API costs and latency
+- **Developer-focused** - Enhanced debugging and development workflow tools
+- **Production-ready** - Robust error handling and state management
+
+---
+
+## TypeScript Development Guide
 
 This project now uses TypeScript for frontend development, following the same build mechanism as rgthree-comfy.
 
