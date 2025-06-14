@@ -2,6 +2,7 @@ import { app } from "scripts/app.js";
 import { StoryboardBaseNode } from "../base_node.js";
 import type { IWidget, LGraphNode } from "@comfyorg/litegraph";
 import { log } from "../../../common/shared_utils.js";
+import type { LGraph } from "@comfyorg/litegraph";
 import { LiteGraph } from "@comfyorg/litegraph";
 
 interface ConnectedNodeWidget {
@@ -43,6 +44,7 @@ export class NodeInspectorNode extends StoryboardBaseNode {
   _fieldEntries: FieldEntry[] = [];
   _selectedFieldNames: string[] = [];
   _updateInterval: number | null = null;
+  _overlayShown: boolean = false;
 
   // Get the input socket type color from the inspector node itself
   private getInputSocketTypeColor(): string {
@@ -216,19 +218,39 @@ export class NodeInspectorNode extends StoryboardBaseNode {
 
     const fieldEntries: FieldEntry[] = [];
 
-    // Get widget entries (existing functionality)
+    // Get widget entries with input inheritance detection
     if (node.widgets) {
       const widgetEntries = node.widgets
         .filter((widget: IWidget) => widget.name && widget.name !== "preview")
         .map((widget: IWidget) => {
           const value = (widget as any).value;
+
+          // Check if this widget has a corresponding input (widget-to-input mapping)
+          let isConnected = false;
+          let connectedNodeTitle = "";
+
+          if (node.inputs) {
+            const matchingInput = node.inputs.find(input => input.name === widget.name);
+            if (matchingInput && matchingInput.link) {
+              isConnected = true;
+              const link = app.graph.links[matchingInput.link];
+              if (link) {
+                const connectedNode = app.graph.getNodeById(link.origin_id);
+                if (connectedNode) {
+                  connectedNodeTitle = connectedNode.title || "Unknown Node";
+                }
+              }
+            }
+          }
+
           return {
             name: widget.name,
             value: this.formatWidgetValue({ name: widget.name, value, type: (widget as any).type }),
             rawValue: value,
             type: (widget as any).type,
             sourceType: 'widget' as const,
-            isConnected: false
+            isConnected: isConnected,
+            connectedNodeTitle: connectedNodeTitle
           };
         });
       fieldEntries.push(...widgetEntries);
@@ -405,6 +427,25 @@ export class NodeInspectorNode extends StoryboardBaseNode {
 
     let totalHeight = 0;
 
+    // Store reference to our class instance for widget handlers
+    const classInstance = this as NodeInspectorNode;
+    const navigateToConnectedNode = (nodeTitle: string) => {
+      console.log('[NodeInspector] Calling navigateToConnectedNode with:', nodeTitle);
+      console.log('[NodeInspector] classInstance type:', typeof classInstance);
+      console.log('[NodeInspector] classInstance.navigateToConnectedNode type:', typeof classInstance.navigateToConnectedNode);
+      if (typeof classInstance.navigateToConnectedNode === 'function') {
+        classInstance.navigateToConnectedNode(nodeTitle);
+      } else {
+        console.error('[NodeInspector] navigateToConnectedNode method not found on class instance');
+        console.log('[NodeInspector] Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(classInstance)));
+      }
+    };
+
+    // Debug: Check if method is available
+    console.log('[NodeInspector] navigateToConnectedNode method available:', typeof this.navigateToConnectedNode === 'function');
+    console.log('[NodeInspector] this context type:', this.constructor.name);
+    console.log('[NodeInspector] this is NodeInspectorNode:', this instanceof NodeInspectorNode);
+
     // Create widgets section (selectable) - put first since it's most important
     if (widgetEntries.length > 0) {
       const maxFieldsBeforeScroll = 8;
@@ -426,16 +467,25 @@ export class NodeInspectorNode extends StoryboardBaseNode {
         size: [0, widgetSectionHeight],
         _lastClickTime: 0,
         _lastClickedField: "",
+        _inheritanceClickAreas: [] as any[],
+        _hoveredBadge: null as any,
+        _hoveredRowIndex: -1,
+        _hoveredInputBadge: null as any,
+        _hoveredInputRowIndex: -1,
+        hideOnZoom: false,
 
-        draw: function (ctx: any, node: any, widgetWidth: number, y: number, widgetHeight: number) {
+        draw: function (ctx: CanvasRenderingContext2D, node: NodeInspectorNode, widgetWidth: number, y: number, widgetHeight: number) {
           this.last_y = y;
+
+          // Clear click areas at start of draw cycle
+          this._inheritanceClickAreas = [];
 
           // Header
           ctx.fillStyle = "#444";
           ctx.fillRect(itemPadding, y, widgetWidth - (itemPadding * 2), headerHeight);
           ctx.fillStyle = "#aaa";
           ctx.font = "bold 12px Arial";
-          ctx.fillText("Widgets (Selectable)", itemPadding + 10, y + 16);
+          ctx.fillText("Widgets", itemPadding + 10, y + 16);
 
           // Scrollable area
           const scrollAreaY = y + headerHeight;
@@ -464,9 +514,16 @@ export class NodeInspectorNode extends StoryboardBaseNode {
             if (fieldY + lineHeight < scrollAreaY || fieldY > scrollAreaY + scrollableHeight) continue;
 
             const isSelected = self._selectedFieldNames.includes(entry.name);
+            const isHovered = this._hoveredRowIndex === i;
 
-            // Background
-            ctx.fillStyle = isSelected ? "#2d4a6b" : "#3a3a3a";
+            // Background with hover effect
+            let bgColor;
+            if (isSelected) {
+              bgColor = isHovered ? "#3d5a7b" : "#2d4a6b"; // Lighter blue when hovered
+            } else {
+              bgColor = isHovered ? "#4a4a4a" : "#3a3a3a"; // Lighter gray when hovered
+            }
+            ctx.fillStyle = bgColor;
             ctx.fillRect(itemPadding, fieldY, widgetWidth - (itemPadding * 2), lineHeight);
 
             if (isSelected) {
@@ -524,26 +581,103 @@ export class NodeInspectorNode extends StoryboardBaseNode {
             // Connection inheritance info for widgets (if they get value from an input)
             if (entry.isConnected && entry.connectedNodeTitle) {
               const valueWidth = ctx.measureText(` ${displayValue}`).width;
-              const connectionStartX = itemPadding + 50 + nameWidth + valueWidth + 10;
+              const connectionStartX = itemPadding + 50 + nameWidth + valueWidth + 15;
 
-              // Check if there's enough space
-              if (connectionStartX < widgetWidth - 80) {
-                const availableWidth = widgetWidth - connectionStartX - itemPadding - 10;
-                let connectionText = ` → ${entry.connectedNodeTitle}`;
+              // Check if there's enough space for the inheritance badge
+              if (connectionStartX < widgetWidth - 100) {
+                const availableWidth = widgetWidth - connectionStartX - itemPadding - 15;
+                let connectionText = entry.connectedNodeTitle;
 
                 // Truncate if necessary
                 ctx.font = "10px Arial";
+                const arrowWidth = ctx.measureText("→ ").width;
+                const maxTextWidth = availableWidth - arrowWidth - 20; // 20px for padding in badge
+
                 let connectionWidth = ctx.measureText(connectionText).width;
-                if (connectionWidth > availableWidth) {
-                  const maxTitleLength = Math.floor((availableWidth - 20) / 6);
-                  const truncatedTitle = entry.connectedNodeTitle.length > maxTitleLength
-                    ? entry.connectedNodeTitle.substring(0, maxTitleLength) + "..."
-                    : entry.connectedNodeTitle;
-                  connectionText = ` → ${truncatedTitle}`;
+                if (connectionWidth > maxTextWidth) {
+                  const maxTitleLength = Math.floor(maxTextWidth / 6);
+                  connectionText = connectionText.length > maxTitleLength
+                    ? connectionText.substring(0, maxTitleLength) + "..."
+                    : connectionText;
                 }
 
-                ctx.fillStyle = isSelected ? "#a0c4e0" : "#888";
-                ctx.fillText(connectionText, connectionStartX, fieldY + 15);
+                // Draw inheritance badge with rounded corners and hover effect
+                const badgeText = `→ ${connectionText}`;
+                const badgeWidth = ctx.measureText(badgeText).width + 16; // 8px padding each side
+                const badgeHeight = 14;
+                const badgeX = connectionStartX;
+                const badgeY = fieldY + (lineHeight - badgeHeight) / 2;
+
+                // Store click area for this inheritance badge
+                if (!this._inheritanceClickAreas) this._inheritanceClickAreas = [];
+                const badgeInfo = {
+                  x: badgeX,
+                  y: badgeY,
+                  width: badgeWidth,
+                  height: badgeHeight,
+                  fieldName: entry.name,
+                  connectedNodeTitle: entry.connectedNodeTitle,
+                  scrollOffset: this.scrollOffset || 0,
+                  widgetY: scrollAreaY
+                };
+                this._inheritanceClickAreas.push(badgeInfo);
+
+                // Check if this badge is being hovered
+                const isHovered = this._hoveredBadge &&
+                  this._hoveredBadge.fieldName === entry.name &&
+                  this._hoveredBadge.connectedNodeTitle === entry.connectedNodeTitle;
+
+                // Badge background with subtle gradient and hover effect
+                const gradient = ctx.createLinearGradient(badgeX, badgeY, badgeX, badgeY + badgeHeight);
+                if (isHovered) {
+                  // Hover state - brighter colors
+                  gradient.addColorStop(0, "#6a9de4");
+                  gradient.addColorStop(1, "#4a7dc4");
+                } else if (isSelected) {
+                  gradient.addColorStop(0, "#4a7dc4");
+                  gradient.addColorStop(1, "#3a6db4");
+                } else {
+                  gradient.addColorStop(0, "#555");
+                  gradient.addColorStop(1, "#444");
+                }
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                ctx.fill();
+
+                // Badge border with hover effect
+                if (isHovered) {
+                  ctx.strokeStyle = "#8bb3f0";
+                  ctx.lineWidth = 2; // Thicker border on hover
+                } else {
+                  ctx.strokeStyle = isSelected ? "#6a9de4" : "#777";
+                  ctx.lineWidth = 1;
+                }
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                ctx.stroke();
+
+                // Badge text with hover effect
+                if (isHovered) {
+                  ctx.fillStyle = "#ffffff";
+                } else {
+                  ctx.fillStyle = isSelected ? "#e6f3ff" : "#ddd";
+                }
+                ctx.font = "bold 9px Arial";
+                ctx.fillText(badgeText, badgeX + 8, badgeY + 10);
+
+                // Add subtle shadow for depth
+                ctx.shadowColor = "rgba(0,0,0,0.3)";
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetY = 1;
+                ctx.fillStyle = "rgba(255,255,255,0.1)";
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, 1, 4);
+                ctx.fill();
+                ctx.shadowColor = "transparent";
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
               }
             }
           }
@@ -573,9 +707,96 @@ export class NodeInspectorNode extends StoryboardBaseNode {
           return [width, widgetSectionHeight];
         },
 
-        mouse: function (event: any, pos: any, node: any) {
+        mouse: function (event: any, pos: any, node: NodeInspectorNode & { graph: LGraph & { canvas: any } }) {
           const [localX, localY] = pos;
           const widgetRelativeY = localY - (this.last_y || 0) - headerHeight; // Account for header
+
+          // Handle mouse move for hover effects (including all mouse events for better responsiveness)
+          if (event.type === "mousemove" || event.type === "pointermove" || event.type === "pointerover" || event.type === "mouseover") {
+            let foundHover = false;
+            let newHoveredBadge = null;
+
+            // Check for row hover (for selectable items)
+            const hoveredIndex = Math.floor((widgetRelativeY + this.scrollOffset) / lineHeight);
+            const newHoveredRowIndex = (hoveredIndex >= 0 && hoveredIndex < widgetEntries.length && widgetRelativeY >= 0 && widgetRelativeY < scrollableHeight) ? hoveredIndex : -1;
+
+            if (this._hoveredRowIndex !== newHoveredRowIndex) {
+              this._hoveredRowIndex = newHoveredRowIndex;
+              console.log('[NodeInspector] Widget hover changed to row:', newHoveredRowIndex);
+              if ((app as any).graph) {
+                (app as any).graph.setDirtyCanvas(true, false);
+              }
+            }
+
+            // Check if mouse is over any inheritance badge
+            if (this._inheritanceClickAreas && this._inheritanceClickAreas.length > 0) {
+              for (const clickArea of this._inheritanceClickAreas) {
+                const adjustedY = clickArea.y + (clickArea.scrollOffset - this.scrollOffset);
+                if (localX >= clickArea.x && localX <= clickArea.x + clickArea.width &&
+                  localY >= adjustedY && localY <= adjustedY + clickArea.height) {
+
+                  // Set hover state
+                  newHoveredBadge = {
+                    fieldName: clickArea.fieldName,
+                    connectedNodeTitle: clickArea.connectedNodeTitle
+                  };
+                  foundHover = true;
+                  break;
+                }
+              }
+            }
+
+            // Always update hover state (more responsive)
+            const hoverChanged = (!this._hoveredBadge && newHoveredBadge) ||
+              (this._hoveredBadge && !newHoveredBadge) ||
+              (this._hoveredBadge && newHoveredBadge &&
+                (this._hoveredBadge.fieldName !== newHoveredBadge.fieldName ||
+                  this._hoveredBadge.connectedNodeTitle !== newHoveredBadge.connectedNodeTitle));
+
+            this._hoveredBadge = newHoveredBadge;
+
+            // Change cursor
+            if (node.graph && node.graph.canvas && node.graph.canvas.canvas) {
+              node.graph.canvas.canvas.style.cursor = foundHover ? "pointer" : "default";
+            }
+
+            // Force redraw more frequently for better hover responsiveness
+            if ((app as any).graph) {
+              (app as any).graph.setDirtyCanvas(true, false);
+            }
+
+            return foundHover;
+          }
+
+          // Handle mouse leave to reset hover states
+          if (event.type === "mouseleave" || event.type === "pointerleave") {
+            if (this._hoveredRowIndex !== -1) {
+              this._hoveredRowIndex = -1;
+              console.log('[NodeInspector] Widget hover reset on mouse leave');
+              if ((app as any).graph) {
+                (app as any).graph.setDirtyCanvas(true, false);
+              }
+            }
+            if (this._hoveredInputRowIndex !== -1) {
+              this._hoveredInputRowIndex = -1;
+              console.log('[NodeInspector] Input hover reset on mouse leave');
+              if ((app as any).graph) {
+                (app as any).graph.setDirtyCanvas(true, false);
+              }
+            }
+            if (this._hoveredBadge) {
+              this._hoveredBadge = null;
+              if ((app as any).graph) {
+                (app as any).graph.setDirtyCanvas(true, false);
+              }
+            }
+            if (this._hoveredInputBadge) {
+              this._hoveredInputBadge = null;
+              if ((app as any).graph) {
+                (app as any).graph.setDirtyCanvas(true, false);
+              }
+            }
+          }
 
           // Scrolling
           if (event.type === "wheel" || event.type === "mousewheel") {
@@ -594,32 +815,55 @@ export class NodeInspectorNode extends StoryboardBaseNode {
 
           // Click handling - only widgets section
           if (event.type === "pointerup" || event.type === "click") {
-            const clickedIndex = Math.floor((widgetRelativeY + this.scrollOffset) / lineHeight);
+            // Check for inheritance badge clicks first - HIGHEST PRIORITY
+            if (this._inheritanceClickAreas) {
+              for (const clickArea of this._inheritanceClickAreas) {
+                const adjustedY = clickArea.y + (clickArea.scrollOffset - this.scrollOffset);
+                if (localX >= clickArea.x && localX <= clickArea.x + clickArea.width &&
+                  localY >= adjustedY && localY <= adjustedY + clickArea.height) {
+                  // Navigate to connected node
+                  console.log('[NodeInspector] Badge clicked, navigating to:', clickArea.connectedNodeTitle);
+                  console.log('[NodeInspector] About to call navigateToConnectedNode function');
+                  try {
+                    navigateToConnectedNode(clickArea.connectedNodeTitle);
+                    console.log('[NodeInspector] navigateToConnectedNode call completed');
+                  } catch (error) {
+                    console.error('[NodeInspector] Error calling navigateToConnectedNode:', error);
+                  }
+                  return true; // Consume the event to prevent row selection
+                }
+              }
+            }
 
-            if (clickedIndex >= 0 && clickedIndex < widgetEntries.length) {
-              const entry = widgetEntries[clickedIndex];
-              if (!entry) return false;
+            // Only handle row selection if badge wasn't clicked
+            if (widgetRelativeY >= 0 && widgetRelativeY < scrollableHeight) {
+              const clickedIndex = Math.floor((widgetRelativeY + this.scrollOffset) / lineHeight);
 
-              const fieldName = entry.name;
+              if (clickedIndex >= 0 && clickedIndex < widgetEntries.length) {
+                const entry = widgetEntries[clickedIndex];
+                if (!entry) return false;
 
-              // Prevent rapid double clicks
-              const now = Date.now();
-              if (this._lastClickTime && this._lastClickedField === fieldName && (now - this._lastClickTime) < 300) {
+                const fieldName = entry.name;
+
+                // Prevent rapid double clicks
+                const now = Date.now();
+                if (this._lastClickTime && this._lastClickedField === fieldName && (now - this._lastClickTime) < 300) {
+                  return true;
+                }
+                this._lastClickTime = now;
+                this._lastClickedField = fieldName;
+
+                try {
+                  self.selectField(fieldName);
+                } catch (e) {
+                  console.error("Error calling selectField:", e);
+                }
+
+                if ((app as any).graph) {
+                  (app as any).graph.setDirtyCanvas(true, false);
+                }
                 return true;
               }
-              this._lastClickTime = now;
-              this._lastClickedField = fieldName;
-
-              try {
-                self.selectField(fieldName);
-              } catch (e) {
-                console.error("Error calling selectField:", e);
-              }
-
-              if ((app as any).graph) {
-                (app as any).graph.setDirtyCanvas(true, false);
-              }
-              return true;
             }
           }
 
@@ -643,8 +887,15 @@ export class NodeInspectorNode extends StoryboardBaseNode {
         y: 0,
         serialize: false,
         _desiredHeight: inputSectionHeight,
+        _inputInheritanceClickAreas: [] as any[],
+        _hoveredInputBadge: null as any,
+        _hoveredInputRowIndex: -1,
+        hideOnZoom: false,
 
-        draw: function (ctx: any, node: any, widgetWidth: number, y: number, widgetHeight: number) {
+        draw: function (ctx: CanvasRenderingContext2D, node: NodeInspectorNode, widgetWidth: number, y: number, widgetHeight: number) {
+          // Clear click areas at start of draw cycle
+          this._inputInheritanceClickAreas = [];
+
           // Header
           ctx.fillStyle = "#444";
           ctx.fillRect(itemPadding, y, widgetWidth - (itemPadding * 2), headerHeight);
@@ -658,8 +909,10 @@ export class NodeInspectorNode extends StoryboardBaseNode {
             if (!entry) continue;
 
             const fieldY = y + headerHeight + (i * lineHeight);
+            const isInputHovered = this._hoveredInputRowIndex === i;
 
-            ctx.fillStyle = "#3a3a3a";
+            // Background with subtle hover effect for informational items
+            ctx.fillStyle = isInputHovered ? "#424242" : "#3a3a3a"; // Slightly lighter on hover
             ctx.fillRect(itemPadding, fieldY, widgetWidth - (itemPadding * 2), lineHeight);
 
             // Connection indicator
@@ -691,26 +944,99 @@ export class NodeInspectorNode extends StoryboardBaseNode {
             // Connection info for inputs (what they're connected to)
             if (entry.isConnected && entry.connectedNodeTitle) {
               const valueWidth = ctx.measureText(` ${displayValue}`).width;
-              const connectionStartX = itemPadding + 40 + nameWidth + valueWidth + 10;
+              const connectionStartX = itemPadding + 40 + nameWidth + valueWidth + 15;
 
-              // Check if there's enough space
-              if (connectionStartX < widgetWidth - 80) {
-                const availableWidth = widgetWidth - connectionStartX - itemPadding - 10;
-                let connectionText = ` → ${entry.connectedNodeTitle}`;
+              // Check if there's enough space for the inheritance badge
+              if (connectionStartX < widgetWidth - 100) {
+                const availableWidth = widgetWidth - connectionStartX - itemPadding - 15;
+                let connectionText = entry.connectedNodeTitle;
 
                 // Truncate if necessary
                 ctx.font = "10px Arial";
+                const arrowWidth = ctx.measureText("→ ").width;
+                const maxTextWidth = availableWidth - arrowWidth - 20; // 20px for padding in badge
+
                 let connectionWidth = ctx.measureText(connectionText).width;
-                if (connectionWidth > availableWidth) {
-                  const maxTitleLength = Math.floor((availableWidth - 20) / 6);
-                  const truncatedTitle = entry.connectedNodeTitle.length > maxTitleLength
-                    ? entry.connectedNodeTitle.substring(0, maxTitleLength) + "..."
-                    : entry.connectedNodeTitle;
-                  connectionText = ` → ${truncatedTitle}`;
+                if (connectionWidth > maxTextWidth) {
+                  const maxTitleLength = Math.floor(maxTextWidth / 6);
+                  connectionText = connectionText.length > maxTitleLength
+                    ? connectionText.substring(0, maxTitleLength) + "..."
+                    : connectionText;
                 }
 
-                ctx.fillStyle = "#888";
-                ctx.fillText(connectionText, connectionStartX, fieldY + 15);
+                // Draw inheritance badge with rounded corners
+                const badgeText = `→ ${connectionText}`;
+                const badgeWidth = ctx.measureText(badgeText).width + 16; // 8px padding each side
+                const badgeHeight = 14;
+                const badgeX = connectionStartX;
+                const badgeY = fieldY + (lineHeight - badgeHeight) / 2;
+
+                // Store click area for this inheritance badge (inputs section)
+                if (!this._inputInheritanceClickAreas) this._inputInheritanceClickAreas = [];
+                const inputBadgeInfo = {
+                  x: badgeX,
+                  y: badgeY,
+                  width: badgeWidth,
+                  height: badgeHeight,
+                  fieldName: entry.name,
+                  connectedNodeTitle: entry.connectedNodeTitle,
+                  absoluteY: fieldY
+                };
+                this._inputInheritanceClickAreas.push(inputBadgeInfo);
+
+                // Check if this input badge is being hovered
+                const isInputHovered = this._hoveredInputBadge &&
+                  this._hoveredInputBadge.fieldName === entry.name &&
+                  this._hoveredInputBadge.connectedNodeTitle === entry.connectedNodeTitle;
+
+                // Badge background with subtle gradient and hover effect
+                const gradient = ctx.createLinearGradient(badgeX, badgeY, badgeX, badgeY + badgeHeight);
+                if (isInputHovered) {
+                  // Hover state - brighter colors
+                  gradient.addColorStop(0, "#6a9de4");
+                  gradient.addColorStop(1, "#4a7dc4");
+                } else {
+                  gradient.addColorStop(0, "#555");
+                  gradient.addColorStop(1, "#444");
+                }
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                ctx.fill();
+
+                // Badge border with hover effect
+                if (isInputHovered) {
+                  ctx.strokeStyle = "#8bb3f0";
+                  ctx.lineWidth = 2; // Thicker border on hover
+                } else {
+                  ctx.strokeStyle = "#777";
+                  ctx.lineWidth = 1;
+                }
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                ctx.stroke();
+
+                // Badge text with hover effect
+                if (isInputHovered) {
+                  ctx.fillStyle = "#ffffff";
+                } else {
+                  ctx.fillStyle = "#ddd";
+                }
+                ctx.font = "bold 9px Arial";
+                ctx.fillText(badgeText, badgeX + 8, badgeY + 10);
+
+                // Add subtle shadow for depth
+                ctx.shadowColor = "rgba(0,0,0,0.3)";
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetY = 1;
+                ctx.fillStyle = "rgba(255,255,255,0.1)";
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, 1, 4);
+                ctx.fill();
+                ctx.shadowColor = "transparent";
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
               }
             }
           }
@@ -722,7 +1048,107 @@ export class NodeInspectorNode extends StoryboardBaseNode {
           return [width, inputSectionHeight];
         },
 
-        mouse: function () { return false; }
+        mouse: function (event: any, pos: any, node: NodeInspectorNode & { graph: LGraph & { canvas: any } }) {
+          const [localX, localY] = pos;
+
+          // Handle mouse move for hover effects (including all mouse events for better responsiveness)
+          if (event.type === "mousemove" || event.type === "pointermove" || event.type === "pointerover" || event.type === "mouseover") {
+            let foundInputHover = false;
+            let newHoveredInputBadge = null;
+
+            // Check for input row hover (for informational items)
+            const inputRowY = localY - headerHeight;
+            const hoveredInputIndex = Math.floor(inputRowY / lineHeight);
+            const inputSectionHeight = inputEntries.length * lineHeight;
+            const newHoveredInputRowIndex = (hoveredInputIndex >= 0 && hoveredInputIndex < inputEntries.length && inputRowY >= 0 && inputRowY < inputSectionHeight) ? hoveredInputIndex : -1;
+
+            if (this._hoveredInputRowIndex !== newHoveredInputRowIndex) {
+              this._hoveredInputRowIndex = newHoveredInputRowIndex;
+              console.log('[NodeInspector] Input hover changed to row:', newHoveredInputRowIndex);
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+
+            // Check if mouse is over any input inheritance badge
+            if (this._inputInheritanceClickAreas && this._inputInheritanceClickAreas.length > 0) {
+              for (const clickArea of this._inputInheritanceClickAreas) {
+                if (localX >= clickArea.x && localX <= clickArea.x + clickArea.width &&
+                  localY >= clickArea.y && localY <= clickArea.y + clickArea.height) {
+
+                  // Set hover state
+                  newHoveredInputBadge = {
+                    fieldName: clickArea.fieldName,
+                    connectedNodeTitle: clickArea.connectedNodeTitle
+                  };
+                  foundInputHover = true;
+                  break;
+                }
+              }
+            }
+
+            // Always update hover state (more responsive)
+            const inputHoverChanged = (!this._hoveredInputBadge && newHoveredInputBadge) ||
+              (this._hoveredInputBadge && !newHoveredInputBadge) ||
+              (this._hoveredInputBadge && newHoveredInputBadge &&
+                (this._hoveredInputBadge.fieldName !== newHoveredInputBadge.fieldName ||
+                  this._hoveredInputBadge.connectedNodeTitle !== newHoveredInputBadge.connectedNodeTitle));
+
+            this._hoveredInputBadge = newHoveredInputBadge;
+
+            // Change cursor
+            if (node.graph && node.graph.canvas && node.graph.canvas.canvas) {
+              node.graph.canvas.canvas.style.cursor = foundInputHover ? "pointer" : "default";
+            }
+
+            // Force redraw more frequently for better hover responsiveness
+            if (app.graph) {
+              app.graph.setDirtyCanvas(true, false);
+            }
+
+            return foundInputHover;
+          }
+
+          // Handle mouse leave to reset hover states
+          if (event.type === "mouseleave" || event.type === "pointerleave") {
+            if (this._hoveredInputRowIndex !== -1) {
+              this._hoveredInputRowIndex = -1;
+              console.log('[NodeInspector] Input hover reset on mouse leave');
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+            if (this._hoveredInputBadge) {
+              this._hoveredInputBadge = null;
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+          }
+
+          // Handle clicks on inheritance badges - HIGHEST PRIORITY
+          if (event.type === "pointerup" || event.type === "click") {
+            if (this._inputInheritanceClickAreas) {
+              for (const clickArea of this._inputInheritanceClickAreas) {
+                if (localX >= clickArea.x && localX <= clickArea.x + clickArea.width &&
+                  localY >= clickArea.y && localY <= clickArea.y + clickArea.height) {
+                  // Navigate to connected node
+                  console.log('[NodeInspector] Input badge clicked, navigating to:', clickArea.connectedNodeTitle);
+                  console.log('[NodeInspector] About to call navigateToConnectedNode function for input');
+                  try {
+                    navigateToConnectedNode(clickArea.connectedNodeTitle);
+                    console.log('[NodeInspector] navigateToConnectedNode call completed for input');
+                  } catch (error) {
+                    console.error('[NodeInspector] Error calling navigateToConnectedNode for input:', error);
+                  }
+                  return true; // Consume the event
+                }
+              }
+            }
+          }
+
+          return false;
+        }
       };
 
       this.widgets.push(inputWidget as any);
@@ -808,6 +1234,157 @@ export class NodeInspectorNode extends StoryboardBaseNode {
       fieldNames: fieldNamesString,
       selectedCount: this._selectedFieldNames.length
     });
+  }
+
+  navigateToConnectedNode(nodeTitle: string) {
+    console.log(`[NodeInspector] Starting navigation to: ${nodeTitle}`);
+
+    if (!app.graph) {
+      console.warn(`[NodeInspector] No app.graph available`);
+      return;
+    }
+
+    // Find the source node by title (the node that provides the value)
+    const sourceNode = app.graph._nodes.find((node: any) => node.title === nodeTitle);
+    if (!sourceNode) {
+      console.warn(`[NodeInspector] Could not find source node with title: ${nodeTitle}`);
+      console.log(`[NodeInspector] Available nodes:`, app.graph._nodes.map((n: any) => n.title));
+      return;
+    }
+
+    console.log(`[NodeInspector] Found source node:`, sourceNode.title, 'at position:', sourceNode.pos);
+
+    // Smooth animation to center the view on the source node
+    if (app.canvas) {
+      const canvas = app.canvas as any;
+      console.log(`[NodeInspector] Canvas available, starting smooth navigation`);
+
+      // Center the node in the viewport using a simpler, more reliable approach
+      // Get the canvas dimensions in screen pixels
+      const canvasRect = canvas.canvas.getBoundingClientRect();
+      const viewportCenterX = canvasRect.width / 2;
+      const viewportCenterY = canvasRect.height / 2;
+
+      // Calculate the center of the node (not just its top-left corner)
+      const nodeCenterX = sourceNode.pos[0] + (sourceNode.size[0] / 2);
+      const nodeCenterY = sourceNode.pos[1] + (sourceNode.size[1] / 2);
+
+      // Calculate target offset to center the node's center point in the viewport
+      // We want: nodeCenterPosition + offset = viewportCenter / scale
+      // So: offset = (viewportCenter / scale) - nodeCenterPosition
+      const targetOffsetX = (viewportCenterX / canvas.ds.scale) - nodeCenterX;
+      const targetOffsetY = (viewportCenterY / canvas.ds.scale) - nodeCenterY;
+
+      // Get current offset
+      const startOffsetX = canvas.ds.offset[0];
+      const startOffsetY = canvas.ds.offset[1];
+
+      console.log(`[NodeInspector] Start offset: [${startOffsetX}, ${startOffsetY}]`);
+      console.log(`[NodeInspector] Target offset: [${targetOffsetX}, ${targetOffsetY}]`);
+
+      // Animation parameters
+      const duration = 600; // 600ms animation
+      const startTime = Date.now();
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Easing function (ease-out cubic for smooth deceleration)
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+
+        // Interpolate between start and target positions
+        const currentOffsetX = startOffsetX + (targetOffsetX - startOffsetX) * easeOut;
+        const currentOffsetY = startOffsetY + (targetOffsetY - startOffsetY) * easeOut;
+
+        canvas.ds.offset[0] = currentOffsetX;
+        canvas.ds.offset[1] = currentOffsetY;
+
+        canvas.setDirty(true, true);
+
+        // Show overlay when animation is 70% complete for better user experience
+        if (progress >= 0.7 && !this._overlayShown) {
+          this._overlayShown = true;
+          this.addNodeHighlightOverlay(sourceNode, canvas);
+          console.log(`[NodeInspector] Overlay shown at 70% animation progress`);
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // Animation complete
+          console.log(`[NodeInspector] Smooth navigation completed successfully`);
+          log(this.type, `Navigated to source node: ${nodeTitle} at position [${sourceNode.pos[0]}, ${sourceNode.pos[1]}]`);
+          // Reset overlay flag for next navigation
+          this._overlayShown = false;
+        }
+      };
+
+      // Start the animation
+      requestAnimationFrame(animate);
+
+    } else {
+      console.warn(`[NodeInspector] No app.canvas available`);
+    }
+  }
+
+  private addNodeHighlightOverlay(targetNode: any, canvas: any) {
+    console.log(`[NodeInspector] Adding subtle highlight overlay to node`);
+
+    // Store original onDrawForeground if it exists
+    const originalOnDrawForeground = targetNode.onDrawForeground;
+
+    // Create highlight overlay function
+    const highlightOverlay = function (this: any, ctx: any) {
+      // Call original onDrawForeground first if it exists
+      if (originalOnDrawForeground) {
+        originalOnDrawForeground.call(this, ctx);
+      }
+
+      // Draw subtle highlight overlay that includes the title area
+      const padding = 8;
+      const titleHeight = LiteGraph.NODE_TITLE_HEIGHT || 30; // Standard ComfyUI title height
+
+      // Start from the title area (negative Y to include title)
+      const x = -padding;
+      const y = -titleHeight - padding; // Include title height
+      const width = this.size[0] + (padding * 2);
+      const height = this.size[1] + titleHeight + (padding * 2); // Add title height to total height
+
+      // Semi-transparent overlay with subtle border
+      ctx.save();
+
+      // Outer glow effect
+      ctx.shadowColor = "rgba(74, 157, 255, 0.4)";
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+
+      // Semi-transparent background
+      ctx.fillStyle = "rgba(74, 157, 255, 0.1)";
+      ctx.strokeStyle = "rgba(74, 157, 255, 0.6)";
+      ctx.lineWidth = 2;
+
+      // Draw rounded rectangle overlay that covers title and body
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+    };
+
+    // Apply the highlight overlay
+    targetNode.onDrawForeground = highlightOverlay;
+
+    // Remove the highlight after 1.5 seconds
+    setTimeout(() => {
+      targetNode.onDrawForeground = originalOnDrawForeground;
+      canvas.setDirty(true, true);
+      console.log(`[NodeInspector] Removed highlight overlay`);
+    }, 1500);
+
+    console.log(`[NodeInspector] Highlight overlay applied`);
   }
 
   private updateFieldsDisplay() {
@@ -1102,6 +1679,8 @@ if (!(window as any).__nodeInspectorRegistered) {
           "onNodeCreated",
           "onRemoved",
           "onMouseDown",
+          "onMouseOver",
+          "onMouseOut",
           "clone",
           "onConstructed",
           "checkAndRunOnConstructed",
@@ -1114,12 +1693,17 @@ if (!(window as any).__nodeInspectorRegistered) {
           "getConnectedNodeOutputValue",
           "formatValue",
           "createFieldsDisplayWidget",
+          "createInformationalSection",
+          "createSelectableSection",
           "startPeriodicUpdates",
           "stopPeriodicUpdates",
           "computeSize",
           "getInputSocketTypeColor",
           "getSocketTypeColor",
-          "updateBackendProperties"
+          "updateBackendProperties",
+          "navigateToConnectedNode",
+          "addNodeHighlightOverlay",
+          "addCustomWidget"
         ];
 
         for (const method of methods) {

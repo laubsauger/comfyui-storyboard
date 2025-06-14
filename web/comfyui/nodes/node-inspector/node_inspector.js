@@ -14150,6 +14150,7 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
     this._fieldEntries = [];
     this._selectedFieldNames = [];
     this._updateInterval = null;
+    this._overlayShown = false;
     log(this.type, "Constructor called");
   }
   // Get the input socket type color from the inspector node itself
@@ -14284,13 +14285,29 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
     if (node2.widgets) {
       const widgetEntries = node2.widgets.filter((widget) => widget.name && widget.name !== "preview").map((widget) => {
         const value = widget.value;
+        let isConnected = false;
+        let connectedNodeTitle = "";
+        if (node2.inputs) {
+          const matchingInput = node2.inputs.find((input) => input.name === widget.name);
+          if (matchingInput && matchingInput.link) {
+            isConnected = true;
+            const link = app.graph.links[matchingInput.link];
+            if (link) {
+              const connectedNode = app.graph.getNodeById(link.origin_id);
+              if (connectedNode) {
+                connectedNodeTitle = connectedNode.title || "Unknown Node";
+              }
+            }
+          }
+        }
         return {
           name: widget.name,
           value: this.formatWidgetValue({ name: widget.name, value, type: widget.type }),
           rawValue: value,
           type: widget.type,
           sourceType: "widget",
-          isConnected: false
+          isConnected,
+          connectedNodeTitle
         };
       });
       fieldEntries.push(...widgetEntries);
@@ -14431,6 +14448,21 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
     const itemPadding = 10;
     const headerHeight = 25;
     let totalHeight = 0;
+    const classInstance = this;
+    const navigateToConnectedNode = (nodeTitle) => {
+      console.log("[NodeInspector] Calling navigateToConnectedNode with:", nodeTitle);
+      console.log("[NodeInspector] classInstance type:", typeof classInstance);
+      console.log("[NodeInspector] classInstance.navigateToConnectedNode type:", typeof classInstance.navigateToConnectedNode);
+      if (typeof classInstance.navigateToConnectedNode === "function") {
+        classInstance.navigateToConnectedNode(nodeTitle);
+      } else {
+        console.error("[NodeInspector] navigateToConnectedNode method not found on class instance");
+        console.log("[NodeInspector] Available methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(classInstance)));
+      }
+    };
+    console.log("[NodeInspector] navigateToConnectedNode method available:", typeof this.navigateToConnectedNode === "function");
+    console.log("[NodeInspector] this context type:", this.constructor.name);
+    console.log("[NodeInspector] this is NodeInspectorNode:", this instanceof _NodeInspectorNode);
     if (widgetEntries.length > 0) {
       const maxFieldsBeforeScroll = 8;
       const shouldScroll = widgetEntries.length > maxFieldsBeforeScroll;
@@ -14450,13 +14482,20 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
         size: [0, widgetSectionHeight],
         _lastClickTime: 0,
         _lastClickedField: "",
+        _inheritanceClickAreas: [],
+        _hoveredBadge: null,
+        _hoveredRowIndex: -1,
+        _hoveredInputBadge: null,
+        _hoveredInputRowIndex: -1,
+        hideOnZoom: false,
         draw: function(ctx, node2, widgetWidth, y, widgetHeight) {
           this.last_y = y;
+          this._inheritanceClickAreas = [];
           ctx.fillStyle = "#444";
           ctx.fillRect(itemPadding, y, widgetWidth - itemPadding * 2, headerHeight);
           ctx.fillStyle = "#aaa";
           ctx.font = "bold 12px Arial";
-          ctx.fillText("Widgets (Selectable)", itemPadding + 10, y + 16);
+          ctx.fillText("Widgets", itemPadding + 10, y + 16);
           const scrollAreaY = y + headerHeight;
           const totalContentHeight = widgetEntries.length * lineHeight;
           const maxScrollOffset = Math.max(0, totalContentHeight - scrollableHeight);
@@ -14475,7 +14514,14 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
             const fieldY = scrollAreaY + i * lineHeight - this.scrollOffset;
             if (fieldY + lineHeight < scrollAreaY || fieldY > scrollAreaY + scrollableHeight) continue;
             const isSelected = self._selectedFieldNames.includes(entry.name);
-            ctx.fillStyle = isSelected ? "#2d4a6b" : "#3a3a3a";
+            const isHovered = this._hoveredRowIndex === i;
+            let bgColor;
+            if (isSelected) {
+              bgColor = isHovered ? "#3d5a7b" : "#2d4a6b";
+            } else {
+              bgColor = isHovered ? "#4a4a4a" : "#3a3a3a";
+            }
+            ctx.fillStyle = bgColor;
             ctx.fillRect(itemPadding, fieldY, widgetWidth - itemPadding * 2, lineHeight);
             if (isSelected) {
               ctx.strokeStyle = "#5a7fa0";
@@ -14517,19 +14563,78 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
             ctx.fillText(` ${displayValue}`, itemPadding + 50 + nameWidth, fieldY + 15);
             if (entry.isConnected && entry.connectedNodeTitle) {
               const valueWidth = ctx.measureText(` ${displayValue}`).width;
-              const connectionStartX = itemPadding + 50 + nameWidth + valueWidth + 10;
-              if (connectionStartX < widgetWidth - 80) {
-                const availableWidth = widgetWidth - connectionStartX - itemPadding - 10;
-                let connectionText = ` \u2192 ${entry.connectedNodeTitle}`;
+              const connectionStartX = itemPadding + 50 + nameWidth + valueWidth + 15;
+              if (connectionStartX < widgetWidth - 100) {
+                const availableWidth = widgetWidth - connectionStartX - itemPadding - 15;
+                let connectionText = entry.connectedNodeTitle;
                 ctx.font = "10px Arial";
+                const arrowWidth = ctx.measureText("\u2192 ").width;
+                const maxTextWidth = availableWidth - arrowWidth - 20;
                 let connectionWidth = ctx.measureText(connectionText).width;
-                if (connectionWidth > availableWidth) {
-                  const maxTitleLength = Math.floor((availableWidth - 20) / 6);
-                  const truncatedTitle = entry.connectedNodeTitle.length > maxTitleLength ? entry.connectedNodeTitle.substring(0, maxTitleLength) + "..." : entry.connectedNodeTitle;
-                  connectionText = ` \u2192 ${truncatedTitle}`;
+                if (connectionWidth > maxTextWidth) {
+                  const maxTitleLength = Math.floor(maxTextWidth / 6);
+                  connectionText = connectionText.length > maxTitleLength ? connectionText.substring(0, maxTitleLength) + "..." : connectionText;
                 }
-                ctx.fillStyle = isSelected ? "#a0c4e0" : "#888";
-                ctx.fillText(connectionText, connectionStartX, fieldY + 15);
+                const badgeText = `\u2192 ${connectionText}`;
+                const badgeWidth = ctx.measureText(badgeText).width + 16;
+                const badgeHeight = 14;
+                const badgeX = connectionStartX;
+                const badgeY = fieldY + (lineHeight - badgeHeight) / 2;
+                if (!this._inheritanceClickAreas) this._inheritanceClickAreas = [];
+                const badgeInfo = {
+                  x: badgeX,
+                  y: badgeY,
+                  width: badgeWidth,
+                  height: badgeHeight,
+                  fieldName: entry.name,
+                  connectedNodeTitle: entry.connectedNodeTitle,
+                  scrollOffset: this.scrollOffset || 0,
+                  widgetY: scrollAreaY
+                };
+                this._inheritanceClickAreas.push(badgeInfo);
+                const isHovered2 = this._hoveredBadge && this._hoveredBadge.fieldName === entry.name && this._hoveredBadge.connectedNodeTitle === entry.connectedNodeTitle;
+                const gradient = ctx.createLinearGradient(badgeX, badgeY, badgeX, badgeY + badgeHeight);
+                if (isHovered2) {
+                  gradient.addColorStop(0, "#6a9de4");
+                  gradient.addColorStop(1, "#4a7dc4");
+                } else if (isSelected) {
+                  gradient.addColorStop(0, "#4a7dc4");
+                  gradient.addColorStop(1, "#3a6db4");
+                } else {
+                  gradient.addColorStop(0, "#555");
+                  gradient.addColorStop(1, "#444");
+                }
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                ctx.fill();
+                if (isHovered2) {
+                  ctx.strokeStyle = "#8bb3f0";
+                  ctx.lineWidth = 2;
+                } else {
+                  ctx.strokeStyle = isSelected ? "#6a9de4" : "#777";
+                  ctx.lineWidth = 1;
+                }
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                ctx.stroke();
+                if (isHovered2) {
+                  ctx.fillStyle = "#ffffff";
+                } else {
+                  ctx.fillStyle = isSelected ? "#e6f3ff" : "#ddd";
+                }
+                ctx.font = "bold 9px Arial";
+                ctx.fillText(badgeText, badgeX + 8, badgeY + 10);
+                ctx.shadowColor = "rgba(0,0,0,0.3)";
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetY = 1;
+                ctx.fillStyle = "rgba(255,255,255,0.1)";
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, 1, 4);
+                ctx.fill();
+                ctx.shadowColor = "transparent";
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
               }
             }
           }
@@ -14554,6 +14659,69 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
         mouse: function(event, pos, node2) {
           const [localX, localY] = pos;
           const widgetRelativeY = localY - (this.last_y || 0) - headerHeight;
+          if (event.type === "mousemove" || event.type === "pointermove" || event.type === "pointerover" || event.type === "mouseover") {
+            let foundHover = false;
+            let newHoveredBadge = null;
+            const hoveredIndex = Math.floor((widgetRelativeY + this.scrollOffset) / lineHeight);
+            const newHoveredRowIndex = hoveredIndex >= 0 && hoveredIndex < widgetEntries.length && widgetRelativeY >= 0 && widgetRelativeY < scrollableHeight ? hoveredIndex : -1;
+            if (this._hoveredRowIndex !== newHoveredRowIndex) {
+              this._hoveredRowIndex = newHoveredRowIndex;
+              console.log("[NodeInspector] Widget hover changed to row:", newHoveredRowIndex);
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+            if (this._inheritanceClickAreas && this._inheritanceClickAreas.length > 0) {
+              for (const clickArea of this._inheritanceClickAreas) {
+                const adjustedY = clickArea.y + (clickArea.scrollOffset - this.scrollOffset);
+                if (localX >= clickArea.x && localX <= clickArea.x + clickArea.width && localY >= adjustedY && localY <= adjustedY + clickArea.height) {
+                  newHoveredBadge = {
+                    fieldName: clickArea.fieldName,
+                    connectedNodeTitle: clickArea.connectedNodeTitle
+                  };
+                  foundHover = true;
+                  break;
+                }
+              }
+            }
+            const hoverChanged = !this._hoveredBadge && newHoveredBadge || this._hoveredBadge && !newHoveredBadge || this._hoveredBadge && newHoveredBadge && (this._hoveredBadge.fieldName !== newHoveredBadge.fieldName || this._hoveredBadge.connectedNodeTitle !== newHoveredBadge.connectedNodeTitle);
+            this._hoveredBadge = newHoveredBadge;
+            if (node2.graph && node2.graph.canvas && node2.graph.canvas.canvas) {
+              node2.graph.canvas.canvas.style.cursor = foundHover ? "pointer" : "default";
+            }
+            if (app.graph) {
+              app.graph.setDirtyCanvas(true, false);
+            }
+            return foundHover;
+          }
+          if (event.type === "mouseleave" || event.type === "pointerleave") {
+            if (this._hoveredRowIndex !== -1) {
+              this._hoveredRowIndex = -1;
+              console.log("[NodeInspector] Widget hover reset on mouse leave");
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+            if (this._hoveredInputRowIndex !== -1) {
+              this._hoveredInputRowIndex = -1;
+              console.log("[NodeInspector] Input hover reset on mouse leave");
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+            if (this._hoveredBadge) {
+              this._hoveredBadge = null;
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+            if (this._hoveredInputBadge) {
+              this._hoveredInputBadge = null;
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+          }
           if (event.type === "wheel" || event.type === "mousewheel") {
             const delta2 = event.deltaY || event.wheelDelta || 0;
             this.scrollOffset += delta2 > 0 ? 20 : -20;
@@ -14566,26 +14734,44 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
             return true;
           }
           if (event.type === "pointerup" || event.type === "click") {
-            const clickedIndex = Math.floor((widgetRelativeY + this.scrollOffset) / lineHeight);
-            if (clickedIndex >= 0 && clickedIndex < widgetEntries.length) {
-              const entry = widgetEntries[clickedIndex];
-              if (!entry) return false;
-              const fieldName = entry.name;
-              const now = Date.now();
-              if (this._lastClickTime && this._lastClickedField === fieldName && now - this._lastClickTime < 300) {
+            if (this._inheritanceClickAreas) {
+              for (const clickArea of this._inheritanceClickAreas) {
+                const adjustedY = clickArea.y + (clickArea.scrollOffset - this.scrollOffset);
+                if (localX >= clickArea.x && localX <= clickArea.x + clickArea.width && localY >= adjustedY && localY <= adjustedY + clickArea.height) {
+                  console.log("[NodeInspector] Badge clicked, navigating to:", clickArea.connectedNodeTitle);
+                  console.log("[NodeInspector] About to call navigateToConnectedNode function");
+                  try {
+                    navigateToConnectedNode(clickArea.connectedNodeTitle);
+                    console.log("[NodeInspector] navigateToConnectedNode call completed");
+                  } catch (error) {
+                    console.error("[NodeInspector] Error calling navigateToConnectedNode:", error);
+                  }
+                  return true;
+                }
+              }
+            }
+            if (widgetRelativeY >= 0 && widgetRelativeY < scrollableHeight) {
+              const clickedIndex = Math.floor((widgetRelativeY + this.scrollOffset) / lineHeight);
+              if (clickedIndex >= 0 && clickedIndex < widgetEntries.length) {
+                const entry = widgetEntries[clickedIndex];
+                if (!entry) return false;
+                const fieldName = entry.name;
+                const now = Date.now();
+                if (this._lastClickTime && this._lastClickedField === fieldName && now - this._lastClickTime < 300) {
+                  return true;
+                }
+                this._lastClickTime = now;
+                this._lastClickedField = fieldName;
+                try {
+                  self.selectField(fieldName);
+                } catch (e2) {
+                  console.error("Error calling selectField:", e2);
+                }
+                if (app.graph) {
+                  app.graph.setDirtyCanvas(true, false);
+                }
                 return true;
               }
-              this._lastClickTime = now;
-              this._lastClickedField = fieldName;
-              try {
-                self.selectField(fieldName);
-              } catch (e2) {
-                console.error("Error calling selectField:", e2);
-              }
-              if (app.graph) {
-                app.graph.setDirtyCanvas(true, false);
-              }
-              return true;
             }
           }
           return false;
@@ -14604,7 +14790,12 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
         y: 0,
         serialize: false,
         _desiredHeight: inputSectionHeight,
+        _inputInheritanceClickAreas: [],
+        _hoveredInputBadge: null,
+        _hoveredInputRowIndex: -1,
+        hideOnZoom: false,
         draw: function(ctx, node2, widgetWidth, y, widgetHeight) {
+          this._inputInheritanceClickAreas = [];
           ctx.fillStyle = "#444";
           ctx.fillRect(itemPadding, y, widgetWidth - itemPadding * 2, headerHeight);
           ctx.fillStyle = "#aaa";
@@ -14614,7 +14805,8 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
             const entry = inputEntries[i];
             if (!entry) continue;
             const fieldY = y + headerHeight + i * lineHeight;
-            ctx.fillStyle = "#3a3a3a";
+            const isInputHovered = this._hoveredInputRowIndex === i;
+            ctx.fillStyle = isInputHovered ? "#424242" : "#3a3a3a";
             ctx.fillRect(itemPadding, fieldY, widgetWidth - itemPadding * 2, lineHeight);
             const sourceIcon = entry.isConnected ? "\u25CF" : "\u25CB";
             const sourceColor = entry.isConnected ? "#46d946" : "#999";
@@ -14636,19 +14828,74 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
             ctx.fillText(` ${displayValue}`, itemPadding + 40 + nameWidth, fieldY + 15);
             if (entry.isConnected && entry.connectedNodeTitle) {
               const valueWidth = ctx.measureText(` ${displayValue}`).width;
-              const connectionStartX = itemPadding + 40 + nameWidth + valueWidth + 10;
-              if (connectionStartX < widgetWidth - 80) {
-                const availableWidth = widgetWidth - connectionStartX - itemPadding - 10;
-                let connectionText = ` \u2192 ${entry.connectedNodeTitle}`;
+              const connectionStartX = itemPadding + 40 + nameWidth + valueWidth + 15;
+              if (connectionStartX < widgetWidth - 100) {
+                const availableWidth = widgetWidth - connectionStartX - itemPadding - 15;
+                let connectionText = entry.connectedNodeTitle;
                 ctx.font = "10px Arial";
+                const arrowWidth = ctx.measureText("\u2192 ").width;
+                const maxTextWidth = availableWidth - arrowWidth - 20;
                 let connectionWidth = ctx.measureText(connectionText).width;
-                if (connectionWidth > availableWidth) {
-                  const maxTitleLength = Math.floor((availableWidth - 20) / 6);
-                  const truncatedTitle = entry.connectedNodeTitle.length > maxTitleLength ? entry.connectedNodeTitle.substring(0, maxTitleLength) + "..." : entry.connectedNodeTitle;
-                  connectionText = ` \u2192 ${truncatedTitle}`;
+                if (connectionWidth > maxTextWidth) {
+                  const maxTitleLength = Math.floor(maxTextWidth / 6);
+                  connectionText = connectionText.length > maxTitleLength ? connectionText.substring(0, maxTitleLength) + "..." : connectionText;
                 }
-                ctx.fillStyle = "#888";
-                ctx.fillText(connectionText, connectionStartX, fieldY + 15);
+                const badgeText = `\u2192 ${connectionText}`;
+                const badgeWidth = ctx.measureText(badgeText).width + 16;
+                const badgeHeight = 14;
+                const badgeX = connectionStartX;
+                const badgeY = fieldY + (lineHeight - badgeHeight) / 2;
+                if (!this._inputInheritanceClickAreas) this._inputInheritanceClickAreas = [];
+                const inputBadgeInfo = {
+                  x: badgeX,
+                  y: badgeY,
+                  width: badgeWidth,
+                  height: badgeHeight,
+                  fieldName: entry.name,
+                  connectedNodeTitle: entry.connectedNodeTitle,
+                  absoluteY: fieldY
+                };
+                this._inputInheritanceClickAreas.push(inputBadgeInfo);
+                const isInputHovered2 = this._hoveredInputBadge && this._hoveredInputBadge.fieldName === entry.name && this._hoveredInputBadge.connectedNodeTitle === entry.connectedNodeTitle;
+                const gradient = ctx.createLinearGradient(badgeX, badgeY, badgeX, badgeY + badgeHeight);
+                if (isInputHovered2) {
+                  gradient.addColorStop(0, "#6a9de4");
+                  gradient.addColorStop(1, "#4a7dc4");
+                } else {
+                  gradient.addColorStop(0, "#555");
+                  gradient.addColorStop(1, "#444");
+                }
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                ctx.fill();
+                if (isInputHovered2) {
+                  ctx.strokeStyle = "#8bb3f0";
+                  ctx.lineWidth = 2;
+                } else {
+                  ctx.strokeStyle = "#777";
+                  ctx.lineWidth = 1;
+                }
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                ctx.stroke();
+                if (isInputHovered2) {
+                  ctx.fillStyle = "#ffffff";
+                } else {
+                  ctx.fillStyle = "#ddd";
+                }
+                ctx.font = "bold 9px Arial";
+                ctx.fillText(badgeText, badgeX + 8, badgeY + 10);
+                ctx.shadowColor = "rgba(0,0,0,0.3)";
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetY = 1;
+                ctx.fillStyle = "rgba(255,255,255,0.1)";
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, 1, 4);
+                ctx.fill();
+                ctx.shadowColor = "transparent";
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
               }
             }
           }
@@ -14657,7 +14904,76 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
         computeSize: function(width2) {
           return [width2, inputSectionHeight];
         },
-        mouse: function() {
+        mouse: function(event, pos, node2) {
+          const [localX, localY] = pos;
+          if (event.type === "mousemove" || event.type === "pointermove" || event.type === "pointerover" || event.type === "mouseover") {
+            let foundInputHover = false;
+            let newHoveredInputBadge = null;
+            const inputRowY = localY - headerHeight;
+            const hoveredInputIndex = Math.floor(inputRowY / lineHeight);
+            const inputSectionHeight2 = inputEntries.length * lineHeight;
+            const newHoveredInputRowIndex = hoveredInputIndex >= 0 && hoveredInputIndex < inputEntries.length && inputRowY >= 0 && inputRowY < inputSectionHeight2 ? hoveredInputIndex : -1;
+            if (this._hoveredInputRowIndex !== newHoveredInputRowIndex) {
+              this._hoveredInputRowIndex = newHoveredInputRowIndex;
+              console.log("[NodeInspector] Input hover changed to row:", newHoveredInputRowIndex);
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+            if (this._inputInheritanceClickAreas && this._inputInheritanceClickAreas.length > 0) {
+              for (const clickArea of this._inputInheritanceClickAreas) {
+                if (localX >= clickArea.x && localX <= clickArea.x + clickArea.width && localY >= clickArea.y && localY <= clickArea.y + clickArea.height) {
+                  newHoveredInputBadge = {
+                    fieldName: clickArea.fieldName,
+                    connectedNodeTitle: clickArea.connectedNodeTitle
+                  };
+                  foundInputHover = true;
+                  break;
+                }
+              }
+            }
+            const inputHoverChanged = !this._hoveredInputBadge && newHoveredInputBadge || this._hoveredInputBadge && !newHoveredInputBadge || this._hoveredInputBadge && newHoveredInputBadge && (this._hoveredInputBadge.fieldName !== newHoveredInputBadge.fieldName || this._hoveredInputBadge.connectedNodeTitle !== newHoveredInputBadge.connectedNodeTitle);
+            this._hoveredInputBadge = newHoveredInputBadge;
+            if (node2.graph && node2.graph.canvas && node2.graph.canvas.canvas) {
+              node2.graph.canvas.canvas.style.cursor = foundInputHover ? "pointer" : "default";
+            }
+            if (app.graph) {
+              app.graph.setDirtyCanvas(true, false);
+            }
+            return foundInputHover;
+          }
+          if (event.type === "mouseleave" || event.type === "pointerleave") {
+            if (this._hoveredInputRowIndex !== -1) {
+              this._hoveredInputRowIndex = -1;
+              console.log("[NodeInspector] Input hover reset on mouse leave");
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+            if (this._hoveredInputBadge) {
+              this._hoveredInputBadge = null;
+              if (app.graph) {
+                app.graph.setDirtyCanvas(true, false);
+              }
+            }
+          }
+          if (event.type === "pointerup" || event.type === "click") {
+            if (this._inputInheritanceClickAreas) {
+              for (const clickArea of this._inputInheritanceClickAreas) {
+                if (localX >= clickArea.x && localX <= clickArea.x + clickArea.width && localY >= clickArea.y && localY <= clickArea.y + clickArea.height) {
+                  console.log("[NodeInspector] Input badge clicked, navigating to:", clickArea.connectedNodeTitle);
+                  console.log("[NodeInspector] About to call navigateToConnectedNode function for input");
+                  try {
+                    navigateToConnectedNode(clickArea.connectedNodeTitle);
+                    console.log("[NodeInspector] navigateToConnectedNode call completed for input");
+                  } catch (error) {
+                    console.error("[NodeInspector] Error calling navigateToConnectedNode for input:", error);
+                  }
+                  return true;
+                }
+              }
+            }
+          }
           return false;
         }
       };
@@ -14721,6 +15037,97 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
       fieldNames: fieldNamesString,
       selectedCount: this._selectedFieldNames.length
     });
+  }
+  navigateToConnectedNode(nodeTitle) {
+    console.log(`[NodeInspector] Starting navigation to: ${nodeTitle}`);
+    if (!app.graph) {
+      console.warn(`[NodeInspector] No app.graph available`);
+      return;
+    }
+    const sourceNode = app.graph._nodes.find((node2) => node2.title === nodeTitle);
+    if (!sourceNode) {
+      console.warn(`[NodeInspector] Could not find source node with title: ${nodeTitle}`);
+      console.log(`[NodeInspector] Available nodes:`, app.graph._nodes.map((n) => n.title));
+      return;
+    }
+    console.log(`[NodeInspector] Found source node:`, sourceNode.title, "at position:", sourceNode.pos);
+    if (app.canvas) {
+      const canvas2 = app.canvas;
+      console.log(`[NodeInspector] Canvas available, starting smooth navigation`);
+      const canvasRect = canvas2.canvas.getBoundingClientRect();
+      const viewportCenterX = canvasRect.width / 2;
+      const viewportCenterY = canvasRect.height / 2;
+      const nodeCenterX = sourceNode.pos[0] + sourceNode.size[0] / 2;
+      const nodeCenterY = sourceNode.pos[1] + sourceNode.size[1] / 2;
+      const targetOffsetX = viewportCenterX / canvas2.ds.scale - nodeCenterX;
+      const targetOffsetY = viewportCenterY / canvas2.ds.scale - nodeCenterY;
+      const startOffsetX = canvas2.ds.offset[0];
+      const startOffsetY = canvas2.ds.offset[1];
+      console.log(`[NodeInspector] Start offset: [${startOffsetX}, ${startOffsetY}]`);
+      console.log(`[NodeInspector] Target offset: [${targetOffsetX}, ${targetOffsetY}]`);
+      const duration = 600;
+      const startTime = Date.now();
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const currentOffsetX = startOffsetX + (targetOffsetX - startOffsetX) * easeOut;
+        const currentOffsetY = startOffsetY + (targetOffsetY - startOffsetY) * easeOut;
+        canvas2.ds.offset[0] = currentOffsetX;
+        canvas2.ds.offset[1] = currentOffsetY;
+        canvas2.setDirty(true, true);
+        if (progress >= 0.7 && !this._overlayShown) {
+          this._overlayShown = true;
+          this.addNodeHighlightOverlay(sourceNode, canvas2);
+          console.log(`[NodeInspector] Overlay shown at 70% animation progress`);
+        }
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          console.log(`[NodeInspector] Smooth navigation completed successfully`);
+          log(this.type, `Navigated to source node: ${nodeTitle} at position [${sourceNode.pos[0]}, ${sourceNode.pos[1]}]`);
+          this._overlayShown = false;
+        }
+      };
+      requestAnimationFrame(animate);
+    } else {
+      console.warn(`[NodeInspector] No app.canvas available`);
+    }
+  }
+  addNodeHighlightOverlay(targetNode, canvas2) {
+    console.log(`[NodeInspector] Adding subtle highlight overlay to node`);
+    const originalOnDrawForeground = targetNode.onDrawForeground;
+    const highlightOverlay = function(ctx) {
+      if (originalOnDrawForeground) {
+        originalOnDrawForeground.call(this, ctx);
+      }
+      const padding = 8;
+      const titleHeight = LiteGraph.NODE_TITLE_HEIGHT || 30;
+      const x2 = -padding;
+      const y = -titleHeight - padding;
+      const width2 = this.size[0] + padding * 2;
+      const height = this.size[1] + titleHeight + padding * 2;
+      ctx.save();
+      ctx.shadowColor = "rgba(74, 157, 255, 0.4)";
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.fillStyle = "rgba(74, 157, 255, 0.1)";
+      ctx.strokeStyle = "rgba(74, 157, 255, 0.6)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(x2, y, width2, height, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    };
+    targetNode.onDrawForeground = highlightOverlay;
+    setTimeout(() => {
+      targetNode.onDrawForeground = originalOnDrawForeground;
+      canvas2.setDirty(true, true);
+      console.log(`[NodeInspector] Removed highlight overlay`);
+    }, 1500);
+    console.log(`[NodeInspector] Highlight overlay applied`);
   }
   updateFieldsDisplay() {
     if (!this._connectedNode) {
@@ -14937,6 +15344,8 @@ if (!window.__nodeInspectorRegistered) {
           "onNodeCreated",
           "onRemoved",
           "onMouseDown",
+          "onMouseOver",
+          "onMouseOut",
           "clone",
           "onConstructed",
           "checkAndRunOnConstructed",
@@ -14949,12 +15358,17 @@ if (!window.__nodeInspectorRegistered) {
           "getConnectedNodeOutputValue",
           "formatValue",
           "createFieldsDisplayWidget",
+          "createInformationalSection",
+          "createSelectableSection",
           "startPeriodicUpdates",
           "stopPeriodicUpdates",
           "computeSize",
           "getInputSocketTypeColor",
           "getSocketTypeColor",
-          "updateBackendProperties"
+          "updateBackendProperties",
+          "navigateToConnectedNode",
+          "addNodeHighlightOverlay",
+          "addCustomWidget"
         ];
         for (const method of methods) {
           const prototype = NodeInspectorNode.prototype;

@@ -2,14 +2,6 @@ import json
 import pprint
 from comfy.comfy_types.node_typing import IO
 
-# Try to import black for better Python code formatting
-try:
-    import black
-
-    HAS_BLACK = True
-except ImportError:
-    HAS_BLACK = False
-
 class MarkdownRenderer:
     NAME = "MarkdownRenderer"
     DISPLAY_NAME = "Markdown Renderer"
@@ -45,25 +37,6 @@ class MarkdownRenderer:
     def IS_CHANGED(s, **kwargs):
         return float("NaN")
 
-    def format_python_code(self, code_str):
-        """Format Python code using black if available, otherwise return as-is."""
-        if not HAS_BLACK:
-            return code_str
-
-        try:
-            # Use black to format the code with a reasonable line length
-            formatted = black.format_str(
-                code_str,
-                mode=black.FileMode(
-                    line_length=80, string_normalization=True, is_pyi=False
-                ),
-            )
-            return formatted.strip()
-        except Exception as e:
-            # If black fails, return the original code
-            print(f"[MarkdownRenderer] Black formatting failed: {e}")
-            return code_str
-
     def format_item_as_markdown(self, item, item_index=None):
         """Format a single item as markdown based on its type."""
         if item is None:
@@ -91,9 +64,6 @@ class MarkdownRenderer:
                     compact=False,  # Don't compact sequences
                     sort_dicts=True,  # Sort dictionary keys
                 )
-
-                # Apply black formatting if available
-                formatted_dict = self.format_python_code(formatted_dict)
 
                 return f"```python\n{formatted_dict}\n```"
             except Exception as e:
@@ -136,9 +106,6 @@ class MarkdownRenderer:
                         sort_dicts=True,
                     )
 
-                    # Apply black formatting if available
-                    formatted_list = self.format_python_code(formatted_list)
-
                     return f"```python\n{formatted_list}\n```"
                 except Exception:
                     return f"```python\n{repr(item)}\n```"
@@ -160,9 +127,6 @@ class MarkdownRenderer:
                     sort_dicts=True,
                 )
 
-                # Apply black formatting if available
-                formatted_item = self.format_python_code(formatted_item)
-
                 return f"```python\n{formatted_item}\n```"
             except Exception:
                 # Fallback to string representation
@@ -170,7 +134,6 @@ class MarkdownRenderer:
 
     def render_markdown(self, unique_id=None, extra_pnginfo=None, text=None):
         print(f"[MarkdownRenderer] Processing input. Input type: {type(text)}")
-        print(f"[MarkdownRenderer] Black formatter available: {HAS_BLACK}")
         print(f"[MarkdownRenderer] Raw input value: {repr(text)}")
 
         # When INPUT_IS_LIST = True, inputs come as lists even for single values
@@ -180,6 +143,8 @@ class MarkdownRenderer:
 
             # Process all input items and format them appropriately
             markdown_sections = []
+            seen_content = set()  # Track unique content to avoid duplicates
+
             for i, item in enumerate(text):
                 print(
                     f"[MarkdownRenderer] Processing item {i}: type={type(item)}, value={repr(item)[:100]}..."
@@ -187,7 +152,15 @@ class MarkdownRenderer:
 
                 formatted_section = self.format_item_as_markdown(item, i)
                 if formatted_section:  # Only add non-empty sections
-                    markdown_sections.append(formatted_section)
+                    # Deduplicate identical content that often comes from list processing
+                    content_hash = hash(formatted_section)
+                    if content_hash not in seen_content:
+                        markdown_sections.append(formatted_section)
+                        seen_content.add(content_hash)
+                    else:
+                        print(
+                            f"[MarkdownRenderer] Skipping duplicate content at item {i}"
+                        )
 
             # Join all sections with double newlines for proper markdown separation
             text_content = "\n\n".join(markdown_sections)
