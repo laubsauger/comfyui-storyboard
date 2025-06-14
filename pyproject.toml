@@ -1,7 +1,7 @@
 [project]
 name = "storyboard"
 description = "A ComfyUI node set for creating and managing visual storyboards. Includes nodes for markdown rendering, image composition, and storyboard sequence management."
-version = "1.0.26"
+version = "1.0.27"
 license = {file = "LICENSE"}
 dependencies = ["python-dotenv", "openai"]
 
