@@ -18,7 +18,7 @@ interface InputEntry {
   rawValue: any;
   isConnected: boolean;
   connectedNodeTitle?: string;
-  connectedNodeId?: number;
+  connectedNodeId?: string | number;
   connectedOutputIndex?: number;
   sourceType: 'widget' | 'input' | 'connected_value';
 }
@@ -31,6 +31,7 @@ interface FieldEntry {
   sourceType: 'widget' | 'input' | 'connected_value';
   isConnected?: boolean;
   connectedNodeTitle?: string;
+  connectedNodeId?: string | number;
 }
 
 export class NodeInspectorNode extends StoryboardBaseNode {
@@ -45,6 +46,7 @@ export class NodeInspectorNode extends StoryboardBaseNode {
   _selectedFieldNames: string[] = [];
   _updateInterval: number | null = null;
   _overlayShown: boolean = false;
+  _graphChangeListener: ((event: any) => void) | null = null;
 
   // Get the input socket type color from the inspector node itself
   private getInputSocketTypeColor(): string {
@@ -122,6 +124,75 @@ export class NodeInspectorNode extends StoryboardBaseNode {
   constructor(title = NodeInspectorNode.title) {
     super(title);
     log(this.type, "Constructor called");
+  }
+
+  // Add refresh button to node title area
+  override onDrawForeground(ctx: CanvasRenderingContext2D, canvas: any, canvas_widget: any) {
+    // Call parent implementation first
+    if (super.onDrawForeground) {
+      super.onDrawForeground(ctx, canvas, canvas_widget);
+    }
+
+    // Only draw refresh button if node is not collapsed
+    if (this.flags?.collapsed) {
+      return;
+    }
+
+    // Draw refresh button in the title bar (far right)
+    const buttonSize = 12;
+    const buttonMargin = 8;
+    const titleHeight = LiteGraph.NODE_TITLE_HEIGHT || 30;
+    const buttonX = this.size[0] - buttonSize - buttonMargin;
+    const buttonY = -titleHeight + (titleHeight - buttonSize) / 2; // Position in title area (negative Y)
+
+    // Save context for clipping
+    ctx.save();
+
+    // Clip to title area to ensure button doesn't overflow
+    ctx.beginPath();
+    ctx.rect(0, -titleHeight, this.size[0], titleHeight);
+    ctx.clip();
+
+    // Button background (dark grey)
+    ctx.fillStyle = "#444";
+    ctx.fillRect(buttonX, buttonY, buttonSize, buttonSize);
+
+    // Button border
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(buttonX, buttonY, buttonSize, buttonSize);
+
+    // Refresh icon (circular arrow) - blue color
+    const iconColor = this._connectedNode ? "#87ceeb" : "#6495ed";
+    ctx.strokeStyle = iconColor;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    const centerX = buttonX + buttonSize / 2;
+    const centerY = buttonY + buttonSize / 2;
+    const radius = 3.5;
+
+    // Draw circular arrow
+    ctx.arc(centerX, centerY, radius, -Math.PI / 2, Math.PI, false);
+    ctx.stroke();
+
+    // Arrow head
+    ctx.beginPath();
+    ctx.moveTo(centerX - radius + 1, centerY + 1);
+    ctx.lineTo(centerX - radius - 0.5, centerY + 2.5);
+    ctx.lineTo(centerX - radius + 2, centerY + 2.5);
+    ctx.closePath();
+    ctx.fillStyle = iconColor;
+    ctx.fill();
+
+    ctx.restore();
+
+    // Store button bounds for click detection (relative to node, accounting for title offset)
+    (this as any)._refreshButtonBounds = {
+      x: buttonX,
+      y: buttonY,
+      width: buttonSize,
+      height: buttonSize
+    };
   }
 
   protected override onConstructed() {
@@ -223,11 +294,13 @@ export class NodeInspectorNode extends StoryboardBaseNode {
       const widgetEntries = node.widgets
         .filter((widget: IWidget) => widget.name && widget.name !== "preview")
         .map((widget: IWidget) => {
-          const value = (widget as any).value;
+          let value = (widget as any).value;
+          let rawValue = value;
 
           // Check if this widget has a corresponding input (widget-to-input mapping)
           let isConnected = false;
           let connectedNodeTitle = "";
+          let connectedNodeId: string | number | undefined = undefined;
 
           if (node.inputs) {
             const matchingInput = node.inputs.find(input => input.name === widget.name);
@@ -238,6 +311,14 @@ export class NodeInspectorNode extends StoryboardBaseNode {
                 const connectedNode = app.graph.getNodeById(link.origin_id);
                 if (connectedNode) {
                   connectedNodeTitle = connectedNode.title || "Unknown Node";
+                  connectedNodeId = connectedNode.id;
+
+                  // Get the actual value from the connected node instead of the widget's default value
+                  const connectedValue = this.getConnectedNodeOutputValue(connectedNode, link.origin_slot);
+                  if (connectedValue !== null) {
+                    value = connectedValue;
+                    rawValue = connectedValue;
+                  }
                 }
               }
             }
@@ -246,11 +327,12 @@ export class NodeInspectorNode extends StoryboardBaseNode {
           return {
             name: widget.name,
             value: this.formatWidgetValue({ name: widget.name, value, type: (widget as any).type }),
-            rawValue: value,
+            rawValue: rawValue,
             type: (widget as any).type,
             sourceType: 'widget' as const,
             isConnected: isConnected,
-            connectedNodeTitle: connectedNodeTitle
+            connectedNodeTitle: connectedNodeTitle,
+            connectedNodeId: connectedNodeId
           };
         });
       fieldEntries.push(...widgetEntries);
@@ -263,6 +345,7 @@ export class NodeInspectorNode extends StoryboardBaseNode {
         let value = "";
         let rawValue: any = null;
         let connectedNodeTitle = "";
+        let connectedNodeId: string | number | undefined = undefined;
 
         if (isConnected && input.link) {
           // Get connected node and its output value
@@ -271,6 +354,7 @@ export class NodeInspectorNode extends StoryboardBaseNode {
             const connectedNode = app.graph.getNodeById(link.origin_id);
             if (connectedNode) {
               connectedNodeTitle = connectedNode.title || "Unknown Node";
+              connectedNodeId = connectedNode.id;
 
               // Try to get the actual value from the connected node
               const connectedValue = this.getConnectedNodeOutputValue(connectedNode, link.origin_slot);
@@ -293,7 +377,8 @@ export class NodeInspectorNode extends StoryboardBaseNode {
           type: Array.isArray(input.type) ? input.type.join('|') : String(input.type || "*"),
           sourceType: 'input' as const,
           isConnected: isConnected,
-          connectedNodeTitle: connectedNodeTitle
+          connectedNodeTitle: connectedNodeTitle,
+          connectedNodeId: connectedNodeId
         };
       });
       fieldEntries.push(...inputEntries);
@@ -429,12 +514,12 @@ export class NodeInspectorNode extends StoryboardBaseNode {
 
     // Store reference to our class instance for widget handlers
     const classInstance = this as NodeInspectorNode;
-    const navigateToConnectedNode = (nodeTitle: string) => {
-      console.log('[NodeInspector] Calling navigateToConnectedNode with:', nodeTitle);
+    const navigateToConnectedNode = (nodeId: string | number) => {
+      console.log('[NodeInspector] Calling navigateToConnectedNode with nodeId:', nodeId);
       console.log('[NodeInspector] classInstance type:', typeof classInstance);
       console.log('[NodeInspector] classInstance.navigateToConnectedNode type:', typeof classInstance.navigateToConnectedNode);
       if (typeof classInstance.navigateToConnectedNode === 'function') {
-        classInstance.navigateToConnectedNode(nodeTitle);
+        classInstance.navigateToConnectedNode(nodeId);
       } else {
         console.error('[NodeInspector] navigateToConnectedNode method not found on class instance');
         console.log('[NodeInspector] Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(classInstance)));
@@ -602,7 +687,8 @@ export class NodeInspectorNode extends StoryboardBaseNode {
                 }
 
                 // Draw inheritance badge with rounded corners and hover effect
-                const badgeText = `→ ${connectionText}`;
+                const nodeIdText = entry.connectedNodeId ? `#${entry.connectedNodeId} ` : '';
+                const badgeText = `→ ${nodeIdText}${connectionText}`;
                 const badgeWidth = ctx.measureText(badgeText).width + 16; // 8px padding each side
                 const badgeHeight = 14;
                 const badgeX = connectionStartX;
@@ -616,7 +702,8 @@ export class NodeInspectorNode extends StoryboardBaseNode {
                   width: badgeWidth,
                   height: badgeHeight,
                   fieldName: entry.name,
-                  connectedNodeTitle: entry.connectedNodeTitle,
+                  connectedNodeId: entry.connectedNodeId,
+                  connectedNodeTitle: entry.connectedNodeTitle, // Keep for hover comparison
                   scrollOffset: this.scrollOffset || 0,
                   widgetY: scrollAreaY
                 };
@@ -822,10 +909,10 @@ export class NodeInspectorNode extends StoryboardBaseNode {
                 if (localX >= clickArea.x && localX <= clickArea.x + clickArea.width &&
                   localY >= adjustedY && localY <= adjustedY + clickArea.height) {
                   // Navigate to connected node
-                  console.log('[NodeInspector] Badge clicked, navigating to:', clickArea.connectedNodeTitle);
+                  console.log('[NodeInspector] Badge clicked, navigating to node ID:', clickArea.connectedNodeId);
                   console.log('[NodeInspector] About to call navigateToConnectedNode function');
                   try {
-                    navigateToConnectedNode(clickArea.connectedNodeTitle);
+                    navigateToConnectedNode(clickArea.connectedNodeId);
                     console.log('[NodeInspector] navigateToConnectedNode call completed');
                   } catch (error) {
                     console.error('[NodeInspector] Error calling navigateToConnectedNode:', error);
@@ -965,7 +1052,8 @@ export class NodeInspectorNode extends StoryboardBaseNode {
                 }
 
                 // Draw inheritance badge with rounded corners
-                const badgeText = `→ ${connectionText}`;
+                const nodeIdText = entry.connectedNodeId ? `#${entry.connectedNodeId} ` : '';
+                const badgeText = `→ ${nodeIdText}${connectionText}`;
                 const badgeWidth = ctx.measureText(badgeText).width + 16; // 8px padding each side
                 const badgeHeight = 14;
                 const badgeX = connectionStartX;
@@ -979,7 +1067,8 @@ export class NodeInspectorNode extends StoryboardBaseNode {
                   width: badgeWidth,
                   height: badgeHeight,
                   fieldName: entry.name,
-                  connectedNodeTitle: entry.connectedNodeTitle,
+                  connectedNodeId: entry.connectedNodeId,
+                  connectedNodeTitle: entry.connectedNodeTitle, // Keep for hover comparison
                   absoluteY: fieldY
                 };
                 this._inputInheritanceClickAreas.push(inputBadgeInfo);
@@ -1133,10 +1222,10 @@ export class NodeInspectorNode extends StoryboardBaseNode {
                 if (localX >= clickArea.x && localX <= clickArea.x + clickArea.width &&
                   localY >= clickArea.y && localY <= clickArea.y + clickArea.height) {
                   // Navigate to connected node
-                  console.log('[NodeInspector] Input badge clicked, navigating to:', clickArea.connectedNodeTitle);
+                  console.log('[NodeInspector] Input badge clicked, navigating to node ID:', clickArea.connectedNodeId);
                   console.log('[NodeInspector] About to call navigateToConnectedNode function for input');
                   try {
-                    navigateToConnectedNode(clickArea.connectedNodeTitle);
+                    navigateToConnectedNode(clickArea.connectedNodeId);
                     console.log('[NodeInspector] navigateToConnectedNode call completed for input');
                   } catch (error) {
                     console.error('[NodeInspector] Error calling navigateToConnectedNode for input:', error);
@@ -1236,19 +1325,19 @@ export class NodeInspectorNode extends StoryboardBaseNode {
     });
   }
 
-  navigateToConnectedNode(nodeTitle: string) {
-    console.log(`[NodeInspector] Starting navigation to: ${nodeTitle}`);
+  navigateToConnectedNode(nodeId: string | number) {
+    console.log(`[NodeInspector] Starting navigation to node ID: ${nodeId}`);
 
     if (!app.graph) {
       console.warn(`[NodeInspector] No app.graph available`);
       return;
     }
 
-    // Find the source node by title (the node that provides the value)
-    const sourceNode = app.graph._nodes.find((node: any) => node.title === nodeTitle);
+    // Find the source node by ID (more reliable than title)
+    const sourceNode = app.graph.getNodeById(nodeId);
     if (!sourceNode) {
-      console.warn(`[NodeInspector] Could not find source node with title: ${nodeTitle}`);
-      console.log(`[NodeInspector] Available nodes:`, app.graph._nodes.map((n: any) => n.title));
+      console.warn(`[NodeInspector] Could not find source node with ID: ${nodeId}`);
+      console.log(`[NodeInspector] Available node IDs:`, app.graph._nodes.map((n: any) => n.id));
       return;
     }
 
@@ -1314,7 +1403,7 @@ export class NodeInspectorNode extends StoryboardBaseNode {
         } else {
           // Animation complete
           console.log(`[NodeInspector] Smooth navigation completed successfully`);
-          log(this.type, `Navigated to source node: ${nodeTitle} at position [${sourceNode.pos[0]}, ${sourceNode.pos[1]}]`);
+          log(this.type, `Navigated to source node: ${sourceNode.title} (ID: ${nodeId}) at position [${sourceNode.pos[0]}, ${sourceNode.pos[1]}]`);
           // Reset overlay flag for next navigation
           this._overlayShown = false;
         }
@@ -1457,6 +1546,40 @@ export class NodeInspectorNode extends StoryboardBaseNode {
     }
   }
 
+  // Force refresh of all field values
+  forceRefresh() {
+    console.log('[NodeInspector] Force refresh triggered');
+    if (this._connectedNode) {
+      this._fieldEntries = this.getAllFieldEntries(this._connectedNode);
+      this.createFieldsDisplayWidget();
+
+      // Update selected field values if they're still selected
+      if (this._selectedFieldNames.length > 0) {
+        this.updateBackendProperties();
+      }
+
+      // Force redraw
+      if (app.graph) {
+        app.graph.setDirtyCanvas(true, false);
+      }
+
+      console.log('[NodeInspector] Force refresh completed');
+    }
+  }
+
+  // Setup enhanced monitoring for upstream changes
+  private setupGraphChangeListener() {
+    // For now, we'll rely on the existing periodic updates and the manual refresh button
+    // The periodic update mechanism already detects value changes every 500ms
+    // The refresh button provides manual control when needed
+    console.log('[NodeInspector] Using periodic updates and manual refresh for change detection');
+  }
+
+  private removeGraphChangeListener() {
+    this._graphChangeListener = null;
+    console.log('[NodeInspector] Graph change listener removed');
+  }
+
   private inspectConnectedNode(connectedNode: LGraphNode | null) {
     this._connectedNode = connectedNode;
 
@@ -1465,12 +1588,14 @@ export class NodeInspectorNode extends StoryboardBaseNode {
       this._fieldEntries = [];
       this._selectedFieldNames = [];
       this.stopPeriodicUpdates();
+      this.removeGraphChangeListener();
       this.updateFieldsDisplay();
       return;
     }
 
     this.updateFieldsDisplay();
     this.startPeriodicUpdates();
+    this.setupGraphChangeListener();
   }
 
   override onConnectionsChange(type: number, index: number, connected: boolean, linkInfo: any, inputOrOutput: any) {
@@ -1580,11 +1705,21 @@ export class NodeInspectorNode extends StoryboardBaseNode {
 
   override onRemoved() {
     this.stopPeriodicUpdates();
+    this.removeGraphChangeListener();
     super.onRemoved?.();
   }
 
   override onMouseDown(event: any, pos: any, canvas: any): boolean {
     console.log(`[NodeInspector] Node onMouseDown: pos=${pos}, event=${event.type}`);
+
+    // Check if click is on refresh button
+    const refreshBounds = (this as any)._refreshButtonBounds;
+    if (refreshBounds && pos[0] >= refreshBounds.x && pos[0] <= refreshBounds.x + refreshBounds.width &&
+      pos[1] >= refreshBounds.y && pos[1] <= refreshBounds.y + refreshBounds.height) {
+      console.log('[NodeInspector] Refresh button clicked');
+      this.forceRefresh();
+      return true; // Consume the event
+    }
 
     // Check if click is within our scrollable widget area
     const scrollableWidget = this.widgets?.find(w => w.name === "fields_scrollable");
@@ -1681,6 +1816,7 @@ if (!(window as any).__nodeInspectorRegistered) {
           "onMouseDown",
           "onMouseOver",
           "onMouseOut",
+          "onDrawForeground",
           "clone",
           "onConstructed",
           "checkAndRunOnConstructed",
@@ -1697,6 +1833,9 @@ if (!(window as any).__nodeInspectorRegistered) {
           "createSelectableSection",
           "startPeriodicUpdates",
           "stopPeriodicUpdates",
+          "forceRefresh",
+          "setupGraphChangeListener",
+          "removeGraphChangeListener",
           "computeSize",
           "getInputSocketTypeColor",
           "getSocketTypeColor",
