@@ -1,6 +1,6 @@
 {
   "name": "storyboard",
-  "version": "1.0.27",
+  "version": "1.0.28",
   "devDependencies": {
     "@comfyorg/comfyui-frontend-types": "^1.15.5",
     "@comfyorg/litegraph": "^0.11.3",
