@@ -12,12 +12,12 @@ var Storyboard = class extends EventTarget {
     let link = document.createElement("link");
     link.rel = "stylesheet";
     link.type = "text/css";
-    link.href = "extensions/comfyui-storyboard/comfyui/styles/storyboard.css";
+    link.href = "extensions/storyboard/comfyui/styles/storyboard.css";
     document.head.appendChild(link);
     let link2 = document.createElement("link");
     link2.rel = "stylesheet";
     link2.type = "text/css";
-    link2.href = "extensions/comfyui-storyboard/comfyui/styles/a11y-dark.min.css";
+    link2.href = "extensions/storyboard/comfyui/styles/a11y-dark.min.css";
     document.head.appendChild(link2);
   }
   log(level, message, ...args) {

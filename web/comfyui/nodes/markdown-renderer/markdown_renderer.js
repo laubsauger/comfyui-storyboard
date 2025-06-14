@@ -20335,7 +20335,7 @@ var MarkdownRendererNode = _MarkdownRendererNode;
 if (!window.__mdRendererRegistered) {
   window.__mdRendererRegistered = true;
   app2.registerExtension({
-    name: "comfyui-storyboard.markdown-renderer",
+    name: "storyboard.markdown-renderer",
     async beforeRegisterNodeDef(nodeType, nodeData) {
       if (nodeData.name === "MarkdownRenderer") {
         log("MarkdownRenderer", "Registering node type");

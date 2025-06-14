@@ -1,5 +1,5 @@
 {
-  "name": "comfyui-storyboard",
+  "name": "storyboard",
   "version": "1.0.27",
   "devDependencies": {
     "@comfyorg/comfyui-frontend-types": "^1.15.5",

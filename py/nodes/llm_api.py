@@ -16,6 +16,7 @@ log(py_dir, "py_dir")
 log(storyboard_dir, "storyboard_dir")
 log(config_path, "config_path")
 
+
 def get_api_key():
     """
     Loads the OpenAI API key from config.json.
@@ -24,7 +25,7 @@ def get_api_key():
     if not os.path.exists(config_path):
         raise ValueError(
             "Configuration file 'config.json' not found. "
-            "Please create it in the 'comfyui-storyboard' directory with your OpenAI API key: "
+            "Please create it in the 'storyboard' directory with your OpenAI API key: "
             '{"openai_api_key": "YOUR_API_KEY"}'
         )
 

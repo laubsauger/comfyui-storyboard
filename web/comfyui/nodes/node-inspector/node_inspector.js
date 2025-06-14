@@ -14460,7 +14460,7 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
   createFieldsDisplayWidget() {
     if (this.widgets) {
       const widgetsToRemove = this.widgets.filter(
-        (w) => w.name === "fields_display" || w.name === "truncated_info" || w.name === "fields_scrollable" || w.name === "inputs_display" || w.name === "widgets_display" || w.name.startsWith("field_")
+        (w) => w.name === "fields_display" || w.name === "truncated_info" || w.name === "fields_scrollable" || w.name === "inputs_display" || w.name === "widgets_display" || w.name === "source_node_info" || w.name.startsWith("field_")
       );
       for (const widget of widgetsToRemove) {
         if (widget && widget.onRemove) {
@@ -14472,9 +14472,66 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
         }
       }
     }
+    if (!this.widgets) this.widgets = [];
+    if (this._connectedNode) {
+      const sourceNodeWidget = {
+        name: "source_node_info",
+        type: "button",
+        value: `Inspecting: #${this._connectedNode.id} ${this._connectedNode.title}`,
+        options: { readonly: true },
+        y: 0,
+        serialize: false,
+        draw: function(ctx, node2, widgetWidth, y, widgetHeight) {
+          var _a, _b;
+          const gradient = ctx.createLinearGradient(0, y, 0, y + widgetHeight);
+          gradient.addColorStop(0, "#2a4a6b");
+          gradient.addColorStop(1, "#1a3a5b");
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, y, widgetWidth, widgetHeight);
+          ctx.strokeStyle = "#4a7dc4";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(0, y, widgetWidth, widgetHeight);
+          ctx.fillStyle = "#87ceeb";
+          ctx.font = "14px Arial";
+          ctx.fillText("\u{1F3AF}", 8, y + 18);
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 12px Arial";
+          const nodeId = `#${((_a = node2._connectedNode) == null ? void 0 : _a.id) || "?"}`;
+          const nodeTitle = ((_b = node2._connectedNode) == null ? void 0 : _b.title) || "Unknown Node";
+          const idText = `${nodeId} `;
+          const idWidth = ctx.measureText(idText).width;
+          const maxTitleWidth = widgetWidth - 35 - idWidth - 10;
+          let displayTitle = nodeTitle;
+          const titleWidth = ctx.measureText(nodeTitle).width;
+          if (titleWidth > maxTitleWidth) {
+            const avgCharWidth = titleWidth / nodeTitle.length;
+            const maxChars = Math.floor(maxTitleWidth / avgCharWidth) - 3;
+            displayTitle = nodeTitle.substring(0, Math.max(1, maxChars)) + "...";
+          }
+          ctx.fillText(idText, 30, y + 18);
+          ctx.fillStyle = "#e6f3ff";
+          ctx.fillText(displayTitle, 30 + idWidth, y + 18);
+          return widgetHeight;
+        },
+        computeSize: function(width2) {
+          return [width2, 28];
+        },
+        mouse: function(event, pos, node2) {
+          if (event.type === "pointerup" || event.type === "click") {
+            const connectedNode = node2._connectedNode;
+            if (connectedNode && typeof node2.navigateToConnectedNode === "function") {
+              console.log("[NodeInspector] Source node info clicked, navigating to source node");
+              node2.navigateToConnectedNode(connectedNode.id);
+              return true;
+            }
+          }
+          return false;
+        }
+      };
+      this.widgets.push(sourceNodeWidget);
+    }
     if (!this._fieldEntries.length) {
       const message = this._connectedNode ? "No fields found" : "Connect a node to inspect its fields!";
-      if (!this.widgets) this.widgets = [];
       const textWidget = {
         name: "fields_display",
         type: "button",
@@ -15400,9 +15457,10 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
     const baseHeight = 90;
     const topPadding = 5;
     const bottomPadding = 5;
+    const sourceNodeInfoHeight = this._connectedNode ? 28 : 0;
     const fieldCount = ((_a = this._fieldEntries) == null ? void 0 : _a.length) || 0;
     if (fieldCount === 0) {
-      return [baseWidth, baseHeight + 25];
+      return [baseWidth, baseHeight + 25 + sourceNodeInfoHeight];
     }
     const lineHeight = 20;
     const headerHeight = 25;
@@ -15418,7 +15476,7 @@ var _NodeInspectorNode = class _NodeInspectorNode extends StoryboardBaseNode {
       const visibleFields = shouldScroll ? maxFieldsBeforeScroll : widgetEntries.length;
       totalContentHeight += headerHeight + visibleFields * lineHeight;
     }
-    const totalHeight = baseHeight + totalContentHeight + topPadding + bottomPadding;
+    const totalHeight = baseHeight + totalContentHeight + topPadding + bottomPadding + sourceNodeInfoHeight;
     return [baseWidth, totalHeight];
   }
 };
@@ -15430,7 +15488,7 @@ var NodeInspectorNode = _NodeInspectorNode;
 if (!window.__nodeInspectorRegistered) {
   window.__nodeInspectorRegistered = true;
   app.registerExtension({
-    name: "comfyui-storyboard.node-inspector",
+    name: "storyboard.node-inspector",
     async beforeRegisterNodeDef(nodeType, nodeData) {
       if (nodeData.name === "NodeInspector") {
         log("NodeInspector", "Registering node type");

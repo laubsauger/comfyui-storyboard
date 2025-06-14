@@ -11,6 +11,6 @@ Repository = "https://github.com/laubsauger/comfyui-storyboard"
 
 [tool.comfy]
 PublisherId = "laub"
-DisplayName = "comfyui-storyboard"
+DisplayName = "storyboard"
 Icon = "https://raw.githubusercontent.com/laubsauger/comfyui-storyboard/refs/heads/main/docs/storyboard_icon_opt.png"
 Banner = "https://raw.githubusercontent.com/laubsauger/comfyui-storyboard/refs/heads/main/docs/storyboard_banner_opt.png"

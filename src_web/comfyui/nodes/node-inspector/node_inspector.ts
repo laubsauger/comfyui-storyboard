@@ -455,6 +455,7 @@ export class NodeInspectorNode extends StoryboardBaseNode {
         w.name === "fields_scrollable" ||
         w.name === "inputs_display" ||
         w.name === "widgets_display" ||
+        w.name === "source_node_info" ||
         w.name.startsWith("field_")
       );
 
@@ -469,10 +470,83 @@ export class NodeInspectorNode extends StoryboardBaseNode {
       }
     }
 
+    if (!this.widgets) this.widgets = [];
+
+    // Add source node info widget at the top (always show when connected)
+    if (this._connectedNode) {
+      const sourceNodeWidget = {
+        name: "source_node_info",
+        type: "button",
+        value: `Inspecting: #${this._connectedNode.id} ${this._connectedNode.title}`,
+        options: { readonly: true },
+        y: 0,
+        serialize: false,
+        draw: function (ctx: CanvasRenderingContext2D, node: NodeInspectorNode, widgetWidth: number, y: number, widgetHeight: number) {
+          // Header background with gradient
+          const gradient = ctx.createLinearGradient(0, y, 0, y + widgetHeight);
+          gradient.addColorStop(0, "#2a4a6b");
+          gradient.addColorStop(1, "#1a3a5b");
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, y, widgetWidth, widgetHeight);
+
+          // Border
+          ctx.strokeStyle = "#4a7dc4";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(0, y, widgetWidth, widgetHeight);
+
+          // Icon
+          ctx.fillStyle = "#87ceeb";
+          ctx.font = "14px Arial";
+          ctx.fillText("🎯", 8, y + 18);
+
+          // Text
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 12px Arial";
+          const nodeId = `#${(node as any)._connectedNode?.id || '?'}`;
+          const nodeTitle = (node as any)._connectedNode?.title || 'Unknown Node';
+
+          // Measure text to ensure it fits
+          const idText = `${nodeId} `;
+          const idWidth = ctx.measureText(idText).width;
+          const maxTitleWidth = widgetWidth - 35 - idWidth - 10; // 35 for icon+padding, 10 for right padding
+
+          let displayTitle = nodeTitle;
+          const titleWidth = ctx.measureText(nodeTitle).width;
+          if (titleWidth > maxTitleWidth) {
+            // Truncate title if too long
+            const avgCharWidth = titleWidth / nodeTitle.length;
+            const maxChars = Math.floor(maxTitleWidth / avgCharWidth) - 3; // -3 for "..."
+            displayTitle = nodeTitle.substring(0, Math.max(1, maxChars)) + "...";
+          }
+
+          ctx.fillText(idText, 30, y + 18);
+          ctx.fillStyle = "#e6f3ff";
+          ctx.fillText(displayTitle, 30 + idWidth, y + 18);
+
+          return widgetHeight;
+        },
+        computeSize: function (width: number) {
+          return [width, 28];
+        },
+        mouse: function (event: any, pos: any, node: NodeInspectorNode) {
+          // Make the entire source info widget clickable to navigate to the source node
+          if (event.type === "pointerup" || event.type === "click") {
+            const connectedNode = (node as any)._connectedNode;
+            if (connectedNode && typeof node.navigateToConnectedNode === 'function') {
+              console.log('[NodeInspector] Source node info clicked, navigating to source node');
+              node.navigateToConnectedNode(connectedNode.id);
+              return true;
+            }
+          }
+          return false;
+        }
+      };
+
+      this.widgets.push(sourceNodeWidget as any);
+    }
+
     if (!this._fieldEntries.length) {
       const message = this._connectedNode ? "No fields found" : "Connect a node to inspect its fields!";
-
-      if (!this.widgets) this.widgets = [];
 
       const textWidget = {
         name: "fields_display",
@@ -1760,13 +1834,14 @@ export class NodeInspectorNode extends StoryboardBaseNode {
     const baseHeight = 90;
     const topPadding = 5;
     const bottomPadding = 5;
+    const sourceNodeInfoHeight = this._connectedNode ? 28 : 0; // Height of source node info widget
 
     // Handle case where _fieldEntries might be undefined during initial construction
     const fieldCount = this._fieldEntries?.length || 0;
 
     if (fieldCount === 0) {
-      // No fields, just show the base message
-      return [baseWidth, baseHeight + 25] as any;
+      // No fields, just show the base message (plus source info if connected)
+      return [baseWidth, baseHeight + 25 + sourceNodeInfoHeight] as any;
     }
 
     // Calculate height for segmented layout
@@ -1790,7 +1865,7 @@ export class NodeInspectorNode extends StoryboardBaseNode {
       totalContentHeight += headerHeight + (visibleFields * lineHeight);
     }
 
-    const totalHeight = baseHeight + totalContentHeight + topPadding + bottomPadding;
+    const totalHeight = baseHeight + totalContentHeight + topPadding + bottomPadding + sourceNodeInfoHeight;
     return [baseWidth, totalHeight] as any;
   }
 }
@@ -1800,7 +1875,7 @@ if (!(window as any).__nodeInspectorRegistered) {
   (window as any).__nodeInspectorRegistered = true;
 
   app.registerExtension({
-    name: "comfyui-storyboard.node-inspector",
+    name: "storyboard.node-inspector",
     async beforeRegisterNodeDef(nodeType: any, nodeData: any) {
       if (nodeData.name === "NodeInspector") {
         log("NodeInspector", "Registering node type");
